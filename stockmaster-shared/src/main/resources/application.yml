@@ -1,0 +1,218 @@
+# ============================================================
+# StockMaster CM — Configuration principale
+# Référence : GS-CDCT-2026-01
+# ============================================================
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: stockmaster-cm
+
+  # ========== JPA / Hibernate ==========
+  jpa:
+    hibernate:
+      ddl-auto: none           # Désactivé — Flyway gère les migrations !
+    show-sql: false
+    open-in-view: false        # ← DÉSACTIVÉ explicitement (évite LazyInitializationException silencieuse)
+    properties:
+      hibernate:
+        format_sql: true
+        default_batch_fetch_size: 20
+        jdbc:
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
+
+  # ========== Flyway ==========
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    validate-on-migrate: true
+    out-of-order: false
+    clean-disabled: true
+
+  # ========== Jackson ==========
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    date-format: yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
+    time-zone: UTC
+    default-property-inclusion: non-null
+
+  # ========== Mail ==========
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+# ========== Actuator ==========
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  info:
+    env:
+      enabled: true
+
+# ========== StockMaster — Propriétés personnalisées ==========
+stockmaster:
+  jwt:
+    secret: ${JWT_SECRET:}
+    access-token-expiration: 900
+    refresh-token-expiration: 604800
+    issuer: stockmaster
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+    allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+    allowed-headers: "*"
+    max-age: 3600
+  pagination:
+    default-page-size: 20
+    max-page-size: 100
+    default-sort: dateCreation,desc
+
+# ========== Logging ==========
+logging:
+  level:
+    root: INFO
+    com.stockmaster: DEBUG
+    org.springframework: WARN
+    org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+---
+# ============================================================
+# Profil : dev
+# ============================================================
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:stockmaster_dev}
+    username: ${DB_USERNAME:stockmaster}
+    password: ${DB_PASSWORD:stockmaster}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: StockMasterPool
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 300000
+      connection-timeout: 20000
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate    # Valide que le schéma correspond aux entités
+
+  flyway:
+    enabled: true
+    clean-disabled: false   # Autorisé en dev pour tests
+
+logging:
+  level:
+    com.stockmaster: DEBUG
+    org.springframework.web: DEBUG
+
+---
+# ============================================================
+# Profil : test
+# ============================================================
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  datasource:
+    url: jdbc:tc:postgresql:16:///stockmaster_test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+  flyway:
+    enabled: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+logging:
+  level:
+    com.stockmaster: DEBUG
+
+---
+# ============================================================
+# Profil : prod
+# ============================================================
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: StockMasterPool
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 10000
+      max-lifetime: 1800000
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+  flyway:
+    enabled: true
+    clean-disabled: true    # ← JAMAIS flyway:clean en prod
+
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+logging:
+  level:
+    root: WARN
+    com.stockmaster: INFO

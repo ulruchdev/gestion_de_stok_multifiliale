@@ -1,0 +1,163 @@
+# =======================================
+# Java / Maven — Build & compilation
+# =======================================
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# =======================================
+# IDE — IntelliJ IDEA
+# =======================================
+.idea/*
+!.idea/icon.png
+!.idea/runConfigurations/
+*.iml
+*.ipr
+*.iws
+out/
+
+# =======================================
+# IDE — VS Code
+# =======================================
+.vscode/
+*.code-workspace
+
+# =======================================
+# IDE — Eclipse
+# =======================================
+.project
+.classpath
+.settings/
+bin/
+*.launch
+
+# =======================================
+# IDE — NetBeans
+# =======================================
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+nbactions.xml
+nb-configuration.xml
+*.nbattrs
+
+# =======================================
+# OS — Fichiers système
+# =======================================
+.DS_Store
+.DS_Store?
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+Desktop.ini
+$RECYCLE.BIN/
+
+# =======================================
+# Environnement & secrets
+# =======================================
+.env
+.env.local
+.env.test
+.env.staging
+.env.prod
+*.p12
+*.jks
+*.key
+*.pem
+*.crt
+*.cert
+secrets/
+
+# =======================================
+# Logs
+# =======================================
+logs/
+*.log
+log/
+spring.log
+spring-boot.log
+
+# =======================================
+# Node / npm (si présent pour le frontend)
+# =======================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =======================================
+# Docker
+# =======================================
+.docker/
+docker-compose.override.yml
+
+# =======================================
+# Base de données — Flyway (fichiers temporaires)
+# =======================================
+*.sql.bak
+*.sql.old
+
+# =======================================
+# Tests & rapports
+# =======================================
+test-output/
+*.test-results
+coverage/
+reports/
+*.html
+!.sonar/
+jacoco.exec
+*.dump
+
+# =======================================
+# Spring Boot — Actuator & temp
+# =======================================
+heapdump.hprof
+*.hprof
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# =======================================
+# IDE — Fichiers projet partagés (à committer)
+# =======================================
+# On commit les fichiers .idea partagés (code style, etc.)
+!.idea/codeStyles/
+!.idea/compiler.xml
+!.idea/encodings.xml
+!.idea/misc.xml
+!.idea/modules.xml
+!.idea/vcs.xml
+!.idea/runConfigurations/
+!.idea/sqldialects.xml
