@@ -125,7 +125,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >
-          mvn compile sonar:sonar 
+          mvn install -DskipTests sonar:sonar 
           -Dsonar.organization=ulruchdev
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.projectKey=gestion_de_stok_multifiliale
