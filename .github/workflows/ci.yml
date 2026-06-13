@@ -1,3 +1,4 @@
+
 name: CI — Compilation & Tests
 
 on:
@@ -127,7 +128,7 @@ jobs:
           mvn compile sonar:sonar 
           -Dsonar.organization=ulruchdev
           -Dsonar.host.url=https://sonarcloud.io
-          -Dsonar.projectKey=stockmaster-cm
+          -Dsonar.projectKey=gestion_de_stok_multifiliale
           -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
           -Dsonar.qualitygate.wait=true
           -Dsonar.coverage.exclusions=**/config/**,**/dto/**
