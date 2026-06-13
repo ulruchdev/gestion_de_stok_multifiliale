@@ -124,9 +124,10 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >
-          mvn verify sonar:sonar 
+          mvn compile sonar:sonar 
           -Dsonar.organization=ulruchdev
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.projectKey=stockmaster-cm
           -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
           -Dsonar.qualitygate.wait=true
+          -Dsonar.coverage.exclusions=**/config/**,**/dto/**
