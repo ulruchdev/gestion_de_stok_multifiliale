@@ -541,3 +541,14 @@ Ces fichiers `.idea/` (IDE IntelliJ) ont été versionnés par erreur dans le co
 > **Règle de gestion du journal :** Ce fichier doit être mis à jour à chaque nouveau commit.
 > La section de la US modifiée doit refléter le hash du commit, la branche, et le statut de push.
 > **Prochaine mise à jour prévue :** Après implémentation de US-007, US-009, US-010.
+
+---
+
+## 📎 Documents connexes
+
+| Document | Rôle |
+|---|---|
+| `document/guideconfiguration.md` | Guide complet des configurations internes et externes (GitHub, SonarCloud, MinIO, secrets, etc.) |
+| `document/BACKLOG_StockMaster_CM.md` | Backlog produit 75 US |
+| `document/CDCT_StockMaster_CM_Complet_Sections22-30.md` | Cahier des Charges Techniques |
+| `document/A_JIRA_ET_GIT_FLOW.md` | Workflow Jira & Git
