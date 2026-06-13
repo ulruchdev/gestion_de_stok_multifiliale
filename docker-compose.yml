@@ -1,0 +1,119 @@
+# ============================================================
+# StockMaster CM — Environnement de développement local
+# ============================================================
+
+
+services:
+  # ========== API ==========
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stockmaster-api
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: stockmaster_dev
+      DB_USERNAME: stockmaster
+      DB_PASSWORD: stockmaster
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-key-that-is-at-least-256-bits-long-for-hs256}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-stockmaster}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-stockmaster}
+      MAIL_HOST: mailhog
+      MAIL_PORT: 1025
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - stockmaster-network
+
+  # ========== PostgreSQL 16 ==========
+  postgres:
+    image: postgres:16-alpine
+    container_name: stockmaster-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: stockmaster_dev
+      POSTGRES_USER: stockmaster
+      POSTGRES_PASSWORD: stockmaster
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stockmaster -d stockmaster_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - stockmaster-network
+
+  # ========== Redis 7 ==========
+  redis:
+    image: redis:7-alpine
+    container_name: stockmaster-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - stockmaster-network
+
+  # ========== MinIO (stockage fichiers) ==========
+  minio:
+    image: minio/minio:latest
+    container_name: stockmaster-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-stockmaster}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-stockmaster}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - stockmaster-network
+
+  # ========== MailHog (capture emails en dev) ==========
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: stockmaster-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    restart: unless-stopped
+    networks:
+      - stockmaster-network
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
+
+networks:
+  stockmaster-network:
+    name: stockmaster-network
