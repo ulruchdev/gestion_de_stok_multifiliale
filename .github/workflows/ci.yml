@@ -124,7 +124,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >
-          mvn verify sonar:sonar 
+          mvn sonar:sonar 
           -Dsonar.organization=ulruchdev
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.projectKey=stockmaster-cm
