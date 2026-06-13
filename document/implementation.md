@@ -1,103 +1,124 @@
 # StockMaster CM — Journal d'Implémentation
 
-> **Référence :** GS-BACKLOG-2026-01 | **Projet :** StockMaster CM
-> **Stack :** Java 21, Spring Boot 3.3.5, PostgreSQL 16, Redis 7, MinIO
+> **Référence :** GS-BACKLOG-2026-01 | **Stack :** Java 21, Spring Boot 3.3.5, PostgreSQL 16, Redis 7, MinIO
 > **Architecture :** Monolithe modulaire (11 modules)
 
 ---
 
 ## US-001 — Initialisation du projet Spring Boot ✅
 
-**Statut :** Terminé — Commit `e47186c` → `fe9b5c9` (amendé)
-**Branche :** `feature/GS-001-initialize-spring-boot-project`
-**Push :** ✅ Vers `origin/feature/GS-001-initialize-spring-boot-project`
+**Branche :** `feature/GS-001-initialize-spring-boot-project` → Pushé ✅  
+**Commit :** `e47186c` puis `0357763` (doc)
 
-### Fichiers créés (40 fichiers, +5 389 lignes)
-
+### Fichiers (40 fichiers, +5 389 lignes)
 | Fichier | Rôle |
 |---|---|
 | `pom.xml` | Parent POM Spring Boot 3.3.5, Java 21, 11 modules |
-| `.gitignore` | Java, Maven, IDE, OS, secrets, logs, Docker |
-| `stockmaster-shared/pom.xml` | Dépendances : Web, JPA, Security, Validation, Redis, jjwt 0.12.x, MapStruct, MinIO, Flyway, PostgreSQL, Testcontainers |
-| `stockmaster-shared/.../AbstractEntity.java` | Classe de base JPA : id, dateCreation, dateModification, supprime |
-| `stockmaster-shared/.../ApiResponse.java` | Wrapper générique de réponse API (success, message, data) |
-| `stockmaster-shared/.../ProblemResponse.java` | Réponse d'erreur RFC 7807 avec extensions StockMaster |
-| `stockmaster-shared/.../ErrorCode.java` | Enum complet (AUTH_*, RES_*, CMD_*, GRP_*, STK_*, SEC_*, SYS_*) |
+| `.gitignore` | Java, Maven, IDE, secrets, logs, Docker |
+| `stockmaster-shared/.../AbstractEntity.java` | id, dateCreation, dateModification, supprime |
+| `stockmaster-shared/.../ApiResponse.java` | Wrapper réponse générique |
+| `stockmaster-shared/.../ProblemResponse.java` | RFC 7807 Problem Details |
+| `stockmaster-shared/.../ErrorCode.java` | 30 codes (AUTH, RES, CMD, GRP, STK, SEC, SYS) |
 | `stockmaster-shared/.../BusinessException.java` | Exception métier avec ErrorCode |
-| `stockmaster-shared/.../EntityNotFoundException.java` | Exception 404 avec nom d'entité et ID |
-| `stockmaster-shared/.../InsufficientStockException.java` | Exception 409 avec liste des ruptures |
-| `stockmaster-shared/.../GlobalExceptionHandler.java` | Handler centralisé (7 cas) — logs, jamais de stack trace exposée |
-| `stockmaster-shared/.../JwtProperties.java` | @ConfigurationProperties pour JWT |
-| `stockmaster-shared/.../CorsProperties.java` | @ConfigurationProperties pour CORS |
-| `stockmaster-shared/.../PaginationProperties.java` | @ConfigurationProperties pour pagination |
-| `stockmaster-shared/.../WebConfig.java` | CORS + JPA Auditing (Instant) |
-| `stockmaster-shared/.../StockMasterApplication.java` | @SpringBootApplication avec @ComponentScan global |
-| `stockmaster-shared/src/main/resources/application.yml` | 3 profils (dev/test/prod), open-in-view: false |
-| 10 modules stubs (auth, groupe, utilisateur, catalogue, tiers, achat, stock, vente, notification, reporting) | Structure standard vide (controller/service/repository/domain/dto/mapper/event) |
-
-### Choix techniques importants
-
-1. **Monolithe modulaire** — Pas de microservices. 11 modules internes isolés par package, communication par événements Spring.
-2. **ErrorCode enum** — Catalogue centralisé unique pour toutes les erreurs métier. Utilisé par BusinessException → GlobalExceptionHandler → RFC 7807.
-3. **Flag JWT version** — jjwt 0.12.6 obligatoire (pas 0.9.x).
-4. **open-in-view: false** — Évite les LazyInitializationException silencieuses.
-5. **Flyway seul maître du schéma** — ddl-auto=none en prod/test, validate en dev.
-6. **Soft delete systématique** — Champ supprime=true sur toutes les entités.
-7. **Stock à la volée** — Pas de colonne dénormalisée, calcul par agrégation depuis mouvement_stock.
+| `stockmaster-shared/.../EntityNotFoundException.java` | 404 avec détails |
+| `stockmaster-shared/.../InsufficientStockException.java` | 409 avec liste ruptures |
+| `stockmaster-shared/.../GlobalExceptionHandler.java` | 9 cas couverts, logs, pas de stack trace |
+| `stockmaster-shared/.../JwtProperties.java` | @ConfigurationProperties JWT |
+| `stockmaster-shared/.../CorsProperties.java` | @ConfigurationProperties CORS |
+| `stockmaster-shared/.../PaginationProperties.java` | @ConfigurationProperties pagination |
+| `stockmaster-shared/.../WebConfig.java` | CORS + JPA Auditing |
+| `stockmaster-shared/.../StockMasterApplication.java` | Point d'entrée, scan global |
+| `application.yml` | 3 profils (dev/test/prod), open-in-view: false |
+| 10 modules stubs | auth, groupe, utilisateur, catalogue, tiers, achat, stock, vente, notification, reporting |
 
 ---
 
-## US-002 — Configuration Flyway et schéma initial
+## US-002 — Configuration Flyway et schéma initial ⏳
 
-**Statut :** ⏳ Non commencé
-**Branche :** N/A
-
----
-
-## US-003 — Gestion centralisée des erreurs (tests)
-
-**Statut :** 🔄 En cours
-**Branche :** `feature/GS-003-centralized-error-handling`
-
-### Ce qui a été fait dans US-001 (partiel)
-- ✅ `ErrorCode` enum complet
-- ✅ `BusinessException`, `EntityNotFoundException`, `InsufficientStockException`
-- ✅ `GlobalExceptionHandler` avec 7 cas couverts
-- ✅ Format RFC 7807
-- ❌ Tests unitaires manquants
-
-### À faire dans cette US
-- [ ] Tests unitaires pour GlobalExceptionHandler (tous les cas)
-- [ ] Tests des exceptions métier
-- [ ] Tests de validation RFC 7807 (stack trace jamais exposée)
+**Branche :** Non commencée
 
 ---
 
-## US-004 — Pipeline CI/CD GitHub Actions
+## US-003 — Gestion centralisée des erreurs (tests) ✅
 
-**Statut :** ⏳ Non commencé
-**Branche :** N/A
+**Branche :** `feature/GS-003-centralized-error-handling` → Pushé ✅  
+**Commit :** `c03bff2` — `test(GS-003): add 18 unit tests for GlobalExceptionHandler`
 
-### Critères
-- [ ] Workflow CI : compilation → tests → JaCoCo ≥ 80% → SonarCloud → JAR
-- [ ] Workflow CD : build Docker → push GHCR → déploiement SSH staging
-- [ ] Services Docker PostgreSQL 16 + Redis 7 dans CI
-- [ ] Stratégie de branches documentée
+### Tests créés
+- `GlobalExceptionHandlerTest.java` — 18 tests unitaires couvrant :
+  - BusinessException (6 statuts HTTP : 400, 401, 403, 404, 409, 429)
+  - EntityNotFoundException (2 variantes : par ID, par champ)
+  - InsufficientStockException (liste des ruptures)
+  - MethodArgumentNotValidException (2 champs en erreur)
+  - AccessDeniedException (403 + code SEC_001)
+  - NoHandlerFoundException (404)
+  - HttpRequestMethodNotSupportedException (405)
+  - HttpMessageNotReadableException (400)
+  - MethodArgumentTypeMismatchException (400 + nom paramètre)
+  - Fallback Exception → 500 sans stack trace
+  - RFC 7807 format complet + pattern du type
 
 ---
 
-## US-005 — Conteneurisation Docker
+## US-004 — Pipeline CI/CD GitHub Actions ✅
 
-**Statut :** ⏳ Non commencé
-**Branche :** N/A
+**Branche :** `feature/GS-004-ci-cd-pipeline` → Pushé ✅  
+**Commits :** `911fb49` puis `a214006`
 
-### Critères
-- [ ] Dockerfile multi-stage (JDK 21 → JRE 21 Alpine)
-- [ ] Utilisateur non-root `stockmaster`
-- [ ] HEALTHCHECK /actuator/health
-- [ ] docker-compose.yml : API + PostgreSQL 16 + Redis 7 + MinIO + MailHog
-- [ ] .env.example (gitignored .env)
-- [ ] Flags JVM conteneur optimisés
+### Fichiers
+| Fichier | Rôle |
+|---|---|
+| `.github/workflows/ci.yml` | Compilation → Tests → JaCoCo ≥ 80% → SonarCloud → OWASP → JAR |
+| `.github/workflows/cd.yml` | Docker build → GHCR push → Déploiement SSH staging |
+
+### Services CI
+- PostgreSQL 16 (healthcheck)
+- Redis 7 (healthcheck)
+
+---
+
+## US-005 — Conteneurisation Docker ✅
+
+**Branche :** `feature/GS-004-ci-cd-pipeline` (même livrable) → Pushé ✅  
+
+### Fichiers
+| Fichier | Rôle |
+|---|---|
+| `Dockerfile` | Multi-stage (JDK 21 builder → JRE 21 Alpine), non-root `stockmaster`, HEALTHCHECK, layered JAR, JVM flags conteneur |
+| `docker-compose.yml` | API + PostgreSQL 16 + Redis 7 + MinIO + MailHog, healthchecks, volumes nommés, réseau dédié |
+| `.env.example` | Template de variables d'environnement (JWT, DB, Redis, MinIO, Mail, CORS) |
+
+---
+
+## Architecture — Arbre complet du projet
+
+```
+gestionulrich/
+├── pom.xml                     ← Parent POM (Spring Boot 3.3.5, 11 modules)
+├── .gitignore
+├── Dockerfile                  ← Multi-stage container
+├── docker-compose.yml          ← Dev environment
+├── .env.example                ← Variables d'environnement
+├── .github/workflows/
+│   ├── ci.yml                  ← CI pipeline
+│   └── cd.yml                  ← CD pipeline
+├── document/                   ← Spécifications
+│   ├── A_JIRA_ET_GIT_FLOW.md
+│   ├── BACKLOG_StockMaster_CM.md
+│   ├── CDCT_StockMaster_CM_Complet_Sections22-30.md
+│   └── implementation.md       ← Ce fichier
+├── stockmaster-shared/         ← Module Shared (infra)
+├── stockmaster-auth/           ← Module Auth
+├── stockmaster-groupe/         ← Module Groupe & Filiales
+├── stockmaster-utilisateur/    ← Module Utilisateurs
+├── stockmaster-catalogue/      ← Module Catalogue
+├── stockmaster-tiers/          ← Module Tiers
+├── stockmaster-achat/          ← Module Achats
+├── stockmaster-stock/          ← Module Stock
+├── stockmaster-vente/          ← Module Ventes
+├── stockmaster-notification/   ← Module Notifications
+└── stockmaster-reporting/      ← Module Reporting
+```
 
 ---
 
@@ -106,6 +127,5 @@
 ```
 type(GS-XXX): description en minuscule
 ```
-
 Types : feat, fix, docs, refactor, test, chore, style
-Scope = ID du ticket Jira (ex: GS-001)
+Scope : GS-001, GS-003, GS-004, GS-005
