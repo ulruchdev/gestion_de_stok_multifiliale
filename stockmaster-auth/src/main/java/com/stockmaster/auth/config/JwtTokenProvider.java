@@ -17,6 +17,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class JwtTokenProvider {
 
+    private static final String CLAIM_USER_ID = "userId";
+
     private final JwtProperties jwtProperties;
 
     private SecretKey getSigningKey() {
@@ -31,7 +33,7 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .subject(userId.toString())
-                .claim("userId", userId)
+                .claim(CLAIM_USER_ID, userId)
                 .claim("entrepriseId", entrepriseId)
                 .claim("groupId", groupId)
                 .claim("role", role)
@@ -50,7 +52,7 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .subject(userId.toString())
-                .claim("userId", userId)
+                .claim(CLAIM_USER_ID, userId)
                 .claim("jti", UUID.randomUUID().toString())
                 .issuer(jwtProperties.getIssuer())
                 .issuedAt(now)
@@ -70,7 +72,7 @@ public class JwtTokenProvider {
 
     public Long getUserIdFromToken(String token) {
         Claims claims = validateToken(token);
-        return claims.get("userId", Long.class);
+        return claims.get(CLAIM_USER_ID, Long.class);
     }
 
     public Long getEntrepriseIdFromToken(String token) {
