@@ -25,6 +25,7 @@ buildNumber.properties
 .idea/*
 !.idea/icon.png
 !.idea/runConfigurations/
+document/.idea/*
 *.iml
 *.ipr
 *.iws
