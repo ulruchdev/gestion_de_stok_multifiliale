@@ -321,12 +321,46 @@ Checkout → Build JAR → Login GHCR → Docker metadata
 
 ---
 
-## US-007 — Inscription — Groupe multi-sites 🔜
+## US-007 — Inscription — Groupe multi-sites ✅
 
-> **Statut :** NON COMMENCÉ
+> **Statut :** TERMINÉ
+> **Branche :** `feature/GS-007-inscription-groupe`
 > **Priorité :** P0 | **Sprint :** 2
 > **Endpoint :** `POST /api/v1/auth/inscription/groupe`
-> **Dépendance :** US-006 doit être mergé (même pattern que US-006)
+> **Fichiers créés/modifiés :** 7
+
+### Détail des fichiers
+
+| Fichier | Changement |
+|---|---|
+| `InscriptionGroupeRequest.java` | 🆕 DTO : nomGroupe, villesiege, nif (opt.), telephone, emailEntreprise, prenom, nom, emailAdmin, motDePasse |
+| `AuthMapper.java` | 📝 Nouveau mapping `toEntrepriseFromGroupe()` avec NIF, téléphone, emailEntreprise |
+| `AuthService.java` | 📝 Nouvelle méthode `inscrireGroupe()` |
+| `AuthServiceImpl.java` | 📝 Création atomique TenantGroup (limiteFiliales=5) → Entreprise (siège) → Utilisateur ADMIN_GROUPE |
+| `AuthController.java` | 📝 Nouvel endpoint `POST /api/v1/auth/inscription/groupe` |
+| `AuthServiceImplTest.java` | 🆕 9 tests (2 inscription unique + 2 groupe + 5 login) |
+| `AuthControllerTest.java` | 🆕 18 tests (6 unique + 6 groupe + 6 login) |
+| `AuthTestApplication.java` | 🆕 Configuration test légère |
+| `stockmaster-auth/pom.xml` | 📝 Ajout `spring-security-test` |
+
+### Logique métier
+
+1. Vérification unicité `emailAdmin` → `BusinessException(EMAIL_ALREADY_EXISTS)`
+2. Création atomique `@Transactional` : `TenantGroup` (plan GRATUIT, 5 filiales) → `Entreprise` (type MERE, NIF, téléphone) → `Utilisateur` (rôle ADMIN_GROUPE)
+3. Mot de passe haché avec BCrypt
+4. Publication événement `InscriptionSuccessEvent` (email de bienvenue)
+5. Message : "Votre groupe a été créé. Créez votre première filiale depuis le tableau de bord."
+
+### Tests (27)
+
+| Catégorie | Tests |
+|---|---|
+| AuthServiceImplTest — inscription unique | 2 (succès + email existant) |
+| AuthServiceImplTest — inscription groupe | 2 (succès avec NIF + email admin existant) |
+| AuthServiceImplTest — login | 5 (succès + email inconnu + mdp faux + compte désactivé + groupe suspendu) |
+| AuthControllerTest — inscription unique | 6 (201 + 4×400 validation + 409 doublon) |
+| AuthControllerTest — inscription groupe | 6 (201 + 4×400 validation + 409 doublon) |
+| AuthControllerTest — login | 6 (200 + 2×400 validation + 401 + 2×403) |
 
 ---
 
@@ -487,7 +521,7 @@ Ces fichiers `.idea/` (IDE IntelliJ) ont été versionnés par erreur dans le co
 | **US-004** | CI/CD pipelines | ✅ Terminé | feature/GS-004 | `e74b481` + `ad86aeb` | ✅ | 3 | +223 |
 | **US-005** | Docker + docker-compose | ✅ Terminé | feature/GS-004 | `911fb49` | ✅ | 3 | +213 |
 | **US-006** | Inscription entreprise unique | ✅ Terminé | feature/GS-006 | `9fed1df` | ✅ | 17 | +500 |
-| **US-007** | Inscription groupe multi-sites | 🔜 Non commencé | — | — | — | — | — |
+| **US-007** | Inscription groupe multi-sites | ✅ Terminé | feature/GS-007 | — | 🚫 | 7 | +300 |
 | **US-008** | Connexion JWT | ✅ Terminé | feature/GS-006 | `9fed1df` | ✅ | 7 | +457 |
 | **US-009** | Refresh token | 🔜 Non commencé | — | — | — | — | — |
 | **US-010** | Déconnexion | 🔜 Non commencé | — | — | — | — | — |
@@ -511,14 +545,15 @@ Ces fichiers `.idea/` (IDE IntelliJ) ont été versionnés par erreur dans le co
 
 | Métrique | Valeur |
 |---|---|
-| US terminées | 6 sur 75 (US-001, 002, 003, 004, 005, 006, 008) |
+| US terminées | 7 sur 75 (US-001 à US-008) |
 | US en cours | 0 |
 | US non commencées | 68 |
 | Total commits | 8 |
-| Total fichiers créés | ~59 |
-| Total lignes de code | ~7 500 |
-| Branches créées | 6 |
-| Branches poussées | 5 (sur 6) |
+| Total fichiers créés | ~66 |
+| Total lignes de code | ~8 000 |
+| Tests unitaires | **27** (18 shared + 3 intégration + 9 auth service + 18 auth contrôleur) |
+| Branches créées | 7 |
+| Branches poussées | 5 (sur 7) |
 | Modules fonctionnels vides | 9 sur 11 |
 | Fichiers en attente (staged) | 6 suppressions (fichiers IDE) |
 | Fichiers untracked | 1 (`sonar-project.properties`) |

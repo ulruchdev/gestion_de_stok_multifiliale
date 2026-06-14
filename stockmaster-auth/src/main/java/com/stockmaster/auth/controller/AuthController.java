@@ -1,6 +1,7 @@
 package com.stockmaster.auth.controller;
 
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
+import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
@@ -28,6 +29,18 @@ public class AuthController {
         log.debug("Inscription entreprise unique reçue pour: {}", request.getEmail());
 
         InscriptionResponse response = authService.inscrireEntrepriseUnique(request);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(response, response.getMessage()));
+    }
+
+    @PostMapping("/inscription/groupe")
+    public ResponseEntity<ApiResponse<InscriptionResponse>> inscrireGroupe(
+            @Valid @RequestBody InscriptionGroupeRequest request) {
+
+        log.debug("Inscription groupe reçue pour: {}", request.getEmailAdmin());
+
+        InscriptionResponse response = authService.inscrireGroupe(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(response, response.getMessage()));
