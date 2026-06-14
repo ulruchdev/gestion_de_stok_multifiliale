@@ -551,10 +551,10 @@ Ces fichiers `.idea/` (IDE IntelliJ) ont été versionnés par erreur dans le co
 | Total commits | 8 |
 | Total fichiers créés | ~66 |
 | Total lignes de code | ~8 000 |
-| Tests unitaires | **27** (18 shared + 3 intégration + 9 auth service + 18 auth contrôleur) |
+| Tests unitaires | **48** (18 shared + 3 intégration + 9 auth service + 18 auth contrôleur) |
 | Branches créées | 7 |
 | Branches poussées | 5 (sur 7) |
-| Modules fonctionnels vides | 9 sur 11 |
+| Modules avec code + tests | 2 sur 11 (shared + auth) |
 | Fichiers en attente (staged) | 6 suppressions (fichiers IDE) |
 | Fichiers untracked | 1 (`sonar-project.properties`) |
 
