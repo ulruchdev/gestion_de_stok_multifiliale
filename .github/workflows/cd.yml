@@ -66,6 +66,7 @@ jobs:
 
       - name: Deploy to staging server
         if: github.ref == 'refs/heads/main'
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.STAGING_HOST }}
