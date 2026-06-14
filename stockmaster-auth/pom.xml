@@ -14,8 +14,6 @@
     <name>StockMaster CM — Auth (authentification &amp; accès)</name>
     <dependencies>
         <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-shared</artifactId></dependency>
-
-        <!-- Spring Security Test (pour .with(csrf()) dans les tests contrôleurs) -->
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
