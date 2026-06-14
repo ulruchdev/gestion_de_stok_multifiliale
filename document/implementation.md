@@ -515,11 +515,12 @@ Ces fichiers `.idea/` (IDE IntelliJ) ont été versionnés par erreur dans le co
 | US en cours | 0 |
 | US non commencées | 68 |
 | Total commits | 8 |
-| Total fichiers créés | ~59 |
-| Total lignes de code | ~7 500 |
-| Branches créées | 6 |
-| Branches poussées | 5 (sur 6) |
-| Modules fonctionnels vides | 9 sur 11 |
+| Total fichiers créés | ~65 |
+| Total lignes de code | ~8 500 |
+| Tests unitaires | **41** (18 shared + 3 intégration + 7 auth service + 13 auth contrôleur) |
+| Branches créées | 7 (feature/GS-006-008-auth-tests) |
+| Branches poussées | 5 (sur 7) |
+| Modules avec code + tests | 2 sur 11 (shared + auth) |
 | Fichiers en attente (staged) | 6 suppressions (fichiers IDE) |
 | Fichiers untracked | 1 (`sonar-project.properties`) |
 
