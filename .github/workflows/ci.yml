@@ -110,6 +110,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-sonar
 
+      - name: Download JaCoCo coverage report from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: jacoco-report
+          path: .
+
       - name: SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
