@@ -123,6 +123,8 @@ curl http://localhost:8080/actuator/health
 | [`document/BACKLOG_StockMaster_CM.md`](document/BACKLOG_StockMaster_CM.md) | Backlog produit complet (75 US, 267 story points) |
 | [`document/CDCT_StockMaster_CM_Complet_Sections22-30.md`](document/CDCT_StockMaster_CM_Complet_Sections22-30.md) | Cahier des Charges Techniques |
 | [`document/A_JIRA_ET_GIT_FLOW.md`](document/A_JIRA_ET_GIT_FLOW.md) | Workflow Jira & Git Flow |
+| [`document/strategie_test.md`](document/strategie_test.md) | Stratégie de test — commandes pré-push, Swagger, pipeline |
+| [`document/test_postman.md`](document/test_postman.md) | Collection Postman officielle — à maintenir comme `implementation.md` |
 | [`document/analyse_fonctionnelle_stockmaster_cm (1).md`](document/analyse_fonctionnelle_stockmaster_cm%20%281%29.md) | Analyse fonctionnelle |
 | Modules | Voir chaque `stockmaster-*/README.md` |
 
@@ -164,13 +166,17 @@ gestionulrich/
 
 | Métrique | Valeur |
 |---|---|
-| User Stories terminées | 7 sur 75 |
-| Modules avec code | 2 sur 11 |
-| Commits | 12 |
+| User Stories terminées | 7 sur 75 (US-001 à 006, 008) |
+| Modules avec code | 2 sur 11 (shared + auth) |
+| Commits (sur main) | 24 |
 | Lignes de code | ~8 500 |
 | Tests unitaires | 18 |
+| Pipeline CI | ✅ Compilation + Tests + SonarCloud + JAR |
+| Qualité SonarCloud | ✅ Analyse active (org: ulruchdev) |
 
 > Voir [`document/implementation.md`](document/implementation.md) pour le détail complet par US.
+>
+> Le projet est en phase **Sprint 1-2 terminé** : fondations techniques + authentification de base mergeés dans `main`.
 
 ---
 

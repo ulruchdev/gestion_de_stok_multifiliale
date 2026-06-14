@@ -98,18 +98,6 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Testcontainers PostgreSQL (pour les tests d'intégration) -->
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>postgresql</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>testcontainers</artifactId>
-            <scope>test</scope>
-        </dependency>
-
         <!-- Lettuce (Redis client) est inclus via spring-boot-starter-data-redis -->
     </dependencies>
 
@@ -121,6 +109,11 @@
                 <configuration>
                     <skip>true</skip>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>
