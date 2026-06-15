@@ -8,6 +8,7 @@ WORKDIR /app
 # Copy Maven wrapper & pom files
 COPY .mvn .mvn
 COPY mvnw pom.xml ./
+RUN chmod +x mvnw
 COPY stockmaster-shared/pom.xml stockmaster-shared/
 COPY stockmaster-auth/pom.xml stockmaster-auth/
 COPY stockmaster-groupe/pom.xml stockmaster-groupe/

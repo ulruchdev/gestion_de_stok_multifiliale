@@ -86,7 +86,7 @@ jobs:
 
       - name: Integration test — Vérifier que l'application démarre
         run: |
-          java -jar stockmaster-shared/target/*.jar --spring.profiles.active=test > /tmp/app.log 2>&1 &
+          mvn spring-boot:run -pl stockmaster-shared -q > /tmp/app.log 2>&1 &
           APP_PID=$!
           echo "PID application : $APP_PID"
           echo "⏳ Attente du démarrage (polling toutes les 5s, timeout 120s)..."
