@@ -11,27 +11,37 @@ import com.stockmaster.auth.domain.enums.TypeEntreprise;
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
 import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
+import com.stockmaster.auth.dto.request.RefreshTokenRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
+import com.stockmaster.auth.dto.response.RefreshTokenResponse;
 import com.stockmaster.auth.event.InscriptionSuccessEvent;
 import com.stockmaster.auth.mapper.AuthMapper;
 import com.stockmaster.auth.repository.EntrepriseRepository;
 import com.stockmaster.auth.repository.TenantGroupRepository;
 import com.stockmaster.auth.repository.UtilisateurRepository;
 import com.stockmaster.auth.service.AuthService;
+import com.stockmaster.shared.config.JwtProperties;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
+
+    private static final String REFRESH_KEY_PREFIX = "refresh:";
 
     private final TenantGroupRepository tenantGroupRepository;
     private final EntrepriseRepository entrepriseRepository;
@@ -40,6 +50,8 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthMapper authMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final StringRedisTemplate redisTemplate;
+    private final JwtProperties jwtProperties;
 
     // ========================================================================
     // US-006 — Inscription entreprise unique
@@ -211,14 +223,88 @@ public class AuthServiceImpl implements AuthService {
                 userId, entrepriseId, groupId, role, scope);
         String refreshToken = jwtTokenProvider.generateRefreshToken(userId);
 
+        // Stocker le refresh token dans Redis avec clé refresh:{userId}
+        String redisKey = REFRESH_KEY_PREFIX + userId;
+        redisTemplate.opsForValue().set(redisKey, refreshToken,
+                jwtProperties.getRefreshTokenExpiration(), TimeUnit.SECONDS);
+
         log.info("Connexion réussie — userId={}, role={}", userId, role);
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
-                .expiresIn(900)
+                .expiresIn(jwtProperties.getAccessTokenExpiration())
                 .role(role)
                 .scope(scope)
+                .build();
+    }
+
+    // ========================================================================
+    // US-009 — Refresh token
+    // ========================================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public RefreshTokenResponse refreshAccessToken(RefreshTokenRequest request) {
+
+        Long userId;
+        try {
+            userId = jwtTokenProvider.getUserIdFromToken(request.getRefreshToken());
+        } catch (ExpiredJwtException e) {
+            log.warn("Refresh token expiré");
+            throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+        } catch (JwtException e) {
+            log.warn("Refresh token invalide: {}", e.getMessage());
+            throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+        }
+
+        // Vérifier que le refresh token existe dans Redis et correspond
+        String redisKey = REFRESH_KEY_PREFIX + userId;
+        String storedRefreshToken = redisTemplate.opsForValue().get(redisKey);
+
+        if (storedRefreshToken == null) {
+            log.warn("Refresh token non trouvé dans Redis pour userId={}", userId);
+            throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+        }
+
+        if (!storedRefreshToken.equals(request.getRefreshToken())) {
+            log.warn("Refresh token ne correspond pas pour userId={}", userId);
+            throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+        }
+
+        // Charger l'utilisateur
+        Utilisateur utilisateur = utilisateurRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("Utilisateur introuvable pour refresh token: userId={}", userId);
+                    return new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+                });
+
+        // Vérifications de sécurité
+        if (!Boolean.TRUE.equals(utilisateur.getActif())) {
+            log.warn("Compte désactivé lors du refresh: userId={}", userId);
+            throw new BusinessException(ErrorCode.AUTH_ACCOUNT_DISABLED);
+        }
+
+        TenantGroup groupe = utilisateur.getEntreprise().getGroupe();
+        if (!Boolean.TRUE.equals(groupe.getActif())) {
+            log.warn("Groupe suspendu lors du refresh: groupId={}", groupe.getId());
+            throw new BusinessException(ErrorCode.AUTH_TENANT_SUSPENDED);
+        }
+
+        // Générer un nouveau access token avec les mêmes claims
+        Long entrepriseId = utilisateur.getEntreprise().getId();
+        Long groupId = groupe.getId();
+        String role = utilisateur.getRole().name();
+        String scope = utilisateur.getScope().name();
+
+        String newAccessToken = jwtTokenProvider.generateAccessToken(
+                userId, entrepriseId, groupId, role, scope);
+
+        log.info("Refresh token accepté — nouveau accessToken émis pour userId={}", userId);
+
+        return RefreshTokenResponse.builder()
+                .accessToken(newAccessToken)
+                .expiresIn(jwtProperties.getAccessTokenExpiration())
                 .build();
     }
 }

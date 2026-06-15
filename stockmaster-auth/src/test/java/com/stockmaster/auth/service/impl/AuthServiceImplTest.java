@@ -11,15 +11,19 @@ import com.stockmaster.auth.domain.enums.TypeEntreprise;
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
 import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
+import com.stockmaster.auth.dto.request.RefreshTokenRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
+import com.stockmaster.auth.dto.response.RefreshTokenResponse;
 import com.stockmaster.auth.event.InscriptionSuccessEvent;
 import com.stockmaster.auth.mapper.AuthMapper;
 import com.stockmaster.auth.repository.EntrepriseRepository;
 import com.stockmaster.auth.repository.TenantGroupRepository;
 import com.stockmaster.auth.repository.UtilisateurRepository;
+import com.stockmaster.shared.config.JwtProperties;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
+import io.jsonwebtoken.ExpiredJwtException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -31,15 +35,18 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AuthServiceImpl — Tests unitaires")
@@ -52,6 +59,9 @@ class AuthServiceImplTest {
     @Mock private JwtTokenProvider jwtTokenProvider;
     @Mock private AuthMapper authMapper;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private StringRedisTemplate redisTemplate;
+    @Mock private ValueOperations<String, String> valueOperations;
+    @Mock private JwtProperties jwtProperties;
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -62,6 +72,7 @@ class AuthServiceImplTest {
     private InscriptionEntrepriseUniqueRequest inscriptionUniqueRequest;
     private InscriptionGroupeRequest inscriptionGroupeRequest;
     private LoginRequest loginRequest;
+    private RefreshTokenRequest refreshTokenRequest;
 
     private TenantGroup savedGroupe;
     private Entreprise savedEntreprise;
@@ -94,6 +105,10 @@ class AuthServiceImplTest {
         loginRequest = LoginRequest.builder()
                 .email("jean.kamga@epicerie.cm")
                 .motDePasse("MotDePasse@2026")
+                .build();
+
+        refreshTokenRequest = RefreshTokenRequest.builder()
+                .refreshToken("valid-refresh-token")
                 .build();
 
         savedGroupe = TenantGroup.builder()
@@ -311,6 +326,9 @@ class AuthServiceImplTest {
             when(jwtTokenProvider.generateAccessToken(1L, 1L, 1L, "ADMIN_GROUPE", "GROUPE"))
                     .thenReturn("access-token");
             when(jwtTokenProvider.generateRefreshToken(1L)).thenReturn("refresh-token");
+            when(jwtProperties.getRefreshTokenExpiration()).thenReturn(604800L);
+            when(jwtProperties.getAccessTokenExpiration()).thenReturn(900L);
+            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
             // Act
             LoginResponse response = authService.login(loginRequest);
@@ -375,6 +393,95 @@ class AuthServiceImplTest {
             assertThatThrownBy(() -> authService.login(loginRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_TENANT_SUSPENDED);
+        }
+    }
+
+    // ========================================================================
+    // US-009 — Refresh token
+    // ========================================================================
+
+    @Nested
+    @DisplayName("Refresh token (US-009)")
+    class RefreshToken {
+
+        @BeforeEach
+        void setUp() {
+            lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+            lenient().when(jwtProperties.getAccessTokenExpiration()).thenReturn(900L);
+        }
+
+        @Test
+        @DisplayName("✅ Retourne RefreshTokenResponse avec nouveau accessToken quand refresh token valide")
+        void shouldReturnNewAccessTokenWhenRefreshTokenValid() {
+            // Arrange
+            when(jwtTokenProvider.getUserIdFromToken("valid-refresh-token")).thenReturn(1L);
+            when(valueOperations.get("refresh:1")).thenReturn("valid-refresh-token");
+            when(utilisateurRepository.findById(1L)).thenReturn(Optional.of(savedUtilisateur));
+            when(jwtTokenProvider.generateAccessToken(1L, 1L, 1L, "ADMIN_GROUPE", "GROUPE"))
+                    .thenReturn("new-access-token");
+
+            // Act
+            RefreshTokenResponse response = authService.refreshAccessToken(refreshTokenRequest);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(response.getAccessToken()).isEqualTo("new-access-token");
+            assertThat(response.getExpiresIn()).isEqualTo(900);
+
+            verify(redisTemplate.opsForValue()).get("refresh:1");
+        }
+
+        @Test
+        @DisplayName("❌ Lève AUTH_INVALID_CREDENTIALS quand le refresh token n'est pas dans Redis")
+        void shouldThrowWhenRefreshTokenNotFoundInRedis() {
+            // Arrange
+            when(jwtTokenProvider.getUserIdFromToken("valid-refresh-token")).thenReturn(1L);
+            when(valueOperations.get("refresh:1")).thenReturn(null);
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.refreshAccessToken(refreshTokenRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_INVALID_CREDENTIALS);
+        }
+
+        @Test
+        @DisplayName("❌ Lève AUTH_INVALID_CREDENTIALS quand le refresh token en Redis ne correspond pas")
+        void shouldThrowWhenRefreshTokenMismatch() {
+            // Arrange
+            when(jwtTokenProvider.getUserIdFromToken("valid-refresh-token")).thenReturn(1L);
+            when(valueOperations.get("refresh:1")).thenReturn("different-refresh-token");
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.refreshAccessToken(refreshTokenRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_INVALID_CREDENTIALS);
+        }
+
+        @Test
+        @DisplayName("❌ Lève AUTH_INVALID_CREDENTIALS quand l'utilisateur n'existe pas (userId du token)")
+        void shouldThrowWhenUserNotFound() {
+            // Arrange
+            when(jwtTokenProvider.getUserIdFromToken("valid-refresh-token")).thenReturn(999L);
+            when(valueOperations.get("refresh:999")).thenReturn("valid-refresh-token");
+            when(utilisateurRepository.findById(999L)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.refreshAccessToken(refreshTokenRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_INVALID_CREDENTIALS);
+        }
+
+        @Test
+        @DisplayName("❌ Lève AUTH_INVALID_CREDENTIALS quand le token JWT est expiré")
+        void shouldThrowWhenRefreshTokenExpired() {
+            // Arrange
+            when(jwtTokenProvider.getUserIdFromToken("valid-refresh-token"))
+                    .thenThrow(new io.jsonwebtoken.ExpiredJwtException(null, null, "Token expiré"));
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.refreshAccessToken(refreshTokenRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_INVALID_CREDENTIALS);
         }
     }
 }

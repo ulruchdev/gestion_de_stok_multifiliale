@@ -329,7 +329,35 @@ main ─────────────────────────
 
 ---
 
-## US-009 — Refresh token 🔜
+## US-009 — Refresh token 🚧
+
+> **Statut :** IMPLÉMENTÉ — En attente de merge
+> **Branche :** `feature/GS-009-refresh-token`
+> **Priorité :** P0 | **Sprint :** 2 | **Points :** 2
+> **Endpoint :** `POST /api/v1/auth/refresh`
+> **Fichiers créés/modifiés :** 7
+
+### Détail des fichiers
+
+| Fichier | Changement |
+|---|---|
+| `RefreshTokenRequest.java` | 🆕 DTO : refreshToken (NotBlank) |
+| `RefreshTokenResponse.java` | 🆕 DTO : accessToken, expiresIn |
+| `AuthService.java` | 📝 Nouvelle méthode `refreshAccessToken()` |
+| `AuthServiceImpl.java` | 📝 Injection `StringRedisTemplate` + `JwtProperties` ; stockage Redis du refresh token dans `login()` ; implémentation de `refreshAccessToken()` avec validation token JWT, vérification Redis, vérification compte/groupe actif, génération nouveau token |
+| `AuthController.java` | 📝 Nouvel endpoint `POST /api/v1/auth/refresh` |
+| `AuthServiceImplTest.java` | 🆕 5 tests refresh (token valide + non trouvé Redis + mismatch + utilisateur introuvable + token expiré) |
+| `AuthControllerTest.java` | 🆕 4 tests refresh endpoint (200 OK + 400 blank + 401 invalid + 403 disabled) |
+
+### Logique métier
+
+1. Extraction `userId` du refresh token JWT → `JwtTokenProvider.getUserIdFromToken()`
+2. Vérification en Redis clé `refresh:{userId}` → existence + correspondance
+3. Chargement utilisateur + vérification compte actif + groupe actif
+4. Génération nouveau access token avec les mêmes claims (rôle, scope)
+5. L'ancien access token reste valide jusqu'à sa propre expiration (15 min)
+6. Token invalide/expiré/absent de Redis → `401 UNAUTHORIZED` → client doit se reconnecter
+
 ## US-010 — Déconnexion 🔜
 ## US-011 — Mot de passe oublié 🔜
 ## US-012 — Réinitialisation mot de passe 🔜
@@ -372,7 +400,7 @@ main ─────────────────────────
 | **US-006** | Inscription entreprise unique | ✅ Terminé | feature/GS-006 | `9fed1df` | ✅ | 17 | +500 |
 | **US-007** | Inscription groupe multi-sites | ✅ Terminé | feature/GS-007 | — | ✅ | 9 | +350 |
 | **US-008** | Connexion JWT | ✅ Terminé | feature/GS-006 | `9fed1df` | ✅ | 7 | +457 |
-| **US-009** | Refresh token | 🔜 Non commencé | — | — | — | — | — |
+| **US-009** | Refresh token | 🚧 Implémenté (branche) | feature/GS-009-refresh-token | — | — | 7 | +180 |
 | **US-010** | Déconnexion | 🔜 Non commencé | — | — | — | — | — |
 | **US-011** | Mot de passe oublié | 🔜 Non commencé | — | — | — | — | — |
 | **US-012** | Réinitialisation mot de passe | 🔜 Non commencé | — | — | — | — | — |
@@ -394,14 +422,14 @@ main ─────────────────────────
 
 | Métrique | Valeur |
 |---|---|
-| US terminées | 7 sur 75 (US-001 à US-008) |
-| US en cours | 0 |
-| US non commencées | 68 |
+| US terminées | 7 sur 75 (US-001 à US-008) + 1 en attente de merge (US-009) |
+| US en cours | US-009 (en attente push + PR) |
+| US non commencées | 67 |
 | Total commits (sur main) | 24 |
-| Total fichiers créés/modifiés | ~85 |
-| Total lignes de code | ~8 500 |
-| Tests unitaires | **48** (18 shared + 3 intégration + 9 auth service + 18 auth contrôleur) |
-| Branches créées | 7 (toutes mergées) |
+| Total fichiers créés/modifiés | ~92 |
+| Total lignes de code | ~9 700 |
+| Tests unitaires | **57** (18 shared + 3 intégration + 36 auth : 14 service + 22 contrôleur) |
+| Branches créées | 8 (7 mergées + 1 active: feature/GS-009-refresh-token) |
 | Modules avec code + tests | 2 sur 11 (shared + auth) |
 | Modules vides | 9 sur 11 |
 

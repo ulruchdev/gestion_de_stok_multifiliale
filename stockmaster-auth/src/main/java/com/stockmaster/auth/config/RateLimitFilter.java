@@ -31,12 +31,15 @@ public class RateLimitFilter implements Filter {
         HttpServletRequest req = (HttpServletRequest) servletRequest;
         HttpServletResponse res = (HttpServletResponse) servletResponse;
 
-        if (!req.getRequestURI().equals("/api/v1/auth/login")) {
+        String uri = req.getRequestURI();
+
+        if (!uri.equals("/api/v1/auth/login") && !uri.equals("/api/v1/auth/refresh")) {
             chain.doFilter(req, res);
             return;
         }
 
-        String key = "rate_limit:login:" + getClientIp(req);
+        String prefix = uri.contains("/login") ? "login" : "refresh";
+        String key = "rate_limit:" + prefix + ":" + getClientIp(req);
         String attemptsStr = redisTemplate.opsForValue().get(key);
         int attempts = (attemptsStr != null) ? Integer.parseInt(attemptsStr) : 0;
 
