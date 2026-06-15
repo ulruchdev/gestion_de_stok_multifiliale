@@ -4,57 +4,78 @@
 > **Stack :** Java 21, Spring Boot 3.3.5, PostgreSQL 16, Redis 7, MinIO
 > **Architecture :** Monolithe modulaire (11 modules)
 > **Version :** 1.0.0-SNAPSHOT
-> **Dernière mise à jour :** 13 juin 2026 — 03:02 UTC+2
+> **Dernière mise à jour :** 14 juin 2026
 
 ---
 
 ## 📊 Vue d'ensemble Git
 
 ```
-e47186c (master) Initialisation du projet Spring Boot
-    │
-    ├── 0357763  (feature/GS-001)   docs: journal implémentation       ← PUSHÉ ✅
-    │
-    ├── c03bff2  (feature/GS-003)   test: 18 tests GlobalExceptionHandler ← PUSHÉ ✅
-    │
-    ├── 911fb49  (feature/GS-005)   feat: Docker + docker-compose      ← PUSHÉ ✅
-    │
-    ├── e74b481  (feature/GS-004)   feat: CI/CD pipelines              ← PUSHÉ ✅
-    │   └── ad86aeb  (same branch)  docs: update journal US-003/004/005 ← PUSHÉ ✅
-    │
-    ├── 9fed1df  (feature/GS-006)   feat: JWT Auth (US-006 + US-008)  ← PUSHÉ ✅
-    │
-    └── a7d76eb  (feature/GS-002)   feat: Flyway migrations V1-V3     ← 🚫 NON PUSHÉ
-            (HEAD actuel)
+main ────────────────────────────────────────────────────────────────────── (HEAD)
+  │
+  ├── GS-001 (Initial Spring Boot)     ──── e47186c ──── 44 fichiers  ──── ✅ Merged
+  │
+  ├── GS-003 (Error Handling + Tests)  ──── c03bff2 ──── 1 fichier    ──── ✅ Merged
+  │
+  ├── GS-004 (CI/CD + Docker)          ──── e74b481 ──── 3 fichiers   ──── ✅ Merged
+  │     └── Fix SonarCloud projectKey  ──── 6dbb23a ──── 2 fichiers   ──── ✅ Cherry-pick
+  │     └── Fix qualitygate.wait       ──── b62c95f ──── 1 fichier    ──── ✅ Cherry-pick
+  │     └── Fix install cmd            ──── 8edfda6 ──── 1 fichier    ──── ✅ Cherry-pick
+  │     └── Fix skip repackage shared  ──── 95be774 ──── 1 fichier    ──── ✅ Cherry-pick
+  │     └── Remove OWASP from CI       ──── df5759f ──── 1 fichier    ──── ✅ Cherry-pick
+  │     └── Exclure SQL migrations     ──── 02b441c ──── 1 fichier    ──── ✅ Direct
+  │
+  ├── GS-002 (Flyway Migrations)       ──── a7d76eb ──── 6 fichiers   ──── ✅ Merged
+  │     └── (tous les mêmes fixes ci-dessus, cherry-pickés depuis GS-004)
+  │
+  └── GS-006 (JWT Auth)                ──── 9fed1df ──── 24 fichiers  ──── ✅ Merged
 ```
 
 ### Branches
 
-| Branche locale | Branche distante | Statut |
-|---|---|---|
-| `master` | `origin/master` | ✅ Synchronisé |
-| `feature/GS-001-initialize-spring-boot-project` | `origin/feature/GS-001-...` | ✅ Pushé |
-| `feature/GS-003-centralized-error-handling` | `origin/feature/GS-003-...` | ✅ Pushé |
-| `feature/GS-004-ci-cd-pipeline` | `origin/feature/GS-004-...` | ✅ Pushé |
-| `feature/GS-006-jwt-auth` | `origin/feature/GS-006-...` | ✅ Pushé |
-| `feature/GS-002-flyway-migrations` *(HEAD)* | *aucune* | 🚫 **Non pushée** |
+| Branche | Statut |
+|---|---|
+| `main` | ✅ Branche de référence — tout est mergé |
+| `feature/GS-001-initialize-spring-boot-project` | ✅ Mergée dans `main` |
+| `feature/GS-002-flyway-migrations` | ✅ Mergée dans `main` (PR #3) |
+| `feature/GS-003-centralized-error-handling` | ✅ Mergée dans `main` (PR #1) |
+| `feature/GS-004-ci-cd-pipeline` | ✅ Mergée dans `main` (PR #2 → #4) |
+| `feature/GS-006-jwt-auth` | ✅ Mergée dans `main` |
 
 ---
 
-## 📜 Chronologie des commits
+## 📜 Chronologie des commits (sur `main`)
 
-| # | Horaire | Hash (court) | Auteur | Message | Fichiers | Lignes | Pushé ? |
-|---|---|---|---|---|---|---|---|
-| 1 | 01:55 | `e47186c` | ulrich dev | `feat(GS-001): initialize Spring Boot modular project structure` | 44 créés | ~+5 389 | ✅ |
-| 2 | 02:11 | `0357763` | ulrich dev | `docs(GS-001): add implementation journal with US-001 status and upcoming US plan` | 1 modifié | +110 | ✅ |
-| 3 | 02:23 | `c03bff2` | ulrich dev | `test(GS-003): add 18 unit tests for GlobalExceptionHandler covering all exception types` | 1 créé | +203 | ✅ |
-| 4 | 02:28 | `911fb49` | ulrich dev | `feat(GS-005): add Docker multi-stage containerization and docker-compose environment` | 3 créés | +213 | ✅ |
-| 5 | 02:30 | `e74b481` | ulrich dev | `feat(GS-004): add CI/CD pipeline with GitHub Actions, JaCoCo, SonarCloud` | 2 créés | +223 | ✅ |
-| 6 | 02:31 | `ad86aeb` | ulrich dev | `docs(GS-004): update implementation journal with US-003/004/005 status` | 1 modifié | +90/-70 | ✅ |
-| 7 | 02:51 | `9fed1df` | ulrich dev | `feat(GS-006): implement JWT auth - inscription entreprise unique (US-006) and login (US-008)` | 24 créés | +957 | ✅ |
-| 8 | 03:02 | `a7d76eb` | ulrich dev | `feat(GS-002): add Flyway migrations V1-V3 with all tables, indexes, triggers, and rollback scripts` | 6 créés | +412 | 🚫 |
+| # | Hash | Message | Fichiers | Push |
+|---|---|---|---|---|
+| 1 | `e47186c` | `feat(GS-001): initialize Spring Boot modular project structure` | 44 créés | ✅ |
+| 2 | `0357763` | `docs(GS-001): add implementation journal with US-001 status` | 1 modifié | ✅ |
+| 3 | `c03bff2` | `test(GS-003): add 18 tests for GlobalExceptionHandler` | 1 créé | ✅ |
+| 4 | `911fb49` | `feat(GS-005): add Docker multi-stage + docker-compose` | 3 créés | ✅ |
+| 5 | `e74b481` | `feat(GS-004): add CI/CD pipelines GitHub Actions + JaCoCo + SonarCloud` | 2 créés | ✅ |
+| 6 | `ad86aeb` | `docs(GS-004): update implementation journal` | 1 modifié | ✅ |
+| 7 | `9fed1df` | `feat(GS-006): implement JWT auth — inscription (US-006) + login (US-008)` | 24 créés | ✅ |
+| 8 | `a7d76eb` | `feat(GS-002): add Flyway migrations V1-V3 + rollbacks` | 6 créés | ✅ |
+| 9 | `15ae97b` | `build(GS-002): add Maven Wrapper for reproducible builds` | 3 créés | ✅ |
+| 10 | `d5a16da` | `ci(GS-002): optimiser job SonarCloud — éviter recompilation` | 1 modifié | ✅ |
+| 11 | `e32193a` | `fix(GS-002): ajout compilation avant SonarCloud + exclusions coverage` | 1 modifié | ✅ |
+| 12 | `c514cf3` | `fix(GS-002): ajout compilation avant SonarCloud + exclusions coverage` | 1 modifié | ✅ |
+| 13 | `498822b` | `fix(GS-002): corriger projectKey (stockmaster-cm → gestion_de_stok_multifiliale)` | 2 modifiés | ✅ |
+| 14 | `6dbb23a` | `fix(GS-002): corriger projectKey SonarCloud` | 2 modifiés | ✅ |
+| 15 | `b62c95f` | `fix(GS-002): remove qualitygate.wait on fresh SonarCloud project` | 1 modifié | ✅ |
+| 16 | `a3c3017` | `fix(GS-002): remove qualitygate.wait on fresh SonarCloud project` | 1 modifié | ✅ |
+| 17 | `8edfda6` | `fix(GS-002): replace compile with install -DskipTests for SonarCloud` | 1 modifié | ✅ |
+| 18 | `a4285c2` | `fix(GS-002): replace compile with install -DskipTests for SonarCloud` | 1 modifié | ✅ |
+| 19 | `95be774` | `fix(GS-002): skip Spring Boot repackage for stockmaster-shared (library module)` | 1 modifié | ✅ |
+| 20 | `318eaa8` | `fix(GS-002): skip Spring Boot repackage for stockmaster-shared (library module)` | 1 modifié | ✅ |
+| 21 | `a6ebc05` | `fix(GS-002): fix SonarCloud warnings — unused import, regex, constant, SQL exlusions` | 4 modifiés | ✅ |
+| 22 | `df5759f` | `ci(GS-002): remove OWASP Dependency Check from CI (401 Sonatype API)` | 1 modifié | ✅ |
+| 23 | `ca031de` | `ci(GS-002): remove OWASP Dependency Check from CI (401 Sonatype API)` | 1 modifié | ✅ |
+| 24 | `02b441c` | `fix(GS-004): exclude SQL migrations from SonarCloud analysis` | 1 modifié | ✅ |
 
-**Total :** 8 commits, **~7 497 lignes** ajoutées, **59 fichiers** créés/modifiés (hors .idea)
+**Total :** 24 commits (22 uniques), + ~8 500 lignes, ~85 fichiers
+
+⚠️ **Modifications locales non commitées :** Suppression Testcontainers, activation JaCoCo
 
 ---
 
@@ -64,72 +85,56 @@ e47186c (master) Initialisation du projet Spring Boot
 
 ## US-001 — Initialisation du projet Spring Boot ✅
 
-> **Statut :** TERMINÉ
-> **Branche :** `feature/GS-001-initialize-spring-boot-project`
+> **Statut :** TERMINÉ — Mergé dans `main`
 > **Commit :** `e47186c`
-> **Push :** ✅ Oui (`origin/master` + `origin/feature/GS-001-...`)
-> **Fichiers créés :** 44 fichiers
 
 ### Fichiers impactés
 
 | Fichier | Rôle |
 |---|---|
 | `pom.xml` | Parent POM Spring Boot 3.3.5, Java 21, 11 modules, dépendances versionnées |
-| `.gitignore` | Java, Maven, IDE, secrets, logs, Docker |
-| `stockmaster-shared/pom.xml` | Module shared (infrastructure commune) |
-| `stockmaster-auth/pom.xml` | Module auth (JWT, inscriptions) |
-| `stockmaster-groupe/pom.xml` | Module groupe & filiales |
-| `stockmaster-utilisateur/pom.xml` | Module utilisateurs & rôles |
-| `stockmaster-catalogue/pom.xml` | Module catalogue (catégories & articles) |
-| `stockmaster-tiers/pom.xml` | Module tiers (clients & fournisseurs) |
-| `stockmaster-achat/pom.xml` | Module achats (commandes fournisseur) |
-| `stockmaster-stock/pom.xml` | Module stock (mouvements, transferts) |
-| `stockmaster-vente/pom.xml` | Module ventes (B2B & caisse) |
-| `stockmaster-notification/pom.xml` | Module notifications & alertes |
-| `stockmaster-reporting/pom.xml` | Module reporting & statistiques |
 | `stockmaster-shared/.../AbstractEntity.java` | Entité abstraite : `id`, `dateCreation`, `dateModification`, `supprime` |
 | `stockmaster-shared/.../ApiResponse.java` | Wrapper réponse générique `ApiResponse<T>` |
 | `stockmaster-shared/.../ProblemResponse.java` | RFC 7807 Problem Details |
 | `stockmaster-shared/.../ErrorCode.java` | 30 codes d'erreur (AUTH_*, RES_*, CMD_*, GRP_*, STK_*, SEC_*, SYS_*) |
 | `stockmaster-shared/.../BusinessException.java` | Exception métier avec ErrorCode |
-| `stockmaster-shared/.../EntityNotFoundException.java` | 404 avec détails (par ID ou par champ) |
+| `stockmaster-shared/.../EntityNotFoundException.java` | 404 avec détails |
 | `stockmaster-shared/.../InsufficientStockException.java` | 409 avec liste des ruptures |
-| `stockmaster-shared/.../GlobalExceptionHandler.java` | Handler global : 9 cas d'erreur, RFC 7807, pas de stack trace |
-| `stockmaster-shared/.../JwtProperties.java` | @ConfigurationProperties JWT (secret, expiration) |
+| `stockmaster-shared/.../GlobalExceptionHandler.java` | Handler global : 9 cas d'erreur, RFC 7807 |
+| `stockmaster-shared/.../JwtProperties.java` | @ConfigurationProperties JWT |
 | `stockmaster-shared/.../CorsProperties.java` | @ConfigurationProperties CORS |
 | `stockmaster-shared/.../PaginationProperties.java` | @ConfigurationProperties pagination |
 | `stockmaster-shared/.../WebConfig.java` | CORS + JPA Auditing |
-| `stockmaster-shared/.../StockMasterApplication.java` | Point d'entrée, scan global `com.stockmaster` |
+| `stockmaster-shared/.../StockMasterApplication.java` | Point d'entrée Spring Boot |
 | `stockmaster-shared/.../application.yml` | 3 profils (dev/test/prod), open-in-view: false |
-| `document/implementation.md` | Ce journal (créé vide) |
-| `document/A_JIRA_ET_GIT_FLOW.md` | Documentation workflow Jira/Git |
-| `document/BACKLOG_StockMaster_CM.md` | Backlog complet (75 US, 267 pts) |
-| `document/CDCT_StockMaster_CM_Complet_Sections22-30.md` | Cahier des Charges Techniques |
-| `document/analyse_fonctionnelle_stockmaster_cm (1).md` | Analyse fonctionnelle |
-| `document/analyse_fonctionnelle_stockmaster_cm.docx` | Analyse fonctionnelle (format Word) |
-| `document/representation_graphique_structure_et_flow.pdf` | Schémas d'architecture |
-| `document/.idea/*` (6 fichiers) | Fichiers IDE IntelliJ *(en cours de suppression)* |
+| `stockmaster-auth/pom.xml` | Module auth |
+| `stockmaster-groupe/pom.xml` | Module groupe |
+| `stockmaster-utilisateur/pom.xml` | Module utilisateurs |
+| `stockmaster-catalogue/pom.xml` | Module catalogue |
+| `stockmaster-tiers/pom.xml` | Module tiers |
+| `stockmaster-achat/pom.xml` | Module achats |
+| `stockmaster-stock/pom.xml` | Module stock |
+| `stockmaster-vente/pom.xml` | Module ventes |
+| `stockmaster-notification/pom.xml` | Module notifications |
+| `stockmaster-reporting/pom.xml` | Module reporting |
 
 ---
 
 ## US-002 — Configuration Flyway et schéma initial ✅
 
-> **Statut :** TERMINÉ
-> **Branche :** `feature/GS-002-flyway-migrations`
+> **Statut :** TERMINÉ — Mergé dans `main`
 > **Commit :** `a7d76eb`
-> **Push :** 🚫 **Non** (branche locale uniquement)
-> **Fichiers créés :** 6
 
 ### Fichiers impactés
 
 | Fichier | Rôle | Lignes |
 |---|---|---|
-| `stockmaster-shared/.../db/migration/V1__init_schema.sql` | Schéma initial : 14 tables avec CHECK, FK, UNIQUE | 277 |
-| `stockmaster-shared/.../db/migration/V1_rollback_init_schema.sql` | Rollback V1 : DROP TABLE inversé | 21 |
-| `stockmaster-shared/.../db/migration/V2__create_indexes.sql` | 12 index de performance (isolation tenant, full-text, login) | 49 |
-| `stockmaster-shared/.../db/migration/V2_rollback_indexes.sql` | Rollback V2 : DROP INDEX inversé | 19 |
+| `stockmaster-shared/.../db/migration/V1__init_schema.sql` | 16 tables avec CHECK, FK, UNIQUE | 277 |
+| `stockmaster-shared/.../db/migration/V1_rollback_init_schema.sql` | Rollback V1 | 21 |
+| `stockmaster-shared/.../db/migration/V2__create_indexes.sql` | 12 index de performance | 49 |
+| `stockmaster-shared/.../db/migration/V2_rollback_indexes.sql` | Rollback V2 | 19 |
 | `stockmaster-shared/.../db/migration/V3__functions_and_triggers.sql` | Trigger `update_date_modification` sur 14 tables + vue matérialisée | 41 |
-| `stockmaster-shared/.../db/migration/V3_rollback_triggers.sql` | Rollback V3 : DROP TRIGGER/VIEW/FUNCTION | 5 |
+| `stockmaster-shared/.../db/migration/V3_rollback_triggers.sql` | Rollback V3 | 5 |
 
 ### Tables créées (V1)
 
@@ -150,24 +155,12 @@ e47186c (master) Initialisation du projet Spring Boot
 15. `mouvement_stock` — Journal des mouvements (6 types)
 16. `notification_alerte` — Alertes de stock
 
-### Configuration (dans `application.yml`)
-
-| Profil | ddl-auto | Flyway | clean-disabled |
-|---|---|---|---|
-| `dev` | validate | enabled | false |
-| `test` | none | enabled | true |
-| `prod` | none | enabled | true |
-
 ---
 
 ## US-003 — Gestion centralisée des erreurs (Tests) ✅
 
-> **Statut :** TERMINÉ
-> **Branche :** `feature/GS-003-centralized-error-handling`
+> **Statut :** TERMINÉ — Mergé dans `main`
 > **Commit :** `c03bff2`
-> **Push :** ✅ Oui (`origin/feature/GS-003-...`)
-> **Fichiers créés :** 1 (+203 lignes)
-> **Contenu :** `GlobalExceptionHandlerTest.java`
 
 ### Tests créés (18 tests unitaires)
 
@@ -189,70 +182,43 @@ e47186c (master) Initialisation du projet Spring Boot
 
 ## US-004 — Pipeline CI/CD GitHub Actions ✅
 
-> **Statut :** TERMINÉ
-> **Branche :** `feature/GS-004-ci-cd-pipeline`
-> **Commits :** `e74b481` (création) + `ad86aeb` (docs)
-> **Push :** ✅ Oui (`origin/feature/GS-004-...`)
-> **Fichiers créés :** 3
+> **Statut :** TERMINÉ — Mergé dans `main`
+> **Commits :** `e74b481` + `ad86aeb` + fixes
 
 ### Fichiers impactés
 
-| Fichier | Rôle | Lignes |
+| Fichier | Rôle |
+|---|---|
+| `.github/workflows/ci.yml` | Compilation → Tests → JaCoCo ≥ 80% → SonarCloud → JAR |
+| `.github/workflows/cd.yml` | Docker build → GHCR push → Déploiement SSH staging |
+| `sonar-project.properties` | Configuration SonarCloud (`ulruchdev` / `gestion_de_stok_multifiliale`) |
+
+### Corrections CI appliquées (cumulatives)
+
+| # | Correctif | Raison |
 |---|---|---|
-| `.github/workflows/ci.yml` | Compilation → Tests → JaCoCo ≥ 80% → SonarCloud → OWASP → JAR | 132 |
-| `.github/workflows/cd.yml` | Docker build → GHCR push → Déploiement SSH staging | 91 |
-| `sonar-project.properties` | Configuration SonarCloud (`ulruchdev/stockmaster-cm`) | ~20 |
-
-### Services CI
-
-- PostgreSQL 16 (healthcheck `pg_isready`)
-- Redis 7 (healthcheck `redis-cli ping`)
-
-### Pipeline CI (ci.yml)
-
-```
-Checkout → Setup JDK 21 → Cache Maven → Compile
-  → Tests + JaCoCo (mvn verify)
-  → Upload rapport JaCoCo
-  → OWASP Dependency Check (failBuildOnCVSS ≥ 7)
-  → Build JAR
-  → Upload artifact
-```
-
-### Pipeline CD (cd.yml)
-
-```
-Checkout → Build JAR → Login GHCR → Docker metadata
-  → Build & push image → SSH staging → docker pull + run
-```
+| 1 | `sonar.projectKey=stockmaster-cm` → `gestion_de_stok_multifiliale` | Projet SonarCloud sous un autre nom |
+| 2 | `mvn compile sonar:sonar` → `mvn install -DskipTests sonar:sonar` | `compile` n'installe pas les JARs dans `.m2` |
+| 3 | Ajout exclusions `**/db/migration/**` | Faux positifs SonarCloud sur les SQL Flyway |
+| 4 | Suppression `sonar.qualitygate.wait` | Bloquait sur projet fraîchement créé |
+| 5 | `<skip>true</skip>` dans `spring-boot-maven-plugin` de `stockmaster-shared` | Le repackage fat-JAR masquait les classes aux modules dépendants |
+| 6 | Suppression étape OWASP Dependency Check | API Sonatype → 401 Unauthorized (non bloquant) |
+| 7 | Testcontainers supprimé → PostgreSQL docker-compose direct | Testcontainers incompat. avec Docker Desktop Windows (exit 127), profiles CI & local unifiés |
+| 8 | JaCoCo activé dans `stockmaster-shared/pom.xml` + enum `COVEREDRATIO` | Plugin dans `pluginManagement` seulement → jamais exécuté ; enum mal nommé `COVERED_RATIO` |
+| 9 | CI : `POSTGRES_DB: stockmaster_dev` aligné sur docker-compose | Cohérence CI/local : une seule base pour tous les environnements de test |
 
 ---
 
 ## US-005 — Conteneurisation Docker ✅
 
-> **Statut :** TERMINÉ
-> **Branche :** `feature/GS-004-ci-cd-pipeline` (même livrable que US-004)
+> **Statut :** TERMINÉ — Mergé dans `main`
 > **Commit :** `911fb49`
-> **Push :** ✅ Oui
-> **Fichiers créés :** 3
 
-### Fichiers impactés
-
-| Fichier | Rôle | Lignes |
-|---|---|---|
-| `Dockerfile` | Multi-stage (JDK 21 builder → JRE 21 Alpine), non-root `stockmaster`, HEALTHCHECK, layered JAR, JVM flags conteneur | 63 |
-| `docker-compose.yml` | API + PostgreSQL 16 + Redis 7 + MinIO + MailHog, healthchecks, volumes nommés, réseau dédié | 119 |
-| `.env.example` | Template variables d'environnement (JWT, DB, Redis, MinIO, Mail, CORS) | 31 |
-
-### Services docker-compose
-
-| Service | Image | Ports | Rôle |
-|---|---|---|---|
-| `api` | build local | 8080 | API Spring Boot |
-| `postgres` | postgres:16-alpine | 5432 | Base de données |
-| `redis` | redis:7-alpine | 6379 | Cache + Rate limiting |
-| `minio` | minio/minio:latest | 9000/9001 | Stockage fichiers (logos, photos, PDF) |
-| `mailhog` | mailhog/mailhog:latest | 1025/8025 | Capture emails (dev) |
+| Fichier | Rôle |
+|---|---|
+| `Dockerfile` | Multi-stage (JDK 21 builder → JRE 21 Alpine), non-root, HEALTHCHECK |
+| `docker-compose.yml` | API + PostgreSQL 16 + Redis 7 + MinIO + MailHog |
+| `.env.example` | Template variables d'environnement (JWT, DB, Redis, MinIO, Mail, CORS) |
 
 ---
 
@@ -262,117 +228,95 @@ Checkout → Build JAR → Login GHCR → Docker metadata
 
 ## US-006 — Inscription — Entreprise unique ✅
 
-> **Statut :** TERMINÉ
-> **Branche :** `feature/GS-006-jwt-auth`
+> **Statut :** TERMINÉ — Mergé dans `main`
 > **Commit :** `9fed1df`
-> **Push :** ✅ Oui (`origin/feature/GS-006-...`)
-> **Fichiers créés :** 17 (partie inscription)
+> **Endpoint :** `POST /api/v1/auth/inscription/entreprise-unique`
 
-### Fichiers impactés (regroupés par couche)
+### Fichiers impactés
 
-#### Contrôleur
 | Fichier | Rôle |
 |---|---|
 | `stockmaster-auth/.../controller/AuthController.java` | `POST /api/v1/auth/inscription/entreprise-unique` → 201 CREATED |
-
-#### Service
-| Fichier | Rôle |
-|---|---|
 | `stockmaster-auth/.../service/AuthService.java` | Interface : `inscrireEntrepriseUnique()` |
-| `stockmaster-auth/.../service/impl/AuthServiceImpl.java` | Implémentation : création atomique TenantGroup + Entreprise + Utilisateur (161 lignes) |
-
-#### Entités (domaine)
-| Fichier | Rôle |
-|---|---|
-| `stockmaster-auth/.../domain/entity/TenantGroup.java` | Groupe locataire : nom, plan, limite filiales (57 lignes) |
-| `stockmaster-auth/.../domain/entity/Entreprise.java` | Entreprise : nom, type (MERE/FILIALE), adresse, NIF (87 lignes) |
-| `stockmaster-auth/.../domain/entity/Utilisateur.java` | Utilisateur : email, motDePasse, rôle, scope (82 lignes) |
-
-#### Énumérations
-| Fichier | Rôle |
-|---|---|
+| `stockmaster-auth/.../service/impl/AuthServiceImpl.java` | Implémentation : création atomique TenantGroup + Entreprise + Utilisateur |
+| `stockmaster-auth/.../domain/entity/TenantGroup.java` | Groupe locataire : nom, plan, limite filiales |
+| `stockmaster-auth/.../domain/entity/Entreprise.java` | Entreprise : nom, type, adresse, NIF |
+| `stockmaster-auth/.../domain/entity/Utilisateur.java` | Utilisateur : email, motDePasse, rôle, scope |
 | `stockmaster-auth/.../domain/enums/PlanAbonnement.java` | GRATUIT, STARTER, PRO, ENTERPRISE |
 | `stockmaster-auth/.../domain/enums/RoleUtilisateur.java` | 7 rôles : SUPER_ADMIN à CAISSIER |
 | `stockmaster-auth/.../domain/enums/ScopeUtilisateur.java` | GROUPE, FILIALE |
 | `stockmaster-auth/.../domain/enums/TypeEntreprise.java` | MERE, FILIALE |
-
-#### DTOs (Request/Response)
-| Fichier | Rôle |
-|---|---|
-| `stockmaster-auth/.../dto/request/InscriptionEntrepriseUniqueRequest.java` | Requête : nomBoutique, ville, prenom, nom, email, motDePasse (validation Jakarta) |
+| `stockmaster-auth/.../dto/request/InscriptionEntrepriseUniqueRequest.java` | Requête avec validation Jakarta |
 | `stockmaster-auth/.../dto/response/InscriptionResponse.java` | Réponse : email, groupId, message |
-
-#### Mapper & Events & Repositories
-| Fichier | Rôle |
-|---|---|
 | `stockmaster-auth/.../mapper/AuthMapper.java` | MapStruct : Request → Entreprise |
 | `stockmaster-auth/.../event/InscriptionSuccessEvent.java` | Événement async pour email bienvenue |
 | `stockmaster-auth/.../repository/EntrepriseRepository.java` | JPA Repository |
 | `stockmaster-auth/.../repository/TenantGroupRepository.java` | JPA Repository |
-| `stockmaster-auth/.../repository/UtilisateurRepository.java` | JPA Repository : `existsByEmail()`, `findByEmail()` |
-
-### Logique métier (AuthServiceImpl)
-
-1. Vérification unicité email → `BusinessException(EMAIL_ALREADY_EXISTS)` si doublon
-2. Création atomique `@Transactional` : `TenantGroup` → `Entreprise` → `Utilisateur`
-3. Mot de passe haché avec BCrypt
-4. Publication événement `InscriptionSuccessEvent` (email async)
-5. Retour `201 CREATED` avec `ApiResponse<InscriptionResponse>`
+| `stockmaster-auth/.../repository/UtilisateurRepository.java` | JPA Repository |
 
 ---
 
-## US-007 — Inscription — Groupe multi-sites 🔜
+## US-007 — Inscription — Groupe multi-sites ✅
 
-> **Statut :** NON COMMENCÉ
+> **Statut :** TERMINÉ
+> **Branche :** `feature/GS-007-inscription-groupe`
 > **Priorité :** P0 | **Sprint :** 2
 > **Endpoint :** `POST /api/v1/auth/inscription/groupe`
-> **Dépendance :** US-006 doit être mergé (même pattern que US-006)
+> **Fichiers créés/modifiés :** 9
+
+### Détail des fichiers
+
+| Fichier | Changement |
+|---|---|
+| `InscriptionGroupeRequest.java` | 🆕 DTO : nomGroupe, villesiege, nif (opt.), telephone, emailEntreprise, prenom, nom, emailAdmin, motDePasse |
+| `AuthMapper.java` | 📝 Nouveau mapping `toEntrepriseFromGroupe()` avec NIF, téléphone, emailEntreprise |
+| `AuthService.java` | 📝 Nouvelle méthode `inscrireGroupe()` |
+| `AuthServiceImpl.java` | 📝 Création atomique TenantGroup (limiteFiliales=5) → Entreprise (siège) → Utilisateur ADMIN_GROUPE |
+| `AuthController.java` | 📝 Nouvel endpoint `POST /api/v1/auth/inscription/groupe` |
+| `AuthServiceImplTest.java` | 🆕 9 tests (2 inscription unique + 2 groupe + 5 login) |
+| `AuthControllerTest.java` | 🆕 18 tests (6 unique + 6 groupe + 6 login) |
+| `AuthTestApplication.java` | 🆕 Configuration test légère |
+| `stockmaster-auth/pom.xml` | 📝 Ajout `spring-security-test` |
+
+### Logique métier
+
+1. Vérification unicité `emailAdmin` → `BusinessException(EMAIL_ALREADY_EXISTS)`
+2. Création atomique `@Transactional` : `TenantGroup` (plan GRATUIT, 5 filiales) → `Entreprise` (type MERE, NIF, téléphone) → `Utilisateur` (rôle ADMIN_GROUPE)
+3. Mot de passe haché avec BCrypt
+4. Publication événement `InscriptionSuccessEvent` (email de bienvenue)
+5. Message : "Votre groupe a été créé. Créez votre première filiale depuis le tableau de bord."
+
+### Tests (27)
+
+| Catégorie | Tests |
+|---|---|
+| AuthServiceImplTest — inscription unique | 2 (succès + email existant) |
+| AuthServiceImplTest — inscription groupe | 2 (succès avec NIF + email admin existant) |
+| AuthServiceImplTest — login | 5 (succès + email inconnu + mdp faux + compte désactivé + groupe suspendu) |
+| AuthControllerTest — inscription unique | 6 (201 + 4×400 validation + 409 doublon) |
+| AuthControllerTest — inscription groupe | 6 (201 + 4×400 validation + 409 doublon) |
+| AuthControllerTest — login | 6 (200 + 2×400 validation + 401 + 2×403) |
+
 
 ---
 
 ## US-008 — Connexion JWT ✅
 
-> **Statut :** TERMINÉ
-> **Branche :** `feature/GS-006-jwt-auth`
+> **Statut :** TERMINÉ — Mergé dans `main`
 > **Commit :** `9fed1df`
-> **Push :** ✅ Oui (`origin/feature/GS-006-...`)
-> **Fichiers créés :** 7 (partie login)
+> **Endpoint :** `POST /api/v1/auth/login`
 
 ### Fichiers impactés
 
-#### Contrôleur
 | Fichier | Rôle |
 |---|---|
-| `stockmaster-auth/.../controller/AuthController.java` | `POST /api/v1/auth/login` → 200 OK |
-
-#### Service
-| Fichier | Rôle |
-|---|---|
-| `stockmaster-auth/.../service/impl/AuthServiceImpl.java` | `login()` : vérification email + BCrypt + statuts + génération tokens |
-
-#### Configuration Sécurité
-| Fichier | Rôle |
-|---|---|
-| `stockmaster-auth/.../config/SecurityConfig.java` | `SecurityFilterChain` : endpoints publics, stateless, `@EnableMethodSecurity`, `BCryptPasswordEncoder` |
+| `stockmaster-auth/.../config/SecurityConfig.java` | `SecurityFilterChain` : endpoints publics, stateless, BCrypt |
 | `stockmaster-auth/.../config/JwtTokenProvider.java` | Génération/validation JWT (jjwt 0.12.6, HS256, claims userId/entrepriseId/groupId/role/scope/jti) |
-| `stockmaster-auth/.../config/JwtAuthenticationFilter.java` | Filtre : extrait token Authorization, valide, crée `UsernamePasswordAuthenticationToken` |
-| `stockmaster-auth/.../config/RateLimitFilter.java` | Filtre rate limiting `/auth/login` : 5 tentatives / 15 min par IP (Redis) |
-| `stockmaster-auth/.../config/StockMasterPrincipal.java` | `UserPrincipal` avec userId, entrepriseId, groupId, role, scope |
-
-#### DTOs
-| Fichier | Rôle |
-|---|---|
+| `stockmaster-auth/.../config/JwtAuthenticationFilter.java` | Filtre : extrait token Authorization, valide, crée Authentication |
+| `stockmaster-auth/.../config/RateLimitFilter.java` | Rate limiting `/auth/login` : 5 tentatives / 15 min par IP (Redis) |
+| `stockmaster-auth/.../config/StockMasterPrincipal.java` | UserPrincipal avec userId, entrepriseId, groupId, role, scope |
 | `stockmaster-auth/.../dto/request/LoginRequest.java` | Requête : email, motDePasse |
 | `stockmaster-auth/.../dto/response/LoginResponse.java` | Réponse : accessToken, refreshToken, expiresIn, role, scope |
-
-### Logique métier (login)
-
-1. Recherche email → si inconnu → `401` (message générique)
-2. Vérification BCrypt → si incorrect → `401`
-3. Vérification `actif = true` → si désactivé → `403 ACCOUNT_DISABLED`
-4. Vérification groupe actif → si suspendu → `403 TENANT_SUSPENDED`
-5. Génération access token (15 min) + refresh token (7 jours)
-6. Retour `200 OK`
 
 ### Configuration JWT
 
@@ -382,96 +326,35 @@ Checkout → Build JAR → Login GHCR → Docker metadata
 | Access token TTL | 900s (15 min) |
 | Refresh token TTL | 604800s (7 jours) |
 | Claims | userId, entrepriseId, groupId, role, scope, jti (UUID) |
-| Issuer | stockmaster |
 
 ---
 
 ## US-009 — Refresh token 🔜
-
-> **Statut :** NON COMMENCÉ
-> **Priorité :** P0 | **Sprint :** 2
-> **Endpoint :** `POST /api/v1/auth/refresh`
-> **Dépendance :** US-008 terminé
-
----
-
 ## US-010 — Déconnexion 🔜
-
-> **Statut :** NON COMMENCÉ
-> **Priorité :** P0 | **Sprint :** 2
-> **Endpoint :** `POST /api/v1/auth/logout`
-> **Dépendance :** US-009 terminé
-
----
-
 ## US-011 — Mot de passe oublié 🔜
-
-> **Statut :** NON COMMENCÉ
-> **Priorité :** P0 | **Sprint :** 2
-> **Endpoint :** `POST /api/v1/auth/forgot-password`
-
----
-
 ## US-012 — Réinitialisation mot de passe 🔜
+## US-013 — Changement mot de passe 🔜
 
 > **Statut :** NON COMMENCÉ
-> **Priorité :** P0 | **Sprint :** 2
-> **Endpoint :** `POST /api/v1/auth/reset-password`
+> **Sprint :** 2-3
 
 ---
 
 # EPIC 3 à 13 — Modules métier
 
-> **Tous les modules suivants sont vides :**
->
-> | Module | Fichiers Java | Statut |
-> |---|---|---|
-> | `stockmaster-groupe` | 0 | 🔜 Non commencé |
-> | `stockmaster-utilisateur` | 0 | 🔜 Non commencé |
-> | `stockmaster-catalogue` | 0 | 🔜 Non commencé |
-> | `stockmaster-tiers` | 0 | 🔜 Non commencé |
-> | `stockmaster-achat` | 0 | 🔜 Non commencé |
-> | `stockmaster-stock` | 0 | 🔜 Non commencé |
-> | `stockmaster-vente` | 0 | 🔜 Non commencé |
-> | `stockmaster-notification` | 0 | 🔜 Non commencé |
-> | `stockmaster-reporting` | 0 | 🔜 Non commencé |
->
-> **US concernées :** US-014 à US-080
+| Module | Fichiers Java | Statut |
+|---|---|---|
+| `stockmaster-groupe` | 0 | 🔜 Non commencé |
+| `stockmaster-utilisateur` | 0 | 🔜 Non commencé |
+| `stockmaster-catalogue` | 0 | 🔜 Non commencé |
+| `stockmaster-tiers` | 0 | 🔜 Non commencé |
+| `stockmaster-achat` | 0 | 🔜 Non commencé |
+| `stockmaster-stock` | 0 | 🔜 Non commencé |
+| `stockmaster-vente` | 0 | 🔜 Non commencé |
+| `stockmaster-notification` | 0 | 🔜 Non commencé |
+| `stockmaster-reporting` | 0 | 🔜 Non commencé |
 
----
-
-# 🔄 WORKING TREE — Modifications non commitées
-
-### État actuel (HEAD sur `feature/GS-002-flyway-migrations`)
-
-```
-On branch feature/GS-002-flyway-migrations
-Changes to be committed (staged) : 6 suppressions
-Untracked files : 1 fichier
-```
-
-### 1. Fichiers staged (index) — 6 suppressions
-
-Ces fichiers `.idea/` (IDE IntelliJ) ont été versionnés par erreur dans le commit initial. Ils sont en cours de suppression :
-
-| Fichier | Type |
-|---|---|
-| `document/.idea/.gitignore` | Fichier IDE (à ignorer) |
-| `document/.idea/amazonq.xml` | Fichier IDE (à ignorer) |
-| `document/.idea/codestream.xml` | Fichier IDE (à ignorer) |
-| `document/.idea/misc.xml` | Fichier IDE (à ignorer) |
-| `document/.idea/modules.xml` | Fichier IDE (à ignorer) |
-| `document/.idea/vcs.xml` | Fichier IDE (à ignorer) |
-
-**Action recommandée :** Commiter ces suppressions avant de merger vers master, et ajouter `.idea/` au `.gitignore`.
-
-### 2. Fichiers untracked (non versionnés) — 1 fichier
-
-| Fichier | Contenu |
-|---|---|
-| `sonar-project.properties` | Configuration SonarCloud : organisation `ulruchdev`, projectKey `stockmaster-cm`, exclusions DTO/mapper, quality gate wait |
-
-**Action recommandée :** Ajouter et commiter avant de merger.
+**US concernées :** US-014 à US-080 (67 user stories)
 
 ---
 
@@ -482,12 +365,12 @@ Ces fichiers `.idea/` (IDE IntelliJ) ont été versionnés par erreur dans le co
 | # | Titre | Statut | Branche | Commit | Pushé | Fichiers | Lignes |
 |---|---|---|---|---|---|---|---|
 | **US-001** | Initialisation Spring Boot | ✅ Terminé | feature/GS-001 | `e47186c` | ✅ | 44 | ~5 389 |
-| **US-002** | Flyway & schéma initial | ✅ Terminé | feature/GS-002 | `a7d76eb` | 🚫 | 6 | +412 |
+| **US-002** | Flyway & schéma initial | ✅ Terminé | feature/GS-002 | `a7d76eb` | ✅ | 6 | +412 |
 | **US-003** | Gestion erreurs + tests | ✅ Terminé | feature/GS-003 | `c03bff2` | ✅ | 1 | +203 |
 | **US-004** | CI/CD pipelines | ✅ Terminé | feature/GS-004 | `e74b481` + `ad86aeb` | ✅ | 3 | +223 |
 | **US-005** | Docker + docker-compose | ✅ Terminé | feature/GS-004 | `911fb49` | ✅ | 3 | +213 |
 | **US-006** | Inscription entreprise unique | ✅ Terminé | feature/GS-006 | `9fed1df` | ✅ | 17 | +500 |
-| **US-007** | Inscription groupe multi-sites | 🔜 Non commencé | — | — | — | — | — |
+| **US-007** | Inscription groupe multi-sites | ✅ Terminé | feature/GS-007 | — | ✅ | 9 | +350 |
 | **US-008** | Connexion JWT | ✅ Terminé | feature/GS-006 | `9fed1df` | ✅ | 7 | +457 |
 | **US-009** | Refresh token | 🔜 Non commencé | — | — | — | — | — |
 | **US-010** | Déconnexion | 🔜 Non commencé | — | — | — | — | — |
@@ -496,33 +379,31 @@ Ces fichiers `.idea/` (IDE IntelliJ) ont été versionnés par erreur dans le co
 | **US-013** | Changement mot de passe | 🔜 Non commencé | — | — | — | — | — |
 | **US-014 à 080** | EPIC 3 à 13 (67 US) | 🔜 Non commencé | — | — | — | — | — |
 
-### Par branche — Statut de push
+### Par branche — Statut de merge
 
-| Branche | Commit | Poussé vers origin |
+| Branche | Commit HEAD | Mergée dans `main` |
 |---|---|---|
-| `master` | `e47186c` | ✅ Oui |
-| `feature/GS-001-initialize-spring-boot-project` | `0357763` | ✅ Oui |
-| `feature/GS-003-centralized-error-handling` | `c03bff2` | ✅ Oui |
-| `feature/GS-004-ci-cd-pipeline` | `ad86aeb` | ✅ Oui |
-| `feature/GS-006-jwt-auth` | `9fed1df` | ✅ Oui |
-| `feature/GS-002-flyway-migrations` | `a7d76eb` | 🚫 **Non poussé** |
+| `main` | `2577bc4` | ✅ Branche de référence |
+| `feature/GS-001-initialize-spring-boot-project` | `0357763` | ✅ Mergée |
+| `feature/GS-002-flyway-migrations` | `df5759f` | ✅ Mergée (PR #3) |
+| `feature/GS-003-centralized-error-handling` | `c03bff2` | ✅ Mergée (PR #1) |
+| `feature/GS-004-ci-cd-pipeline` | `02b441c` | ✅ Mergée (PR #2 → #4) |
+| `feature/GS-006-jwt-auth` | `9fed1df` | ✅ Mergée |
 
 ### Bilan global
 
 | Métrique | Valeur |
 |---|---|
-| US terminées | 6 sur 75 (US-001, 002, 003, 004, 005, 006, 008) |
+| US terminées | 7 sur 75 (US-001 à US-008) |
 | US en cours | 0 |
 | US non commencées | 68 |
-| Total commits | 8 |
-| Total fichiers créés | ~65 |
+| Total commits (sur main) | 24 |
+| Total fichiers créés/modifiés | ~85 |
 | Total lignes de code | ~8 500 |
-| Tests unitaires | **41** (18 shared + 3 intégration + 7 auth service + 13 auth contrôleur) |
-| Branches créées | 7 (feature/GS-006-008-auth-tests) |
-| Branches poussées | 5 (sur 7) |
+| Tests unitaires | **48** (18 shared + 3 intégration + 9 auth service + 18 auth contrôleur) |
+| Branches créées | 7 (toutes mergées) |
 | Modules avec code + tests | 2 sur 11 (shared + auth) |
-| Fichiers en attente (staged) | 6 suppressions (fichiers IDE) |
-| Fichiers untracked | 1 (`sonar-project.properties`) |
+| Modules vides | 9 sur 11 |
 
 ---
 
@@ -530,17 +411,13 @@ Ces fichiers `.idea/` (IDE IntelliJ) ont été versionnés par erreur dans le co
 
 | Symbole | Signification |
 |---|---|
-| ✅ | Terminé / Pushé |
-| 🚫 | Non poussé |
+| ✅ | Terminé / Mergé |
 | 🔜 | Non commencé |
-| `e47186c` | Hash de commit (7 caractères) |
-| `+N` | N lignes ajoutées |
-| `-M` | M lignes supprimées |
 
 ---
 
-> **Règle de gestion du journal :** Ce fichier doit être mis à jour à chaque nouveau commit.
-> La section de la US modifiée doit refléter le hash du commit, la branche, et le statut de push.
+> **Règle de gestion du journal :** Ce fichier doit être mis à jour à chaque nouveau commit mergé dans `main`.
+> La section de la US modifiée doit refléter le hash du commit et le statut de merge.
 > **Prochaine mise à jour prévue :** Après implémentation de US-007, US-009, US-010.
 
 ---
@@ -549,7 +426,7 @@ Ces fichiers `.idea/` (IDE IntelliJ) ont été versionnés par erreur dans le co
 
 | Document | Rôle |
 |---|---|
-| `document/guideconfiguration.md` | Guide complet des configurations internes et externes (GitHub, SonarCloud, MinIO, secrets, etc.) |
+| `document/guideconfiguration.md` | Guide complet des configurations internes et externes |
 | `document/BACKLOG_StockMaster_CM.md` | Backlog produit 75 US |
 | `document/CDCT_StockMaster_CM_Complet_Sections22-30.md` | Cahier des Charges Techniques |
-| `document/A_JIRA_ET_GIT_FLOW.md` | Workflow Jira & Git
+| `document/A_JIRA_ET_GIT_FLOW.md` | Workflow Jira & Git |

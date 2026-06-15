@@ -8,6 +8,7 @@ WORKDIR /app
 # Copy Maven wrapper & pom files
 COPY .mvn .mvn
 COPY mvnw pom.xml ./
+RUN chmod +x mvnw
 COPY stockmaster-shared/pom.xml stockmaster-shared/
 COPY stockmaster-auth/pom.xml stockmaster-auth/
 COPY stockmaster-groupe/pom.xml stockmaster-groupe/
@@ -30,7 +31,8 @@ COPY stockmaster-shared/src stockmaster-shared/src
 # Build layered JAR
 RUN --mount=type=cache,target=/root/.m2 \
     ./mvnw package -DskipTests -q && \
-    java -Djarmode=layertools -jar stockmaster-shared/target/*.jar extract --destination extracted
+    # Use the executable jar produced with classifier "exec" so layertools is available
+    java -Djarmode=layertools -jar stockmaster-shared/target/*-exec.jar extract --destination extracted
 
 # ============================================================
 # Stage 2 : Runtime — JRE 21 Alpine (non-root)

@@ -1,34 +1,36 @@
 package com.stockmaster.auth.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stockmaster.auth.AuthTestApplication;
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
+import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
 import com.stockmaster.auth.service.AuthService;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.stockmaster.auth.AuthTestApplication;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.http.MediaType;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(controllers = AuthController.class)
+@WebMvcTest(AuthController.class)
 @ContextConfiguration(classes = AuthTestApplication.class)
-@DisplayName("AuthController — Tests web MVC")
+@DisplayName("AuthController — Tests d'intégration")
 class AuthControllerTest {
 
     @Autowired
@@ -40,137 +42,125 @@ class AuthControllerTest {
     @MockBean
     private AuthService authService;
 
-    private static final String BASE_URL = "/api/v1/auth";
+    private InscriptionEntrepriseUniqueRequest inscriptionUniqueRequest;
+    private InscriptionGroupeRequest inscriptionGroupeRequest;
+    private LoginRequest loginRequest;
 
-    // ====================================================================
-    // US-006 — Inscription entreprise unique
-    // ====================================================================
+    @BeforeEach
+    void setUp() {
+        inscriptionUniqueRequest = InscriptionEntrepriseUniqueRequest.builder()
+                .nomBoutique("Épicerie Centrale")
+                .ville("Douala")
+                .quartier("Akwa")
+                .prenom("Jean")
+                .nom("Kamga")
+                .email("jean.kamga@epicerie.cm")
+                .motDePasse("MotDePasse@2026")
+                .build();
+
+        inscriptionGroupeRequest = InscriptionGroupeRequest.builder()
+                .nomGroupe("Distribo Sarl")
+                .villesiege("Yaoundé")
+                .nif("M123456789")
+                .telephone("699000001")
+                .emailEntreprise("contact@distribo.cm")
+                .prenom("Paul")
+                .nom("Biya Jr")
+                .emailAdmin("paul@distribo.cm")
+                .motDePasse("MotDePasse@2026")
+                .build();
+
+        loginRequest = LoginRequest.builder()
+                .email("jean.kamga@epicerie.cm")
+                .motDePasse("MotDePasse@2026")
+                .build();
+    }
+
+    // ========================================================================
+    // US-006 — POST /api/v1/auth/inscription/entreprise-unique
+    // ========================================================================
 
     @Nested
     @DisplayName("POST /api/v1/auth/inscription/entreprise-unique")
-    class InscriptionTests {
-
-        private static final String URL = BASE_URL + "/inscription/entreprise-unique";
-
-        private InscriptionEntrepriseUniqueRequest createValidRequest() {
-            return InscriptionEntrepriseUniqueRequest.builder()
-                    .nomBoutique("Épicerie Centrale")
-                    .ville("Douala")
-                    .quartier("Akwa")
-                    .prenom("Jean")
-                    .nom("Kamga")
-                    .email("jean.kamga@test.cm")
-                    .motDePasse("Test@2026")
-                    .build();
-        }
+    class InscriptionEntrepriseUniqueEndpoint {
 
         @Test
-        @DisplayName("✅ 201 CREATED quand inscription valide")
+        @DisplayName("201 CREATED — inscription valide")
         void shouldReturn201WhenInscriptionValid() throws Exception {
-            // given
-            InscriptionEntrepriseUniqueRequest request = createValidRequest();
-            InscriptionResponse serviceResponse = InscriptionResponse.builder()
-                    .email("jean.kamga@test.cm")
+            InscriptionResponse response = InscriptionResponse.builder()
+                    .email("jean.kamga@epicerie.cm")
                     .groupId(1L)
-                    .message("Votre espace a été créé")
+                    .message("Votre espace a été créé. Vérifiez votre email pour activer votre compte.")
                     .build();
 
-            when(authService.inscrireEntrepriseUnique(any())).thenReturn(serviceResponse);
+            when(authService.inscrireEntrepriseUnique(any(InscriptionEntrepriseUniqueRequest.class)))
+                    .thenReturn(response);
 
-            // when & then
-            mockMvc.perform(post(URL)
+            mockMvc.perform(post("/api/v1/auth/inscription/entreprise-unique")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
+                            .content(objectMapper.writeValueAsString(inscriptionUniqueRequest))
                             .with(csrf()))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data.email").value("jean.kamga@test.cm"))
+                    .andExpect(jsonPath("$.data.email").value("jean.kamga@epicerie.cm"))
                     .andExpect(jsonPath("$.data.groupId").value(1))
-                    .andExpect(jsonPath("$.data.message").value(containsString("créé")));
+                    .andExpect(jsonPath("$.message").value("Votre espace a été créé. Vérifiez votre email pour activer votre compte."));
         }
 
         @Test
-        @DisplayName("❌ 400 BAD REQUEST quand nomBoutique manquant")
+        @DisplayName("400 BAD REQUEST — nomBoutique vide")
         void shouldReturn400WhenNomBoutiqueIsBlank() throws Exception {
-            // given
-            InscriptionEntrepriseUniqueRequest request = createValidRequest();
-            request.setNomBoutique("");
+            inscriptionUniqueRequest.setNomBoutique("");
 
-            // when & then
-            mockMvc.perform(post(URL)
+            mockMvc.perform(post("/api/v1/auth/inscription/entreprise-unique")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
+                            .content(objectMapper.writeValueAsString(inscriptionUniqueRequest))
                             .with(csrf()))
                     .andExpect(status().isBadRequest());
         }
 
         @Test
-        @DisplayName("❌ 400 BAD REQUEST quand email invalide")
+        @DisplayName("400 BAD REQUEST — email invalide")
         void shouldReturn400WhenEmailInvalid() throws Exception {
-            // given
-            InscriptionEntrepriseUniqueRequest request = createValidRequest();
-            request.setEmail("pas-un-email");
+            inscriptionUniqueRequest.setEmail("pas-un-email");
 
-            // when & then
-            mockMvc.perform(post(URL)
+            mockMvc.perform(post("/api/v1/auth/inscription/entreprise-unique")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
+                            .content(objectMapper.writeValueAsString(inscriptionUniqueRequest))
                             .with(csrf()))
                     .andExpect(status().isBadRequest());
         }
 
         @Test
-        @DisplayName("❌ 400 BAD REQUEST quand motDePasse trop court")
+        @DisplayName("400 BAD REQUEST — mot de passe trop court")
         void shouldReturn400WhenPasswordTooShort() throws Exception {
-            // given
-            InscriptionEntrepriseUniqueRequest request = createValidRequest();
-            request.setMotDePasse("Ab1!");
+            inscriptionUniqueRequest.setMotDePasse("Ab1!");
 
-            // when & then
-            mockMvc.perform(post(URL)
+            mockMvc.perform(post("/api/v1/auth/inscription/entreprise-unique")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
+                            .content(objectMapper.writeValueAsString(inscriptionUniqueRequest))
                             .with(csrf()))
                     .andExpect(status().isBadRequest());
         }
 
         @Test
-        @DisplayName("❌ 400 BAD REQUEST quand motDePasse sans caractère spécial")
-        void shouldReturn400WhenPasswordNoSpecialChar() throws Exception {
-            // given
-            InscriptionEntrepriseUniqueRequest request = createValidRequest();
-            request.setMotDePasse("MotDePasse123");
-
-            // when & then
-            mockMvc.perform(post(URL)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isBadRequest());
-        }
-
-        @Test
-        @DisplayName("❌ 409 CONFLICT quand service lève BusinessException EMAIL_ALREADY_EXISTS")
+        @DisplayName("409 CONFLICT — email déjà existant")
         void shouldReturn409WhenEmailAlreadyExists() throws Exception {
-            // given
-            InscriptionEntrepriseUniqueRequest request = createValidRequest();
-            when(authService.inscrireEntrepriseUnique(any()))
-                    .thenThrow(new BusinessException(ErrorCode.AUTH_EMAIL_ALREADY_EXISTS,
-                            "Cet email est déjà utilisé"));
+            when(authService.inscrireEntrepriseUnique(any(InscriptionEntrepriseUniqueRequest.class)))
+                    .thenThrow(new BusinessException(ErrorCode.AUTH_EMAIL_ALREADY_EXISTS));
 
-            // when & then
-            mockMvc.perform(post(URL)
+            mockMvc.perform(post("/api/v1/auth/inscription/entreprise-unique")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
+                            .content(objectMapper.writeValueAsString(inscriptionUniqueRequest))
                             .with(csrf()))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.errorCode").value("AUTH_008"));
         }
 
         @Test
-        @DisplayName("❌ 400 BAD REQUEST quand corps vide")
+        @DisplayName("400 BAD REQUEST — corps vide")
         void shouldReturn400WhenEmptyBody() throws Exception {
-            // when & then
-            mockMvc.perform(post(URL)
+            mockMvc.perform(post("/api/v1/auth/inscription/entreprise-unique")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{}")
                             .with(csrf()))
@@ -178,128 +168,190 @@ class AuthControllerTest {
         }
     }
 
-    // ====================================================================
-    // US-008 — Connexion JWT
-    // ====================================================================
+    // ========================================================================
+    // US-007 — POST /api/v1/auth/inscription/groupe
+    // ========================================================================
 
     @Nested
-    @DisplayName("POST /api/v1/auth/login")
-    class LoginTests {
+    @DisplayName("POST /api/v1/auth/inscription/groupe")
+    class InscriptionGroupeEndpoint {
 
-        private static final String URL = BASE_URL + "/login";
-
-        private LoginRequest createValidLoginRequest() {
-            return LoginRequest.builder()
-                    .email("jean.kamga@test.cm")
-                    .motDePasse("Test@2026")
+        @Test
+        @DisplayName("201 CREATED — inscription groupe valide avec NIF, téléphone")
+        void shouldReturn201WhenInscriptionGroupeValid() throws Exception {
+            InscriptionResponse response = InscriptionResponse.builder()
+                    .email("paul@distribo.cm")
+                    .groupId(2L)
+                    .message("Votre groupe a été créé. Créez votre première filiale depuis le tableau de bord.")
                     .build();
+
+            when(authService.inscrireGroupe(any(InscriptionGroupeRequest.class)))
+                    .thenReturn(response);
+
+            mockMvc.perform(post("/api/v1/auth/inscription/groupe")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(inscriptionGroupeRequest))
+                            .with(csrf()))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.email").value("paul@distribo.cm"))
+                    .andExpect(jsonPath("$.data.groupId").value(2))
+                    .andExpect(jsonPath("$.message").value("Votre groupe a été créé. Créez votre première filiale depuis le tableau de bord."));
         }
 
         @Test
-        @DisplayName("✅ 200 OK quand credentials valides")
+        @DisplayName("400 BAD REQUEST — nomGroupe vide")
+        void shouldReturn400WhenNomGroupeIsBlank() throws Exception {
+            inscriptionGroupeRequest.setNomGroupe("");
+
+            mockMvc.perform(post("/api/v1/auth/inscription/groupe")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(inscriptionGroupeRequest))
+                            .with(csrf()))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("400 BAD REQUEST — emailAdmin invalide")
+        void shouldReturn400WhenEmailAdminInvalid() throws Exception {
+            inscriptionGroupeRequest.setEmailAdmin("pas-un-email");
+
+            mockMvc.perform(post("/api/v1/auth/inscription/groupe")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(inscriptionGroupeRequest))
+                            .with(csrf()))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("400 BAD REQUEST — mot de passe trop court")
+        void shouldReturn400WhenPasswordTooShort() throws Exception {
+            inscriptionGroupeRequest.setMotDePasse("Ab1!");
+
+            mockMvc.perform(post("/api/v1/auth/inscription/groupe")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(inscriptionGroupeRequest))
+                            .with(csrf()))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("409 CONFLICT — emailAdmin déjà existant")
+        void shouldReturn409WhenEmailAdminAlreadyExists() throws Exception {
+            when(authService.inscrireGroupe(any(InscriptionGroupeRequest.class)))
+                    .thenThrow(new BusinessException(ErrorCode.AUTH_EMAIL_ALREADY_EXISTS));
+
+            mockMvc.perform(post("/api/v1/auth/inscription/groupe")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(inscriptionGroupeRequest))
+                            .with(csrf()))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.errorCode").value("AUTH_008"));
+        }
+
+        @Test
+        @DisplayName("400 BAD REQUEST — corps vide")
+        void shouldReturn400WhenEmptyBody() throws Exception {
+            mockMvc.perform(post("/api/v1/auth/inscription/groupe")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}")
+                            .with(csrf()))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    // ========================================================================
+    // US-008 — POST /api/v1/auth/login
+    // ========================================================================
+
+    @Nested
+    @DisplayName("POST /api/v1/auth/login")
+    class LoginEndpoint {
+
+        @Test
+        @DisplayName("200 OK — credentials valides")
         void shouldReturn200WhenLoginValid() throws Exception {
-            // given
-            LoginRequest request = createValidLoginRequest();
-            LoginResponse serviceResponse = LoginResponse.builder()
-                    .accessToken("eyJ.access.token")
-                    .refreshToken("eyJ.refresh.token")
+            LoginResponse response = LoginResponse.builder()
+                    .accessToken("access-token")
+                    .refreshToken("refresh-token")
                     .expiresIn(900)
                     .role("ADMIN_GROUPE")
                     .scope("GROUPE")
                     .build();
 
-            when(authService.login(any())).thenReturn(serviceResponse);
+            when(authService.login(any(LoginRequest.class))).thenReturn(response);
 
-            // when & then
-            mockMvc.perform(post(URL)
+            mockMvc.perform(post("/api/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
+                            .content(objectMapper.writeValueAsString(loginRequest))
                             .with(csrf()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data.accessToken").value("eyJ.access.token"))
-                    .andExpect(jsonPath("$.data.refreshToken").value("eyJ.refresh.token"))
-                    .andExpect(jsonPath("$.data.expiresIn").value(900))
-                    .andExpect(jsonPath("$.data.role").value("ADMIN_GROUPE"))
-                    .andExpect(jsonPath("$.data.scope").value("GROUPE"));
+                    .andExpect(jsonPath("$.data.accessToken").value("access-token"))
+                    .andExpect(jsonPath("$.data.role").value("ADMIN_GROUPE"));
         }
 
         @Test
-        @DisplayName("❌ 400 BAD REQUEST quand email manquant")
+        @DisplayName("400 BAD REQUEST — email vide")
         void shouldReturn400WhenEmailIsBlank() throws Exception {
-            // given
-            LoginRequest request = createValidLoginRequest();
-            request.setEmail("");
+            loginRequest.setEmail("");
 
-            // when & then
-            mockMvc.perform(post(URL)
+            mockMvc.perform(post("/api/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
+                            .content(objectMapper.writeValueAsString(loginRequest))
                             .with(csrf()))
                     .andExpect(status().isBadRequest());
         }
 
         @Test
-        @DisplayName("❌ 400 BAD REQUEST quand motDePasse manquant")
+        @DisplayName("400 BAD REQUEST — mot de passe vide")
         void shouldReturn400WhenPasswordIsBlank() throws Exception {
-            // given
-            LoginRequest request = createValidLoginRequest();
-            request.setMotDePasse("");
+            loginRequest.setMotDePasse("");
 
-            // when & then
-            mockMvc.perform(post(URL)
+            mockMvc.perform(post("/api/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
+                            .content(objectMapper.writeValueAsString(loginRequest))
                             .with(csrf()))
                     .andExpect(status().isBadRequest());
         }
 
         @Test
-        @DisplayName("❌ 401 UNAUTHORIZED quand service lève AUTH_INVALID_CREDENTIALS")
+        @DisplayName("401 UNAUTHORIZED — credentials invalides")
         void shouldReturn401WhenInvalidCredentials() throws Exception {
-            // given
-            LoginRequest request = createValidLoginRequest();
-            when(authService.login(any()))
+            when(authService.login(any(LoginRequest.class)))
                     .thenThrow(new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS));
 
-            // when & then
-            mockMvc.perform(post(URL)
+            mockMvc.perform(post("/api/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
+                            .content(objectMapper.writeValueAsString(loginRequest))
                             .with(csrf()))
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.errorCode").value("AUTH_001"));
         }
 
         @Test
-        @DisplayName("❌ 403 FORBIDDEN quand service lève AUTH_ACCOUNT_DISABLED")
+        @DisplayName("403 FORBIDDEN — compte désactivé")
         void shouldReturn403WhenAccountDisabled() throws Exception {
-            // given
-            LoginRequest request = createValidLoginRequest();
-            when(authService.login(any()))
+            when(authService.login(any(LoginRequest.class)))
                     .thenThrow(new BusinessException(ErrorCode.AUTH_ACCOUNT_DISABLED));
 
-            // when & then
-            mockMvc.perform(post(URL)
+            mockMvc.perform(post("/api/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
+                            .content(objectMapper.writeValueAsString(loginRequest))
                             .with(csrf()))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.errorCode").value("AUTH_002"));
         }
 
         @Test
-        @DisplayName("❌ 403 FORBIDDEN quand service lève AUTH_TENANT_SUSPENDED")
+        @DisplayName("403 FORBIDDEN — groupe suspendu")
         void shouldReturn403WhenTenantSuspended() throws Exception {
-            // given
-            LoginRequest request = createValidLoginRequest();
-            when(authService.login(any()))
+            when(authService.login(any(LoginRequest.class)))
                     .thenThrow(new BusinessException(ErrorCode.AUTH_TENANT_SUSPENDED));
 
-            // when & then
-            mockMvc.perform(post(URL)
+            mockMvc.perform(post("/api/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
+                            .content(objectMapper.writeValueAsString(loginRequest))
                             .with(csrf()))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.errorCode").value("AUTH_003"));

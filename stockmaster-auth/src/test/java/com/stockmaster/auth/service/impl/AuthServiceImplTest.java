@@ -9,6 +9,7 @@ import com.stockmaster.auth.domain.enums.RoleUtilisateur;
 import com.stockmaster.auth.domain.enums.ScopeUtilisateur;
 import com.stockmaster.auth.domain.enums.TypeEntreprise;
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
+import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
@@ -19,6 +20,7 @@ import com.stockmaster.auth.repository.TenantGroupRepository;
 import com.stockmaster.auth.repository.UtilisateurRepository;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -36,317 +38,343 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AuthServiceImpl — Tests unitaires")
 class AuthServiceImplTest {
 
-    @Mock
-    private TenantGroupRepository tenantGroupRepository;
-
-    @Mock
-    private EntrepriseRepository entrepriseRepository;
-
-    @Mock
-    private UtilisateurRepository utilisateurRepository;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private JwtTokenProvider jwtTokenProvider;
-
-    @Mock
-    private AuthMapper authMapper;
-
-    @Mock
-    private ApplicationEventPublisher eventPublisher;
+    @Mock private TenantGroupRepository tenantGroupRepository;
+    @Mock private EntrepriseRepository entrepriseRepository;
+    @Mock private UtilisateurRepository utilisateurRepository;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private JwtTokenProvider jwtTokenProvider;
+    @Mock private AuthMapper authMapper;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private AuthServiceImpl authService;
 
     @Captor
-    private ArgumentCaptor<TenantGroup> tenantGroupCaptor;
-
-    @Captor
-    private ArgumentCaptor<Utilisateur> utilisateurCaptor;
-
-    @Captor
     private ArgumentCaptor<InscriptionSuccessEvent> eventCaptor;
 
-    // ====================================================================
+    private InscriptionEntrepriseUniqueRequest inscriptionUniqueRequest;
+    private InscriptionGroupeRequest inscriptionGroupeRequest;
+    private LoginRequest loginRequest;
+
+    private TenantGroup savedGroupe;
+    private Entreprise savedEntreprise;
+    private Utilisateur savedUtilisateur;
+
+    @BeforeEach
+    void setUp() {
+        inscriptionUniqueRequest = InscriptionEntrepriseUniqueRequest.builder()
+                .nomBoutique("Épicerie Centrale")
+                .ville("Douala")
+                .quartier("Akwa")
+                .prenom("Jean")
+                .nom("Kamga")
+                .email("jean.kamga@epicerie.cm")
+                .motDePasse("MotDePasse@2026")
+                .build();
+
+        inscriptionGroupeRequest = InscriptionGroupeRequest.builder()
+                .nomGroupe("Distribo Sarl")
+                .villesiege("Yaoundé")
+                .nif("M123456789")
+                .telephone("699000001")
+                .emailEntreprise("contact@distribo.cm")
+                .prenom("Paul")
+                .nom("Biya Jr")
+                .emailAdmin("paul@distribo.cm")
+                .motDePasse("MotDePasse@2026")
+                .build();
+
+        loginRequest = LoginRequest.builder()
+                .email("jean.kamga@epicerie.cm")
+                .motDePasse("MotDePasse@2026")
+                .build();
+
+        savedGroupe = TenantGroup.builder()
+                .id(1L)
+                .nomGroupe("Épicerie Centrale")
+                .planAbonnement(PlanAbonnement.GRATUIT)
+                .limiteFiliales(1)
+                .actif(true)
+                .build();
+
+        savedEntreprise = Entreprise.builder()
+                .id(1L)
+                .groupe(savedGroupe)
+                .typeEntreprise(TypeEntreprise.MERE)
+                .nom("Épicerie Centrale")
+                .adresseVille("Douala")
+                .adresseQuartier("Akwa")
+                .adressePays("Cameroun")
+                .email("jean.kamga@epicerie.cm")
+                .actif(true)
+                .build();
+
+        savedUtilisateur = Utilisateur.builder()
+                .id(1L)
+                .entreprise(savedEntreprise)
+                .scope(ScopeUtilisateur.GROUPE)
+                .role(RoleUtilisateur.ADMIN_GROUPE)
+                .nom("Kamga")
+                .prenom("Jean")
+                .email("jean.kamga@epicerie.cm")
+                .motDePasse("$2a$10$hash")
+                .actif(true)
+                .build();
+    }
+
+    // ========================================================================
     // US-006 — Inscription entreprise unique
-    // ====================================================================
+    // ========================================================================
 
     @Nested
-    @DisplayName("Inscription entreprise unique")
-    class InscriptionTests {
-
-        private static final String EMAIL = "jean.kamga@test.cm";
-        private static final String MOT_DE_PASSE = "Test@2026";
-        private static final String MOT_DE_PASSE_HASH = "$2a$10$hashfactice";
-        private static final Long GROUP_ID = 1L;
-        private static final Long ENTREPRISE_ID = 10L;
-        private static final Long USER_ID = 100L;
-
-        private InscriptionEntrepriseUniqueRequest createValidRequest() {
-            return InscriptionEntrepriseUniqueRequest.builder()
-                    .nomBoutique("Épicerie Centrale")
-                    .ville("Douala")
-                    .quartier("Akwa")
-                    .prenom("Jean")
-                    .nom("Kamga")
-                    .email(EMAIL)
-                    .motDePasse(MOT_DE_PASSE)
-                    .build();
-        }
-
-        private TenantGroup createSavedGroup() {
-            return TenantGroup.builder()
-                    .id(GROUP_ID)
-                    .nomGroupe("Épicerie Centrale")
-                    .planAbonnement(PlanAbonnement.GRATUIT)
-                    .limiteFiliales(1)
-                    .actif(true)
-                    .build();
-        }
-
-        private Entreprise createSavedEntreprise(TenantGroup groupe) {
-            Entreprise entreprise = new Entreprise();
-            entreprise.setId(ENTREPRISE_ID);
-            entreprise.setGroupe(groupe);
-            entreprise.setTypeEntreprise(TypeEntreprise.MERE);
-            entreprise.setNom("Épicerie Centrale");
-            return entreprise;
-        }
+    @DisplayName("Inscription entreprise unique (US-006)")
+    class InscriptionEntrepriseUnique {
 
         @Test
-        @DisplayName("✅ Crée un TenantGroup, une Entreprise et un Utilisateur admin")
-        void shouldCreateEntrepriseWhenEmailIsUnique() {
-            // given
-            InscriptionEntrepriseUniqueRequest request = createValidRequest();
-            when(utilisateurRepository.existsByEmail(EMAIL)).thenReturn(false);
-
-            TenantGroup savedGroup = createSavedGroup();
-            when(tenantGroupRepository.save(any(TenantGroup.class))).thenReturn(savedGroup);
-
-            Entreprise savedEntreprise = createSavedEntreprise(savedGroup);
-            when(authMapper.toEntreprise(request)).thenReturn(new Entreprise());
+        @DisplayName("✅ Crée un groupe, une entreprise et un utilisateur avec tous les champs valides")
+        void shouldCreateGroupAndEntrepriseAndUtilisateur() {
+            // Arrange
+            when(utilisateurRepository.existsByEmail(inscriptionUniqueRequest.getEmail())).thenReturn(false);
+            when(tenantGroupRepository.save(any(TenantGroup.class))).thenReturn(savedGroupe);
+            when(authMapper.toEntreprise(inscriptionUniqueRequest)).thenReturn(savedEntreprise);
             when(entrepriseRepository.save(any(Entreprise.class))).thenReturn(savedEntreprise);
+            when(passwordEncoder.encode(inscriptionUniqueRequest.getMotDePasse())).thenReturn("$2a$10$hash");
+            when(utilisateurRepository.save(any(Utilisateur.class))).thenReturn(savedUtilisateur);
 
-            when(passwordEncoder.encode(MOT_DE_PASSE)).thenReturn(MOT_DE_PASSE_HASH);
-            when(utilisateurRepository.save(any(Utilisateur.class))).thenAnswer(invocation -> {
-                Utilisateur u = invocation.getArgument(0);
-                u.setId(USER_ID);
-                return u;
-            });
+            // Act
+            InscriptionResponse response = authService.inscrireEntrepriseUnique(inscriptionUniqueRequest);
 
-            // when
-            InscriptionResponse response = authService.inscrireEntrepriseUnique(request);
-
-            // then
+            // Assert
             assertThat(response).isNotNull();
-            assertThat(response.getEmail()).isEqualTo(EMAIL);
-            assertThat(response.getGroupId()).isEqualTo(GROUP_ID);
-            assertThat(response.getMessage()).contains("créé");
+            assertThat(response.getEmail()).isEqualTo("jean.kamga@epicerie.cm");
+            assertThat(response.getGroupId()).isEqualTo(1L);
+            assertThat(response.getMessage()).contains("Votre espace a été créé");
 
-            // Vérifier TenantGroup créé avec les bons champs
-            verify(tenantGroupRepository).save(tenantGroupCaptor.capture());
-            assertThat(tenantGroupCaptor.getValue().getNomGroupe()).isEqualTo("Épicerie Centrale");
-            assertThat(tenantGroupCaptor.getValue().getPlanAbonnement()).isEqualTo(PlanAbonnement.GRATUIT);
-            assertThat(tenantGroupCaptor.getValue().getLimiteFiliales()).isEqualTo(1);
-            assertThat(tenantGroupCaptor.getValue().getActif()).isTrue();
-
-            // Vérifier Utilisateur créé avec ADMIN_GROUPE
-            verify(utilisateurRepository).save(utilisateurCaptor.capture());
-            assertThat(utilisateurCaptor.getValue().getRole()).isEqualTo(RoleUtilisateur.ADMIN_GROUPE);
-            assertThat(utilisateurCaptor.getValue().getScope()).isEqualTo(ScopeUtilisateur.GROUPE);
-            assertThat(utilisateurCaptor.getValue().getEmail()).isEqualTo(EMAIL);
-            assertThat(utilisateurCaptor.getValue().getMotDePasse()).isEqualTo(MOT_DE_PASSE_HASH);
-            assertThat(utilisateurCaptor.getValue().getActif()).isTrue();
-
-            // Vérifier événement publié
+            verify(tenantGroupRepository).save(any(TenantGroup.class));
+            verify(entrepriseRepository).save(any(Entreprise.class));
+            verify(utilisateurRepository).save(any(Utilisateur.class));
             verify(eventPublisher).publishEvent(eventCaptor.capture());
-            assertThat(eventCaptor.getValue().getEmail()).isEqualTo(EMAIL);
-            assertThat(eventCaptor.getValue().getPrenom()).isEqualTo("Jean");
+
+            InscriptionSuccessEvent event = eventCaptor.getValue();
+            assertThat(event.getEmail()).isEqualTo("jean.kamga@epicerie.cm");
+            assertThat(event.getPrenom()).isEqualTo("Jean");
         }
 
         @Test
-        @DisplayName("❌ Lève BusinessException AUTH_EMAIL_ALREADY_EXISTS si email déjà utilisé")
+        @DisplayName("❌ Lève BusinessException AUTH_EMAIL_ALREADY_EXISTS quand l'email existe déjà")
         void shouldThrowWhenEmailAlreadyExists() {
-            // given
-            InscriptionEntrepriseUniqueRequest request = createValidRequest();
-            when(utilisateurRepository.existsByEmail(EMAIL)).thenReturn(true);
+            // Arrange
+            when(utilisateurRepository.existsByEmail(inscriptionUniqueRequest.getEmail())).thenReturn(true);
 
-            // when & then
-            assertThatThrownBy(() -> authService.inscrireEntrepriseUnique(request))
+            // Act & Assert
+            assertThatThrownBy(() -> authService.inscrireEntrepriseUnique(inscriptionUniqueRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_EMAIL_ALREADY_EXISTS)
-                    .hasMessageContaining("Cet email");
+                    .hasMessageContaining("déjà utilisé");
 
-            // Vérifier aucune sauvegarde
             verify(tenantGroupRepository, never()).save(any());
             verify(entrepriseRepository, never()).save(any());
             verify(utilisateurRepository, never()).save(any());
-            verify(eventPublisher, never()).publishEvent(any());
         }
     }
 
-    // ====================================================================
-    // US-008 — Connexion JWT
-    // ====================================================================
+    // ========================================================================
+    // US-007 — Inscription groupe multi-sites
+    // ========================================================================
 
     @Nested
-    @DisplayName("Connexion JWT")
-    class LoginTests {
+    @DisplayName("Inscription groupe multi-sites (US-007)")
+    class InscriptionGroupe {
 
-        private static final String EMAIL = "jean.kamga@test.cm";
-        private static final String MOT_DE_PASSE = "Test@2026";
-        private static final String ACCESS_TOKEN = "eyJ.access.token";
-        private static final String REFRESH_TOKEN = "eyJ.refresh.token";
-        private static final Long USER_ID = 100L;
-        private static final Long ENTREPRISE_ID = 10L;
-        private static final Long GROUP_ID = 1L;
+        private TenantGroup savedGroupeGroupe;
+        private Entreprise savedEntrepriseGroupe;
+        private Utilisateur savedUtilisateurGroupe;
 
-        private TenantGroup createActiveGroup() {
-            return TenantGroup.builder()
-                    .id(GROUP_ID)
-                    .nomGroupe("Épicerie Centrale")
+        @BeforeEach
+        void setUp() {
+            savedGroupeGroupe = TenantGroup.builder()
+                    .id(2L)
+                    .nomGroupe("Distribo Sarl")
+                    .planAbonnement(PlanAbonnement.GRATUIT)
+                    .limiteFiliales(5)
                     .actif(true)
                     .build();
-        }
 
-        private Entreprise createActiveEntreprise(TenantGroup groupe) {
-            Entreprise entreprise = new Entreprise();
-            entreprise.setId(ENTREPRISE_ID);
-            entreprise.setGroupe(groupe);
-            entreprise.setNom("Épicerie Centrale");
-            return entreprise;
-        }
+            savedEntrepriseGroupe = Entreprise.builder()
+                    .id(2L)
+                    .groupe(savedGroupeGroupe)
+                    .typeEntreprise(TypeEntreprise.MERE)
+                    .nom("Distribo Sarl")
+                    .adresseVille("Yaoundé")
+                    .adressePays("Cameroun")
+                    .nif("M123456789")
+                    .telephone("699000001")
+                    .email("contact@distribo.cm")
+                    .actif(true)
+                    .build();
 
-        private Utilisateur createActiveUtilisateur(Entreprise entreprise) {
-            return Utilisateur.builder()
-                    .id(USER_ID)
-                    .entreprise(entreprise)
-                    .email(EMAIL)
-                    .motDePasse(MOT_DE_PASSE)
-                    .role(RoleUtilisateur.ADMIN_GROUPE)
+            savedUtilisateurGroupe = Utilisateur.builder()
+                    .id(2L)
+                    .entreprise(savedEntrepriseGroupe)
                     .scope(ScopeUtilisateur.GROUPE)
+                    .role(RoleUtilisateur.ADMIN_GROUPE)
+                    .nom("Biya Jr")
+                    .prenom("Paul")
+                    .email("paul@distribo.cm")
+                    .motDePasse("$2a$10$hash")
                     .actif(true)
                     .build();
         }
 
-        private LoginRequest createValidLoginRequest() {
-            return LoginRequest.builder()
-                    .email(EMAIL)
-                    .motDePasse(MOT_DE_PASSE)
-                    .build();
-        }
-
         @Test
-        @DisplayName("✅ Retourne LoginResponse avec tokens quand credentials valides")
-        void shouldReturnLoginResponseWhenCredentialsValid() {
-            // given
-            LoginRequest request = createValidLoginRequest();
-            TenantGroup groupe = createActiveGroup();
-            Entreprise entreprise = createActiveEntreprise(groupe);
-            Utilisateur utilisateur = createActiveUtilisateur(entreprise);
+        @DisplayName("✅ Crée un groupe multi-sites avec NIF, téléphone et tous les champs")
+        void shouldCreateGroupeSuccessfully() {
+            // Arrange
+            when(utilisateurRepository.existsByEmail(inscriptionGroupeRequest.getEmailAdmin())).thenReturn(false);
+            when(tenantGroupRepository.save(any(TenantGroup.class))).thenReturn(savedGroupeGroupe);
+            when(authMapper.toEntrepriseFromGroupe(inscriptionGroupeRequest)).thenReturn(savedEntrepriseGroupe);
+            when(entrepriseRepository.save(any(Entreprise.class))).thenReturn(savedEntrepriseGroupe);
+            when(passwordEncoder.encode(inscriptionGroupeRequest.getMotDePasse())).thenReturn("$2a$10$hash");
+            when(utilisateurRepository.save(any(Utilisateur.class))).thenReturn(savedUtilisateurGroupe);
 
-            when(utilisateurRepository.findByEmail(EMAIL)).thenReturn(Optional.of(utilisateur));
-            when(passwordEncoder.matches(MOT_DE_PASSE, utilisateur.getMotDePasse())).thenReturn(true);
-            when(jwtTokenProvider.generateAccessToken(USER_ID, ENTREPRISE_ID, GROUP_ID,
-                    RoleUtilisateur.ADMIN_GROUPE.name(), ScopeUtilisateur.GROUPE.name()))
-                    .thenReturn(ACCESS_TOKEN);
-            when(jwtTokenProvider.generateRefreshToken(USER_ID)).thenReturn(REFRESH_TOKEN);
+            // Act
+            InscriptionResponse response = authService.inscrireGroupe(inscriptionGroupeRequest);
 
-            // when
-            LoginResponse response = authService.login(request);
-
-            // then
+            // Assert
             assertThat(response).isNotNull();
-            assertThat(response.getAccessToken()).isEqualTo(ACCESS_TOKEN);
-            assertThat(response.getRefreshToken()).isEqualTo(REFRESH_TOKEN);
+            assertThat(response.getEmail()).isEqualTo("paul@distribo.cm");
+            assertThat(response.getGroupId()).isEqualTo(2L);
+            assertThat(response.getMessage()).contains("Votre groupe a été créé");
+            assertThat(response.getMessage()).contains("Créez votre première filiale");
+
+            verify(tenantGroupRepository).save(argThat(g ->
+                    g.getNomGroupe().equals("Distribo Sarl") &&
+                    g.getLimiteFiliales() == 5 &&
+                    g.getPlanAbonnement() == PlanAbonnement.GRATUIT));
+            verify(entrepriseRepository).save(argThat(e ->
+                    e.getNom().equals("Distribo Sarl") &&
+                    e.getAdresseVille().equals("Yaoundé") &&
+                    "M123456789".equals(e.getNif()) &&
+                    "699000001".equals(e.getTelephone()) &&
+                    "contact@distribo.cm".equals(e.getEmail())));
+            verify(utilisateurRepository).save(argThat(u ->
+                    u.getEmail().equals("paul@distribo.cm") &&
+                    u.getRole() == RoleUtilisateur.ADMIN_GROUPE &&
+                    u.getScope() == ScopeUtilisateur.GROUPE));
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+            InscriptionSuccessEvent event = eventCaptor.getValue();
+            assertThat(event.getEmail()).isEqualTo("paul@distribo.cm");
+            assertThat(event.getPrenom()).isEqualTo("Paul");
+            assertThat(event.getNomEntreprise()).isEqualTo("Distribo Sarl");
+        }
+
+        @Test
+        @DisplayName("❌ Lève BusinessException AUTH_EMAIL_ALREADY_EXISTS quand l'email admin existe déjà")
+        void shouldThrowWhenEmailAdminAlreadyExists() {
+            // Arrange
+            when(utilisateurRepository.existsByEmail(inscriptionGroupeRequest.getEmailAdmin())).thenReturn(true);
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.inscrireGroupe(inscriptionGroupeRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_EMAIL_ALREADY_EXISTS)
+                    .hasMessageContaining("déjà utilisé");
+
+            verify(tenantGroupRepository, never()).save(any());
+            verify(entrepriseRepository, never()).save(any());
+            verify(utilisateurRepository, never()).save(any());
+        }
+    }
+
+    // ========================================================================
+    // US-008 — Connexion JWT
+    // ========================================================================
+
+    @Nested
+    @DisplayName("Connexion JWT (US-008)")
+    class Login {
+
+        @Test
+        @DisplayName("✅ Retourne LoginResponse avec accessToken et refreshToken quand credentials valides")
+        void shouldReturnTokensWhenCredentialsValid() {
+            // Arrange
+            when(utilisateurRepository.findByEmail(loginRequest.getEmail())).thenReturn(Optional.of(savedUtilisateur));
+            when(passwordEncoder.matches(loginRequest.getMotDePasse(), savedUtilisateur.getMotDePasse())).thenReturn(true);
+            when(jwtTokenProvider.generateAccessToken(1L, 1L, 1L, "ADMIN_GROUPE", "GROUPE"))
+                    .thenReturn("access-token");
+            when(jwtTokenProvider.generateRefreshToken(1L)).thenReturn("refresh-token");
+
+            // Act
+            LoginResponse response = authService.login(loginRequest);
+
+            // Assert
+            assertThat(response).isNotNull();
+            assertThat(response.getAccessToken()).isEqualTo("access-token");
+            assertThat(response.getRefreshToken()).isEqualTo("refresh-token");
             assertThat(response.getExpiresIn()).isEqualTo(900);
-            assertThat(response.getRole()).isEqualTo(RoleUtilisateur.ADMIN_GROUPE.name());
-            assertThat(response.getScope()).isEqualTo(ScopeUtilisateur.GROUPE.name());
+            assertThat(response.getRole()).isEqualTo("ADMIN_GROUPE");
+            assertThat(response.getScope()).isEqualTo("GROUPE");
         }
 
         @Test
-        @DisplayName("❌ Lève AUTH_INVALID_CREDENTIALS si email introuvable")
+        @DisplayName("❌ Lève AUTH_INVALID_CREDENTIALS quand l'email n'existe pas")
         void shouldThrowWhenEmailNotFound() {
-            // given
-            LoginRequest request = createValidLoginRequest();
-            when(utilisateurRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
+            // Arrange
+            when(utilisateurRepository.findByEmail(loginRequest.getEmail())).thenReturn(Optional.empty());
 
-            // when & then
-            assertThatThrownBy(() -> authService.login(request))
+            // Act & Assert
+            assertThatThrownBy(() -> authService.login(loginRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_INVALID_CREDENTIALS);
-
-            verify(jwtTokenProvider, never()).generateAccessToken(any(), any(), any(), any(), any());
         }
 
         @Test
-        @DisplayName("❌ Lève AUTH_INVALID_CREDENTIALS si mot de passe incorrect")
+        @DisplayName("❌ Lève AUTH_INVALID_CREDENTIALS quand le mot de passe est incorrect")
         void shouldThrowWhenPasswordIncorrect() {
-            // given
-            LoginRequest request = createValidLoginRequest();
-            TenantGroup groupe = createActiveGroup();
-            Entreprise entreprise = createActiveEntreprise(groupe);
-            Utilisateur utilisateur = createActiveUtilisateur(entreprise);
+            // Arrange
+            when(utilisateurRepository.findByEmail(loginRequest.getEmail())).thenReturn(Optional.of(savedUtilisateur));
+            when(passwordEncoder.matches(loginRequest.getMotDePasse(), savedUtilisateur.getMotDePasse())).thenReturn(false);
 
-            when(utilisateurRepository.findByEmail(EMAIL)).thenReturn(Optional.of(utilisateur));
-            when(passwordEncoder.matches(MOT_DE_PASSE, utilisateur.getMotDePasse())).thenReturn(false);
-
-            // when & then
-            assertThatThrownBy(() -> authService.login(request))
+            // Act & Assert
+            assertThatThrownBy(() -> authService.login(loginRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_INVALID_CREDENTIALS);
-
-            verify(jwtTokenProvider, never()).generateAccessToken(any(), any(), any(), any(), any());
         }
 
         @Test
-        @DisplayName("❌ Lève AUTH_ACCOUNT_DISABLED si compte inactif")
+        @DisplayName("❌ Lève AUTH_ACCOUNT_DISABLED quand le compte est inactif")
         void shouldThrowWhenAccountDisabled() {
-            // given
-            LoginRequest request = createValidLoginRequest();
-            TenantGroup groupe = createActiveGroup();
-            Entreprise entreprise = createActiveEntreprise(groupe);
-            Utilisateur utilisateur = createActiveUtilisateur(entreprise);
-            utilisateur.setActif(false); // ← Compte désactivé
+            // Arrange
+            savedUtilisateur.setActif(false);
+            when(utilisateurRepository.findByEmail(loginRequest.getEmail())).thenReturn(Optional.of(savedUtilisateur));
+            when(passwordEncoder.matches(loginRequest.getMotDePasse(), savedUtilisateur.getMotDePasse())).thenReturn(true);
 
-            when(utilisateurRepository.findByEmail(EMAIL)).thenReturn(Optional.of(utilisateur));
-            when(passwordEncoder.matches(MOT_DE_PASSE, utilisateur.getMotDePasse())).thenReturn(true);
-
-            // when & then
-            assertThatThrownBy(() -> authService.login(request))
+            // Act & Assert
+            assertThatThrownBy(() -> authService.login(loginRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_ACCOUNT_DISABLED);
-
-            verify(jwtTokenProvider, never()).generateAccessToken(any(), any(), any(), any(), any());
         }
 
         @Test
-        @DisplayName("❌ Lève AUTH_TENANT_SUSPENDED si groupe suspendu")
-        void shouldThrowWhenGroupSuspended() {
-            // given
-            LoginRequest request = createValidLoginRequest();
-            TenantGroup groupe = createActiveGroup();
-            groupe.setActif(false); // ← Groupe suspendu
-            Entreprise entreprise = createActiveEntreprise(groupe);
-            Utilisateur utilisateur = createActiveUtilisateur(entreprise);
+        @DisplayName("❌ Lève AUTH_TENANT_SUSPENDED quand le groupe est suspendu")
+        void shouldThrowWhenTenantSuspended() {
+            // Arrange
+            savedGroupe.setActif(false);
+            when(utilisateurRepository.findByEmail(loginRequest.getEmail())).thenReturn(Optional.of(savedUtilisateur));
+            when(passwordEncoder.matches(loginRequest.getMotDePasse(), savedUtilisateur.getMotDePasse())).thenReturn(true);
 
-            when(utilisateurRepository.findByEmail(EMAIL)).thenReturn(Optional.of(utilisateur));
-            when(passwordEncoder.matches(MOT_DE_PASSE, utilisateur.getMotDePasse())).thenReturn(true);
-
-            // when & then
-            assertThatThrownBy(() -> authService.login(request))
+            // Act & Assert
+            assertThatThrownBy(() -> authService.login(loginRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_TENANT_SUSPENDED);
-
-            verify(jwtTokenProvider, never()).generateAccessToken(any(), any(), any(), any(), any());
         }
     }
 }

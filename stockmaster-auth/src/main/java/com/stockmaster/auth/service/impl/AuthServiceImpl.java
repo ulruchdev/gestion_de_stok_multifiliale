@@ -9,6 +9,7 @@ import com.stockmaster.auth.domain.enums.RoleUtilisateur;
 import com.stockmaster.auth.domain.enums.ScopeUtilisateur;
 import com.stockmaster.auth.domain.enums.TypeEntreprise;
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
+import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
@@ -100,6 +101,68 @@ public class AuthServiceImpl implements AuthService {
                 .email(request.getEmail())
                 .groupId(groupe.getId())
                 .message("Votre espace a été créé. Vérifiez votre email pour activer votre compte.")
+                .build();
+    }
+
+    // ========================================================================
+    // US-007 — Inscription groupe multi-sites
+    // ========================================================================
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public InscriptionResponse inscrireGroupe(InscriptionGroupeRequest request) {
+
+        // Vérifier unicité email admin
+        if (utilisateurRepository.existsByEmail(request.getEmailAdmin())) {
+            log.warn("Tentative d'inscription groupe avec un email admin existant: {}", request.getEmailAdmin());
+            throw new BusinessException(ErrorCode.AUTH_EMAIL_ALREADY_EXISTS,
+                    "Cet email est déjà utilisé");
+        }
+
+        // Création atomique : TenantGroup + Entreprise + Utilisateur
+        TenantGroup groupe = TenantGroup.builder()
+                .nomGroupe(request.getNomGroupe())
+                .planAbonnement(PlanAbonnement.GRATUIT)
+                .limiteFiliales(5)
+                .actif(true)
+                .build();
+        groupe = tenantGroupRepository.save(groupe);
+        log.debug("TenantGroup créé pour groupe multi-sites: id={}", groupe.getId());
+
+        Entreprise entreprise = authMapper.toEntrepriseFromGroupe(request);
+        entreprise.setGroupe(groupe);
+        entreprise = entrepriseRepository.save(entreprise);
+        log.debug("Entreprise (siège) créée: id={}", entreprise.getId());
+
+        String motDePasseHash = passwordEncoder.encode(request.getMotDePasse());
+
+        Utilisateur utilisateur = Utilisateur.builder()
+                .entreprise(entreprise)
+                .scope(ScopeUtilisateur.GROUPE)
+                .role(RoleUtilisateur.ADMIN_GROUPE)
+                .nom(request.getNom())
+                .prenom(request.getPrenom())
+                .email(request.getEmailAdmin())
+                .motDePasse(motDePasseHash)
+                .actif(true)
+                .build();
+        utilisateur = utilisateurRepository.save(utilisateur);
+        log.debug("Utilisateur ADMIN_GROUPE créé pour groupe: id={}", utilisateur.getId());
+
+        // Publication événement asynchrone (email de bienvenue)
+        eventPublisher.publishEvent(new InscriptionSuccessEvent(
+                this,
+                utilisateur.getEmail(),
+                utilisateur.getPrenom(),
+                entreprise.getNom()
+        ));
+
+        log.info("Inscription groupe réussie — emailAdmin={}, groupeId={}", request.getEmailAdmin(), groupe.getId());
+
+        return InscriptionResponse.builder()
+                .email(request.getEmailAdmin())
+                .groupId(groupe.getId())
+                .message("Votre groupe a été créé. Créez votre première filiale depuis le tableau de bord.")
                 .build();
     }
 

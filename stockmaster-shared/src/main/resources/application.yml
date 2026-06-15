@@ -10,6 +10,12 @@ spring:
   application:
     name: stockmaster-cm
 
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:stockmaster_dev}
+    username: ${DB_USERNAME:stockmaster}
+    password: ${DB_PASSWORD:stockmaster}
+    driver-class-name: org.postgresql.Driver
+
   # ========== JPA / Hibernate ==========
   jpa:
     hibernate:
@@ -73,7 +79,7 @@ management:
 # ========== StockMaster — Propriétés personnalisées ==========
 stockmaster:
   jwt:
-    secret: ${JWT_SECRET:}
+    secret: ${JWT_SECRET:defaultsecretkeythatshouldbereplacedwithastrongone}
     access-token-expiration: 900
     refresh-token-expiration: 604800
     issuer: stockmaster
@@ -146,8 +152,10 @@ spring:
       on-profile: test
 
   datasource:
-    url: jdbc:tc:postgresql:16:///stockmaster_test
-    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    url: jdbc:postgresql://localhost:5432/stockmaster_dev
+    username: stockmaster
+    password: stockmaster
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
@@ -160,6 +168,15 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+
+stockmaster:
+  jwt:
+    secret: test-secret-key-that-is-at-least-256-bits-long-for-hs256-test
+
+management:
+  health:
+    mail:
+      enabled: false
 
 logging:
   level:
