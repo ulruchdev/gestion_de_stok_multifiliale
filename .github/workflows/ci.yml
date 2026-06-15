@@ -95,7 +95,7 @@ jobs:
           REDIS_HOST: localhost
           REDIS_PORT: 6379
         run: |
-          mvn -pl stockmaster-shared -am spring-boot:run -q -Dspring-boot.run.profiles=dev -Dspring-boot.run.mainClass=com.stockmaster.shared.StockMasterApplication > /tmp/app.log 2>&1 &
+          java -jar stockmaster-shared/target/*-exec.jar --spring.profiles.active=dev > /tmp/app.log 2>&1 &
           APP_PID=$!
           echo "PID application : $APP_PID"
           echo "⏳ Attente du démarrage (polling toutes les 5s, timeout 120s)..."
