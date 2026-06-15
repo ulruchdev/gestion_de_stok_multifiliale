@@ -26,7 +26,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U stockmaster -d stockmaster_dev"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -84,6 +84,18 @@ jobs:
           path: stockmaster-shared/target/*.jar
           retention-days: 7
 
+      - name: Wait for PostgreSQL
+        run: |
+          echo "⏳ Attente de PostgreSQL..."
+          for i in {1..30}; do
+            if PGPASSWORD=stockmaster psql -h localhost -U stockmaster -d stockmaster_dev -c "SELECT 1" > /dev/null 2>&1; then
+              echo "✅ PostgreSQL est prêt"
+              break
+            fi
+            echo "  Tentative $i/30..."
+            sleep 2
+          done
+
       - name: Integration test — Vérifier que l'application démarre
         env:
           SPRING_PROFILES_ACTIVE: dev
@@ -94,8 +106,10 @@ jobs:
           DB_PASSWORD: stockmaster
           REDIS_HOST: localhost
           REDIS_PORT: 6379
+          SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 1
+          SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
         run: |
-          java -jar stockmaster-shared/target/*-exec.jar --spring.profiles.active=dev > /tmp/app.log 2>&1 &
+          java -Dspring.profiles.active=dev -jar stockmaster-shared/target/*-exec.jar > /tmp/app.log 2>&1 &
           APP_PID=$!
           echo "PID application : $APP_PID"
           echo "⏳ Attente du démarrage (polling toutes les 5s, timeout 120s)..."
@@ -106,7 +120,7 @@ jobs:
             HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health 2>/dev/null || echo "000")
             if [ "$HTTP_CODE" = "200" ]; then
               echo "✅ Application démarrée — HTTP $HTTP_CODE"
-              curl -s http://localhost:8080/actuator/health
+              curl -s http://localhost:8080/actuator/health | jq . || true
               kill $APP_PID 2>/dev/null || true
               exit 0
             fi
@@ -116,7 +130,7 @@ jobs:
           echo "❌ Timeout — Application non démarrée après 120s"
           echo ""
           echo "=== Dernières lignes du log applicatif ==="
-          tail -50 /tmp/app.log
+          tail -100 /tmp/app.log
           kill $APP_PID 2>/dev/null || true
           exit 1
 
