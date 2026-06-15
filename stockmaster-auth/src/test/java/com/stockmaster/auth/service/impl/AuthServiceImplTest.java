@@ -23,7 +23,10 @@ import com.stockmaster.auth.repository.UtilisateurRepository;
 import com.stockmaster.shared.config.JwtProperties;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
+import com.stockmaster.auth.config.StockMasterPrincipal;
 import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Claims;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -39,14 +42,20 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+
+import static org.mockito.Mockito.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.lenient;
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AuthServiceImpl — Tests unitaires")
@@ -482,6 +491,69 @@ class AuthServiceImplTest {
             assertThatThrownBy(() -> authService.refreshAccessToken(refreshTokenRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_INVALID_CREDENTIALS);
+        }
+    }
+
+    // ========================================================================
+    // US-010 — Déconnexion (révocation du refresh token)
+    // ========================================================================
+
+    @Nested
+    @DisplayName("Déconnexion (US-010)")
+    class Logout {
+
+        @BeforeEach
+        void setUp() {
+            // Simuler un utilisateur authentifié dans le SecurityContext
+            StockMasterPrincipal principal = new StockMasterPrincipal(1L, mock(Claims.class));
+            UsernamePasswordAuthenticationToken auth =
+                    new UsernamePasswordAuthenticationToken(principal, null, List.of());
+            SecurityContextHolder.getContext().setAuthentication(auth);
+        }
+
+        @AfterEach
+        void tearDown() {
+            SecurityContextHolder.clearContext();
+        }
+
+        @Test
+        @DisplayName("✅ Supprime le refresh token de Redis et vide le contexte de sécurité")
+        void shouldDeleteRefreshTokenAndClearContext() {
+            // Arrange
+            when(redisTemplate.delete("refresh:1")).thenReturn(true);
+
+            // Act
+            authService.logout();
+
+            // Assert
+            verify(redisTemplate).delete("refresh:1");
+            assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        }
+
+        @Test
+        @DisplayName("✅ Ne lève pas d'erreur si le refresh token n'existe pas dans Redis")
+        void shouldNotThrowWhenNoRefreshTokenInRedis() {
+            // Arrange
+            when(redisTemplate.delete("refresh:1")).thenReturn(false);
+
+            // Act (ne doit pas lever d'exception)
+            authService.logout();
+
+            // Assert
+            verify(redisTemplate).delete("refresh:1");
+            assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        }
+
+        @Test
+        @DisplayName("❌ Lève AUTH_TOKEN_INVALID quand aucun utilisateur n'est authentifié")
+        void shouldThrowWhenNotAuthenticated() {
+            // Arrange
+            SecurityContextHolder.clearContext();
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.logout())
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_TOKEN_INVALID);
         }
     }
 }

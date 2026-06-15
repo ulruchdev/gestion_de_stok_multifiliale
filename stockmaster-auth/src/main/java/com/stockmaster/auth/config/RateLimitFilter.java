@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -22,6 +23,11 @@ public class RateLimitFilter implements Filter {
     private static final int MAX_ATTEMPTS = 5;
     private static final Duration WINDOW = Duration.ofMinutes(15);
 
+    private static final Map<String, String> RATE_LIMIT_ENDPOINTS = Map.of(
+            "/api/v1/auth/login", "login",
+            "/api/v1/auth/refresh", "refresh"
+    );
+
     @Override
     public void doFilter(ServletRequest servletRequest,
                          ServletResponse servletResponse,
@@ -32,13 +38,13 @@ public class RateLimitFilter implements Filter {
         HttpServletResponse res = (HttpServletResponse) servletResponse;
 
         String uri = req.getRequestURI();
+        String prefix = RATE_LIMIT_ENDPOINTS.get(uri);
 
-        if (!uri.equals("/api/v1/auth/login") && !uri.equals("/api/v1/auth/refresh")) {
+        if (prefix == null) {
             chain.doFilter(req, res);
             return;
         }
 
-        String prefix = uri.contains("/login") ? "login" : "refresh";
         String key = "rate_limit:" + prefix + ":" + getClientIp(req);
         String attemptsStr = redisTemplate.opsForValue().get(key);
         int attempts = (attemptsStr != null) ? Integer.parseInt(attemptsStr) : 0;
