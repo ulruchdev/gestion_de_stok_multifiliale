@@ -85,8 +85,17 @@ jobs:
           retention-days: 7
 
       - name: Integration test — Vérifier que l'application démarre
+        env:
+          SPRING_PROFILES_ACTIVE: dev
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: stockmaster_dev
+          DB_USERNAME: stockmaster
+          DB_PASSWORD: stockmaster
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
         run: |
-          mvn spring-boot:run -pl stockmaster-shared -q > /tmp/app.log 2>&1 &
+          mvn -pl stockmaster-shared -am spring-boot:run -q -Dspring-boot.run.profiles=dev > /tmp/app.log 2>&1 &
           APP_PID=$!
           echo "PID application : $APP_PID"
           echo "⏳ Attente du démarrage (polling toutes les 5s, timeout 120s)..."
