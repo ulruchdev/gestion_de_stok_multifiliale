@@ -71,4 +71,15 @@ public class AuthController {
         return ResponseEntity.ok()
                 .body(ApiResponse.ok(response));
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout() {
+
+        log.debug("Demande de déconnexion reçue");
+
+        authService.logout();
+
+        return ResponseEntity.ok()
+                .body(ApiResponse.success("Déconnexion réussie"));
+    }
 }

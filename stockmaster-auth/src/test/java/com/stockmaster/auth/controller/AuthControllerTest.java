@@ -16,6 +16,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -25,6 +28,8 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -446,6 +451,41 @@ class AuthControllerTest {
                             .content("{}")
                             .with(csrf()))
                     .andExpect(status().isBadRequest());
+        }
+    }
+
+    // ========================================================================
+    // US-010 — POST /api/v1/auth/logout
+    // ========================================================================
+
+    @Nested
+    @DisplayName("POST /api/v1/auth/logout")
+    class LogoutEndpoint {
+
+        @Test
+        @DisplayName("200 OK — déconnexion réussie")
+        void shouldReturn200WhenLogoutSuccess() throws Exception {
+            mockMvc.perform(post("/api/v1/auth/logout")
+                            .with(user("1").roles("ADMIN_GROUPE"))
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.message").value("Déconnexion réussie"));
+
+            verify(authService).logout();
+        }
+
+        @Test
+        @DisplayName("401 UNAUTHORIZED — token invalide (simulé par le service)")
+        void shouldReturn401WhenTokenInvalid() throws Exception {
+            doThrow(new BusinessException(ErrorCode.AUTH_TOKEN_INVALID))
+                    .when(authService).logout();
+
+            mockMvc.perform(post("/api/v1/auth/logout")
+                            .with(user("1").roles("ADMIN_GROUPE"))
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.errorCode").value("AUTH_005"));
         }
     }
 }

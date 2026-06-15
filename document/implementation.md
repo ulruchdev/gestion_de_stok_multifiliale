@@ -331,8 +331,9 @@ main ─────────────────────────
 
 ## US-009 — Refresh token 🚧
 
-> **Statut :** IMPLÉMENTÉ — En attente de merge
+> **Statut :** IMPLÉMENTÉ — Pushé, en attente de PR
 > **Branche :** `feature/GS-009-refresh-token`
+> **Commit :** `5a39023`
 > **Priorité :** P0 | **Sprint :** 2 | **Points :** 2
 > **Endpoint :** `POST /api/v1/auth/refresh`
 > **Fichiers créés/modifiés :** 7
@@ -358,7 +359,40 @@ main ─────────────────────────
 5. L'ancien access token reste valide jusqu'à sa propre expiration (15 min)
 6. Token invalide/expiré/absent de Redis → `401 UNAUTHORIZED` → client doit se reconnecter
 
-## US-010 — Déconnexion 🔜
+## US-010 — Déconnexion 🚧
+
+> **Statut :** IMPLÉMENTÉ — En attente de push
+> **Branche :** `feature/GS-010-logout`
+> **Priorité :** P0 | **Sprint :** 2 | **Points :** 2
+> **Endpoint :** `POST /api/v1/auth/logout` (authentifié)
+> **Fichiers modifiés :** 5
+
+### Détail des fichiers
+
+| Fichier | Changement |
+|---|---|
+| `AuthService.java` | 📝 Nouvelle méthode `logout()` |
+| `AuthServiceImpl.java` | 📝 Implémentation `logout()` : récupération userId via `SecurityContextHolder`, suppression clé Redis `refresh:{userId}`, nettoyage `SecurityContext` |
+| `AuthController.java` | 📝 Nouvel endpoint `POST /api/v1/auth/logout` → 200 avec `ApiResponse.success()` |
+| `AuthServiceImplTest.java` | 🆕 3 tests logout (suppression Redis + cas sans token + non authentifié) |
+| `AuthControllerTest.java` | 🆕 3 tests endpoint logout (200 OK + 401 token invalide) |
+
+### Logique métier
+
+1. L'utilisateur doit être authentifié (Bearer token valide)
+2. Récupération de l'userId depuis `StockMasterPrincipal` (via `SecurityContextHolder`)
+3. Suppression de la clé Redis `refresh:{userId}` → révocation du refresh token
+4. Nettoyage du contexte de sécurité (`SecurityContextHolder.clearContext()`)
+5. Si aucun refresh token en Redis (déjà expiré/déconnecté) → succès quand même (idempotent)
+6. Si non authentifié → `AUTH_TOKEN_INVALID` (AUTH_005 → 401)
+
+### Tests (5 nouveaux, 42 total)
+
+| Catégorie | Tests |
+|---|---|
+| AuthServiceImplTest — logout | 3 (succès Redis + pas de token en Redis + non authentifié) |
+| AuthControllerTest — logout | 2 (200 OK + 401 via service mock) |
+
 ## US-011 — Mot de passe oublié 🔜
 ## US-012 — Réinitialisation mot de passe 🔜
 ## US-013 — Changement mot de passe 🔜

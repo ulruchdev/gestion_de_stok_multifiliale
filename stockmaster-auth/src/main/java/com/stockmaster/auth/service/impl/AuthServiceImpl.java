@@ -1,6 +1,7 @@
 package com.stockmaster.auth.service.impl;
 
 import com.stockmaster.auth.config.JwtTokenProvider;
+import com.stockmaster.auth.config.StockMasterPrincipal;
 import com.stockmaster.auth.domain.entity.Entreprise;
 import com.stockmaster.auth.domain.entity.TenantGroup;
 import com.stockmaster.auth.domain.entity.Utilisateur;
@@ -30,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -237,6 +239,32 @@ public class AuthServiceImpl implements AuthService {
                 .role(role)
                 .scope(scope)
                 .build();
+    }
+
+    // ========================================================================
+    // US-009 — Refresh token
+    // ========================================================================
+
+    // ========================================================================
+    // US-010 — Déconnexion (révocation du refresh token)
+    // ========================================================================
+
+    @Override
+    public void logout() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof StockMasterPrincipal principal)) {
+            log.warn("Tentative de déconnexion sans authentification valide");
+            throw new BusinessException(ErrorCode.AUTH_TOKEN_INVALID);
+        }
+
+        Long userId = principal.getUserId();
+        String redisKey = REFRESH_KEY_PREFIX + userId;
+
+        redisTemplate.delete(redisKey);
+        log.info("Refresh token révoqué pour userId={}", userId);
+
+        // Nettoyer le contexte de sécurité
+        SecurityContextHolder.clearContext();
     }
 
     // ========================================================================
