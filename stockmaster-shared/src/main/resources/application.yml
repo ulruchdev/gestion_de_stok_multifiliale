@@ -79,7 +79,7 @@ management:
 # ========== StockMaster — Propriétés personnalisées ==========
 stockmaster:
   jwt:
-    secret: ${JWT_SECRET:}
+    secret: ${JWT_SECRET:defaultsecretkeythatshouldbereplacedwithastrongone}
     access-token-expiration: 900
     refresh-token-expiration: 604800
     issuer: stockmaster
