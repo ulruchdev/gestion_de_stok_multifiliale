@@ -20,7 +20,7 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: stockmaster_test
+          POSTGRES_DB: stockmaster_dev
           POSTGRES_USER: stockmaster
           POSTGRES_PASSWORD: stockmaster
         ports:
@@ -83,6 +83,33 @@ jobs:
           name: stockmaster-jar
           path: stockmaster-shared/target/*.jar
           retention-days: 7
+
+      - name: Integration test — Vérifier que l'application démarre
+        run: |
+          java -jar stockmaster-shared/target/*.jar --spring.profiles.active=test > /tmp/app.log 2>&1 &
+          APP_PID=$!
+          echo "PID application : $APP_PID"
+          echo "⏳ Attente du démarrage (polling toutes les 5s, timeout 120s)..."
+          MAX_RETRIES=24
+          RETRY=0
+          while [ $RETRY -lt $MAX_RETRIES ]; do
+            sleep 5
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/actuator/health 2>/dev/null || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Application démarrée — HTTP $HTTP_CODE"
+              curl -s http://localhost:8080/actuator/health
+              kill $APP_PID 2>/dev/null || true
+              exit 0
+            fi
+            RETRY=$((RETRY+1))
+            echo "  Tentative $RETRY/$MAX_RETRIES — HTTP $HTTP_CODE"
+          done
+          echo "❌ Timeout — Application non démarrée après 120s"
+          echo ""
+          echo "=== Dernières lignes du log applicatif ==="
+          tail -50 /tmp/app.log
+          kill $APP_PID 2>/dev/null || true
+          exit 1
 
   sonar:
     name: SonarCloud Analysis

@@ -146,8 +146,10 @@ spring:
       on-profile: test
 
   datasource:
-    url: jdbc:tc:postgresql:16:///stockmaster_test
-    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    url: jdbc:postgresql://localhost:5432/stockmaster_dev
+    username: stockmaster
+    password: stockmaster
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
@@ -160,6 +162,15 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+
+stockmaster:
+  jwt:
+    secret: test-secret-key-that-is-at-least-256-bits-long-for-hs256-test
+
+management:
+  health:
+    mail:
+      enabled: false
 
 logging:
   level:
