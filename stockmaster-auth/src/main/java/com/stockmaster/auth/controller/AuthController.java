@@ -3,8 +3,10 @@ package com.stockmaster.auth.controller;
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
 import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
+import com.stockmaster.auth.dto.request.RefreshTokenRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
+import com.stockmaster.auth.dto.response.RefreshTokenResponse;
 import com.stockmaster.auth.service.AuthService;
 import com.stockmaster.shared.dto.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -53,6 +55,18 @@ public class AuthController {
         log.debug("Tentative de connexion pour: {}", request.getEmail());
 
         LoginResponse response = authService.login(request);
+
+        return ResponseEntity.ok()
+                .body(ApiResponse.ok(response));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<RefreshTokenResponse>> refresh(
+            @Valid @RequestBody RefreshTokenRequest request) {
+
+        log.debug("Demande de refresh token reçue");
+
+        RefreshTokenResponse response = authService.refreshAccessToken(request);
 
         return ResponseEntity.ok()
                 .body(ApiResponse.ok(response));

@@ -5,8 +5,10 @@ import com.stockmaster.auth.AuthTestApplication;
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
 import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
+import com.stockmaster.auth.dto.request.RefreshTokenRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
+import com.stockmaster.auth.dto.response.RefreshTokenResponse;
 import com.stockmaster.auth.service.AuthService;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
@@ -355,6 +357,95 @@ class AuthControllerTest {
                             .with(csrf()))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.errorCode").value("AUTH_003"));
+        }
+    }
+
+    // ========================================================================
+    // US-009 — POST /api/v1/auth/refresh
+    // ========================================================================
+
+    @Nested
+    @DisplayName("POST /api/v1/auth/refresh")
+    class RefreshTokenEndpoint {
+
+        private RefreshTokenRequest refreshTokenRequest;
+
+        @BeforeEach
+        void setUp() {
+            refreshTokenRequest = RefreshTokenRequest.builder()
+                    .refreshToken("valid-refresh-token")
+                    .build();
+        }
+
+        @Test
+        @DisplayName("200 OK — refresh token valide")
+        void shouldReturn200WhenRefreshTokenValid() throws Exception {
+            RefreshTokenResponse response = RefreshTokenResponse.builder()
+                    .accessToken("new-access-token")
+                    .expiresIn(900)
+                    .build();
+
+            when(authService.refreshAccessToken(any(RefreshTokenRequest.class)))
+                    .thenReturn(response);
+
+            mockMvc.perform(post("/api/v1/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(refreshTokenRequest))
+                            .with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.accessToken").value("new-access-token"))
+                    .andExpect(jsonPath("$.data.expiresIn").value(900));
+        }
+
+        @Test
+        @DisplayName("400 BAD REQUEST — refresh token vide")
+        void shouldReturn400WhenRefreshTokenIsBlank() throws Exception {
+            refreshTokenRequest.setRefreshToken("");
+
+            mockMvc.perform(post("/api/v1/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(refreshTokenRequest))
+                            .with(csrf()))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("401 UNAUTHORIZED — refresh token invalide")
+        void shouldReturn401WhenRefreshTokenInvalid() throws Exception {
+            when(authService.refreshAccessToken(any(RefreshTokenRequest.class)))
+                    .thenThrow(new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS));
+
+            mockMvc.perform(post("/api/v1/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(refreshTokenRequest))
+                            .with(csrf()))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.errorCode").value("AUTH_001"));
+        }
+
+        @Test
+        @DisplayName("403 FORBIDDEN — compte désactivé")
+        void shouldReturn403WhenAccountDisabled() throws Exception {
+            when(authService.refreshAccessToken(any(RefreshTokenRequest.class)))
+                    .thenThrow(new BusinessException(ErrorCode.AUTH_ACCOUNT_DISABLED));
+
+            mockMvc.perform(post("/api/v1/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(refreshTokenRequest))
+                            .with(csrf()))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.errorCode").value("AUTH_002"));
+        }
+
+        @Test
+        @DisplayName("400 BAD REQUEST — corps vide")
+        void shouldReturn400WhenEmptyBody() throws Exception {
+            mockMvc.perform(post("/api/v1/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}")
+                            .with(csrf()))
+                    .andExpect(status().isBadRequest());
         }
     }
 }
