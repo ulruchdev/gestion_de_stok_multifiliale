@@ -42,7 +42,7 @@
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
         <minio.version>8.5.17</minio.version>
         <archunit.version>1.4.0</archunit.version>
-        <springdoc.version>2.7.0</springdoc.version>
+        <springdoc.version>2.6.0</springdoc.version>
         <jackson-databind-nullable.version>0.2.6</jackson-databind-nullable.version>
 
         <!-- Spring Boot (pour configuration-processor) -->
