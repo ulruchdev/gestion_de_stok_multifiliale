@@ -40,6 +40,17 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      
+      mailhog:
+        image: mailhog/mailhog:latest
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd "curl -sS http://localhost:8025/ || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout code
@@ -106,6 +117,8 @@ jobs:
           DB_PASSWORD: stockmaster
           REDIS_HOST: localhost
           REDIS_PORT: 6379
+          MAIL_HOST: localhost
+          MAIL_PORT: 1025
           SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 1
           SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
         run: |
