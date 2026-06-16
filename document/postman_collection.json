@@ -1,0 +1,646 @@
+{
+  "info": {
+    "name": "StockMaster CM — API",
+    "description": "# StockMaster CM — Collection Postman\n\nCollection officielle de l'API StockMaster CM, organisée par parcours métier.\n\n## 🔧 Prérequis\n\n1. Démarrer les services : `docker compose up -d`\n2. Lancer l'application : `mvn spring-boot:run -pl stockmaster-shared`\n3. Importer cette collection dans Postman\n4. Optionnel : créer un environnement avec la variable `base_url` = `http://localhost:8080`\n\n## 🔐 Authentification automatique\n\nLa collection configure automatiquement le Bearer token au niveau **collection** :\n- `Connexion JWT` → sauvegarde `access_token` et `refresh_token`\n- `Déconnexion` → nettoie les tokens\n- **Toutes les requêtes protégées** héritent automatiquement du token via l'auth collection\n\n## 🎲 Données aléatoires\n\nLes requêtes d'inscription génèrent automatiquement :\n- Prénom / Nom via `$randomFirstName`, `$randomLastName`\n- Email construit : `{prenom}.{nom}@stockmaster.cm`\n- Boutique / Groupe via `$randomCompanyName`\n- Ville / Quartier via `$randomCity`, `$randomStreetName`\n- **Mot de passe constant** : `StockMaster@2026`\n\n## 📋 Flows disponibles\n\n| Flow | Description | US couvertes |\n|------|-------------|--------------|\n| 🏪 Parcours Entreprise Unique | Inscription → Connexion → Refresh → Logout | US-006, US-008, US-009, US-010 |\n| 🏢 Parcours Groupe | Inscription → Connexion → Refresh → Logout | US-007, US-008, US-009, US-010 |\n| 🔑 Gestion Mot de Passe | Forgot → Reset (transversal) | US-011, US-012 |\n\n## ⚠️ Ordre d'exécution recommandé\n\n**Flow complet (exécution automatique) :**\n1. Exécuter `🏪 Inscription Entreprise Unique` (génère email + le stocke)\n2. Exécuter `🔐 Connexion JWT` (utilise l'email stocké → récupère tokens)\n3. Exécuter `🔄 Refresh Token` (utilise le refresh_token stocké → met à jour access_token)\n4. Exécuter `🚪 Déconnexion` (nettoie les tokens)\n\n**Ou en mode autonome :**\n- Modifier manuellement la variable `current_email` dans l'environnement\n- Puis exécuter les requêtes Auth individuellement\n\n## 📋 Maintenance\n\n⚠️ **Ce fichier DOIT être mis à jour dans la même PR que toute modification d'API.**\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "stockmaster-cm"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// ===================================================================",
+          "// StockMaster CM — Pre-request Script (Collection)",
+          "// Logger + vérification du token avant chaque requête",
+          "// ===================================================================",
+          "",
+          "const publicEndpoints = [",
+          "    \"/api/v1/auth/inscription/entreprise-unique\",",
+          "    \"/api/v1/auth/inscription/groupe\",",
+          "    \"/api/v1/auth/login\",",
+          "    \"/api/v1/auth/refresh\",",
+          "    \"/api/v1/auth/forgot-password\",",
+          "    \"/api/v1/auth/reset-password\"",
+          "];",
+          "",
+          "const requestUrl = pm.request.url.toString();",
+          "const requestMethod = pm.request.method;",
+          "const timestamp = new Date().toISOString();",
+          "",
+          "// 1. Logger l'appel API",
+          "console.log(`[${timestamp}] ── ${requestMethod} ${requestUrl}`);",
+          "",
+          "// 2. Vérifier le token pour les endpoints protégés",
+          "const isPublic = publicEndpoints.some(ep => requestUrl.includes(ep));",
+          "const token = pm.environment.get(\"access_token\");",
+          "",
+          "if (!isPublic && (!token || token === \"\")) {",
+          "    console.warn(\"⚠️  [StockMaster] Token manquant ! Exécutez d'abord 'Connexion JWT (US-008)'\");",
+          "    throw new Error(\"Token JWT requis — exécutez d'abord la requête Connexion\");",
+          "}",
+          "",
+          "// 3. Logger le token (début seulement pour sécurité)",
+          "if (token) {",
+          "    console.log(`🔑  Token: ${token.substring(0, 25)}...`);",
+          "}",
+          "",
+          "// 4. Logger refresh_token si présent",
+          "const refreshToken = pm.environment.get(\"refresh_token\");",
+          "if (refreshToken) {",
+          "    console.log(`🔄  Refresh: ${refreshToken.substring(0, 25)}...`);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "default_password",
+      "value": "StockMaster@2026",
+      "type": "string"
+    },
+    {
+      "key": "new_password",
+      "value": "NewPass@2026",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "current_email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "current_group_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "🏪 1. Parcours Entreprise Unique",
+      "description": "Flow complet pour une entreprise unique (SUPER_ADMIN) : Inscription → Connexion → Refresh → Déconnexion",
+      "item": [
+        {
+          "name": "🏪 Inscription Entreprise Unique (US-006)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// ===================================================================",
+                  "// Générer des données aléatoires pour l'inscription entreprise unique",
+                  "// ===================================================================",
+                  "const prenom = pm.variables.replaceIn('{{$randomFirstName}}');",
+                  "const nom = pm.variables.replaceIn('{{$randomLastName}}');",
+                  "const boutique = pm.variables.replaceIn('{{$randomCompanyName}}');",
+                  "const ville = pm.variables.replaceIn('{{$randomCity}}');",
+                  "const quartier = pm.variables.replaceIn('{{$randomStreetName}}');",
+                  "const email = `${prenom.toLowerCase()}.${nom.toLowerCase()}@stockmaster.cm`.replace(/[^a-z0-9.@]/g, '');",
+                  "",
+                  "pm.variables.set('genPrenom', prenom);",
+                  "pm.variables.set('genNom', nom);",
+                  "pm.variables.set('genBoutique', boutique);",
+                  "pm.variables.set('genVille', ville);",
+                  "pm.variables.set('genQuartier', quartier);",
+                  "",
+                  "// Stocker l'email pour les requêtes suivantes du flow",
+                  "pm.environment.set('current_email', email);",
+                  "",
+                  "console.log(`[StockMaster] 🏪 Inscription entreprise unique : ${prenom} ${nom} <${email}>`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 201 Created\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Format ApiResponse valide\", () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.have.property('email');",
+                  "    pm.expect(json.data).to.have.property('groupId');",
+                  "    pm.expect(json.data).to.have.property('message');",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data.groupId) {",
+                  "        pm.environment.set('current_group_id', json.data.groupId.toString());",
+                  "    }",
+                  "    console.log(`[StockMaster] ✅ Entreprise créée — groupId: ${json.data.groupId}, email: ${json.data.email}`);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"nomBoutique\": \"{{genBoutique}}\",\n    \"ville\": \"{{genVille}}\",\n    \"quartier\": \"{{genQuartier}}\",\n    \"prenom\": \"{{genPrenom}}\",\n    \"nom\": \"{{genNom}}\",\n    \"email\": \"{{current_email}}\",\n    \"motDePasse\": \"{{default_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/inscription/entreprise-unique",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "inscription", "entreprise-unique"]
+            }
+          }
+        },
+        {
+          "name": "🔐 Connexion JWT (US-008)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Token JWT reçu avec tous les champs\", () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.accessToken).to.match(/^eyJ/);",
+                  "    pm.expect(json.data.refreshToken).to.match(/^eyJ/);",
+                  "    pm.expect(json.data.expiresIn).to.eql(900);",
+                  "    pm.expect(json.data.role).to.exist;",
+                  "    pm.expect(json.data.scope).to.exist;",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.environment.set('access_token', json.data.accessToken);",
+                  "    pm.environment.set('refresh_token', json.data.refreshToken);",
+                  "    console.log(`[StockMaster] 🔐 Connecté — rôle: ${json.data.role}, scope: ${json.data.scope}`);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{current_email}}\",\n    \"motDePasse\": \"{{default_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "🔄 Refresh Token (US-009)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Nouveau access token reçu\", () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.accessToken).to.match(/^eyJ/);",
+                  "    pm.expect(json.data.expiresIn).to.eql(900);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.environment.set('access_token', json.data.accessToken);",
+                  "    console.log('[StockMaster] 🔄 Token rafraîchi avec succès');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "🚪 Déconnexion (US-010)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Message de succès\", () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.message).to.include('Déconnexion');",
+                  "});",
+                  "",
+                  "// Nettoyer les tokens après déconnexion",
+                  "pm.environment.unset('access_token');",
+                  "pm.environment.unset('refresh_token');",
+                  "console.log('[StockMaster] 🚪 Déconnecté — tokens nettoyés');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏢 2. Parcours Groupe",
+      "description": "Flow complet pour un groupe multi-sites (ADMIN_GROUPE) : Inscription → Connexion → Refresh → Déconnexion",
+      "item": [
+        {
+          "name": "🏢 Inscription Groupe Multi-Sites (US-007)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// ===================================================================",
+                  "// Générer des données aléatoires pour l'inscription groupe",
+                  "// ===================================================================",
+                  "const prenom = pm.variables.replaceIn('{{$randomFirstName}}');",
+                  "const nom = pm.variables.replaceIn('{{$randomLastName}}');",
+                  "const groupe = pm.variables.replaceIn('{{$randomCompanyName}}');",
+                  "const ville = pm.variables.replaceIn('{{$randomCity}}');",
+                  "const tel = pm.variables.replaceIn('{{$randomPhoneNumber}}');",
+                  "const emailContact = `${groupe.toLowerCase().replace(/[^a-z]/g, '')}@contact.cm`;",
+                  "const emailAdmin = `${prenom.toLowerCase()}.${nom.toLowerCase()}@groupe.cm`.replace(/[^a-z0-9.@]/g, '');",
+                  "",
+                  "pm.variables.set('genPrenom', prenom);",
+                  "pm.variables.set('genNom', nom);",
+                  "pm.variables.set('genGroupe', groupe);",
+                  "pm.variables.set('genVille', ville);",
+                  "pm.variables.set('genTel', tel);",
+                  "pm.variables.set('genEmailContact', emailContact);",
+                  "",
+                  "// Stocker l'email admin pour les requêtes suivantes du flow",
+                  "pm.environment.set('current_email', emailAdmin);",
+                  "",
+                  "console.log(`[StockMaster] 🏢 Inscription groupe : ${groupe} — admin: ${prenom} ${nom} <${emailAdmin}>`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 201 Created\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Format ApiResponse valide\", () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.have.property('email');",
+                  "    pm.expect(json.data).to.have.property('groupId');",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data.groupId) {",
+                  "        pm.environment.set('current_group_id', json.data.groupId.toString());",
+                  "    }",
+                  "    console.log(`[StockMaster] ✅ Groupe créé — groupId: ${json.data.groupId}, email: ${json.data.email}`);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"nomGroupe\": \"{{genGroupe}}\",\n    \"villesiege\": \"{{genVille}}\",\n    \"nif\": \"M{{$randomInt}}\",\n    \"telephone\": \"{{genTel}}\",\n    \"emailEntreprise\": \"{{genEmailContact}}\",\n    \"prenom\": \"{{genPrenom}}\",\n    \"nom\": \"{{genNom}}\",\n    \"emailAdmin\": \"{{current_email}}\",\n    \"motDePasse\": \"{{default_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/inscription/groupe",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "inscription", "groupe"]
+            }
+          }
+        },
+        {
+          "name": "🔐 Connexion Admin Groupe (US-008)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Token JWT reçu avec scope GROUPE\", () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.accessToken).to.match(/^eyJ/);",
+                  "    pm.expect(json.data.scope).to.eql('GROUPE');",
+                  "    pm.expect(json.data.role).to.eql('ADMIN_GROUPE');",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.environment.set('access_token', json.data.accessToken);",
+                  "    pm.environment.set('refresh_token', json.data.refreshToken);",
+                  "    console.log(`[StockMaster] 🔐 Admin Groupe connecté — rôle: ${json.data.role}`);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{current_email}}\",\n    \"motDePasse\": \"{{default_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "🔄 Refresh Token Groupe (US-009)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Nouveau access token reçu\", () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.accessToken).to.match(/^eyJ/);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.environment.set('access_token', json.data.accessToken);",
+                  "    console.log('[StockMaster] 🔄 Token groupe rafraîchi');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "🚪 Déconnexion Groupe (US-010)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Message de succès\", () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.message).to.include('Déconnexion');",
+                  "});",
+                  "",
+                  "pm.environment.unset('access_token');",
+                  "pm.environment.unset('refresh_token');",
+                  "console.log('[StockMaster] 🚪 Admin Groupe déconnecté — tokens nettoyés');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔑 3. Gestion Mot de Passe",
+      "description": "Endpoints transversaux de gestion de mot de passe (valable pour tous les rôles)",
+      "item": [
+        {
+          "name": "📧 Mot de passe oublié (US-011)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK (toujours — même si email inconnu)\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Message standard de réinitialisation\", () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.message).to.include('réinitialisation');",
+                  "});",
+                  "",
+                  "console.log('[StockMaster] 📧 Email de réinitialisation demandé');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{current_email}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/forgot-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "forgot-password"]
+            }
+          }
+        },
+        {
+          "name": "🔁 Réinitialisation mot de passe (US-012)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Message de confirmation\", () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.message).to.include('réinitialisé');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"token\": \"TOKEN_DEPUIS_EMAIL\",\n    \"nouveauMotDePasse\": \"{{new_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/reset-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "reset-password"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
