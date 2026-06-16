@@ -2,6 +2,7 @@ package com.stockmaster.auth.service;
 
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
 import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
+import com.stockmaster.auth.dto.request.ForgotPasswordRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
 import com.stockmaster.auth.dto.request.RefreshTokenRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
@@ -19,4 +20,6 @@ public interface AuthService {
     RefreshTokenResponse refreshAccessToken(RefreshTokenRequest request);
 
     void logout();
+
+    void forgotPassword(ForgotPasswordRequest request);
 }

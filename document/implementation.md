@@ -393,7 +393,42 @@ main ─────────────────────────
 | AuthServiceImplTest — logout | 3 (succès Redis + pas de token en Redis + non authentifié) |
 | AuthControllerTest — logout | 2 (200 OK + 401 via service mock) |
 
-## US-011 — Mot de passe oublié 🔜
+## US-011 — Mot de passe oublié 🚧
+
+> **Statut :** IMPLÉMENTÉ — En attente de push
+> **Branche :** `feature/GS-011-forgot-password`
+> **Priorité :** P0 | **Sprint :** 2 | **Points :** 3
+> **Endpoint :** `POST /api/v1/auth/forgot-password` (public)
+> **Fichiers créés/modifiés :** 6
+
+### Détail des fichiers
+
+| Fichier | Changement |
+|---|---|
+| `ForgotPasswordRequest.java` | 🆕 DTO : email (@NotBlank @Email) |
+| `AuthService.java` | 📝 Nouvelle méthode `forgotPassword()` |
+| `AuthServiceImpl.java` | 📝 Génération UUID token, stockage Redis `reset:{token}` → userId (TTL 15 min), log du lien (email à intégrer via notification module) |
+| `AuthController.java` | 📝 Nouvel endpoint `POST /api/v1/auth/forgot-password` → 200 avec message standard |
+| `RateLimitFilter.java` | 📝 Ajout de `/forgot-password` au rate limiting (5/15min) |
+| `AuthServiceImplTest.java` | 🆕 2 tests (email existe + email inexistant sans erreur) |
+| `AuthControllerTest.java` | 🆕 2 tests (200 OK + 400 email vide) |
+
+### Logique métier
+
+1. Endpoint public (dans `.permitAll()` de SecurityConfig)
+2. Validation email (format valide requis)
+3. Recherche silencieuse de l'utilisateur par email → pas d'erreur si inexistant (anti-énumération)
+4. Si l'utilisateur existe : génération UUID token → stockage Redis `reset:{token}` → userId avec TTL 15 min
+5. Journalisation du lien de réinitialisation (email à envoyer via le module notification plus tard)
+6. Rate limiting : 5 tentatives / 15 min par IP
+
+### Tests (4 nouveaux, 46 total)
+
+| Catégorie | Tests |
+|---|---|
+| AuthServiceImplTest — forgot-password | 2 (email existe → token stocké + email inexistant → pas d'action) |
+| AuthControllerTest — forgot-password | 2 (200 OK + 400 email vide) |
+
 ## US-012 — Réinitialisation mot de passe 🔜
 ## US-013 — Changement mot de passe 🔜
 

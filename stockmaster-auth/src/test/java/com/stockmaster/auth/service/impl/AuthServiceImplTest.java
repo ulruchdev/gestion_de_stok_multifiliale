@@ -10,6 +10,7 @@ import com.stockmaster.auth.domain.enums.ScopeUtilisateur;
 import com.stockmaster.auth.domain.enums.TypeEntreprise;
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
 import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
+import com.stockmaster.auth.dto.request.ForgotPasswordRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
 import com.stockmaster.auth.dto.request.RefreshTokenRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
@@ -82,6 +83,7 @@ class AuthServiceImplTest {
     private InscriptionGroupeRequest inscriptionGroupeRequest;
     private LoginRequest loginRequest;
     private RefreshTokenRequest refreshTokenRequest;
+    private ForgotPasswordRequest forgotPasswordRequest;
 
     private TenantGroup savedGroupe;
     private Entreprise savedEntreprise;
@@ -118,6 +120,10 @@ class AuthServiceImplTest {
 
         refreshTokenRequest = RefreshTokenRequest.builder()
                 .refreshToken("valid-refresh-token")
+                .build();
+
+        forgotPasswordRequest = ForgotPasswordRequest.builder()
+                .email("jean.kamga@epicerie.cm")
                 .build();
 
         savedGroupe = TenantGroup.builder()
@@ -554,6 +560,50 @@ class AuthServiceImplTest {
             assertThatThrownBy(() -> authService.logout())
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_TOKEN_INVALID);
+        }
+    }
+
+    // ========================================================================
+    // US-011 — Mot de passe oublié
+    // ========================================================================
+
+    @Nested
+    @DisplayName("Mot de passe oublié (US-011)")
+    class ForgotPassword {
+
+        @Test
+        @DisplayName("✅ Génère un token et le stocke dans Redis quand l'email existe")
+        void shouldGenerateResetTokenWhenEmailExists() {
+            // Arrange
+            when(utilisateurRepository.findByEmail("jean.kamga@epicerie.cm"))
+                    .thenReturn(Optional.of(savedUtilisateur));
+            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+            // Act
+            authService.forgotPassword(forgotPasswordRequest);
+
+            // Assert
+            verify(utilisateurRepository).findByEmail("jean.kamga@epicerie.cm");
+            verify(redisTemplate.opsForValue()).set(
+                    startsWith("reset:"),
+                    eq("1"),
+                    eq(900L),
+                    eq(TimeUnit.SECONDS));
+        }
+
+        @Test
+        @DisplayName("✅ Ne fait rien (pas d'erreur) quand l'email n'existe pas")
+        void shouldNotThrowWhenEmailNotFound() {
+            // Arrange
+            when(utilisateurRepository.findByEmail("jean.kamga@epicerie.cm"))
+                    .thenReturn(Optional.empty());
+
+            // Act (ne doit pas lever d'exception)
+            authService.forgotPassword(forgotPasswordRequest);
+
+            // Assert
+            verify(utilisateurRepository).findByEmail("jean.kamga@epicerie.cm");
+            verify(redisTemplate, never()).opsForValue();
         }
     }
 }

@@ -3,6 +3,7 @@ package com.stockmaster.auth.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stockmaster.auth.AuthTestApplication;
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
+import com.stockmaster.auth.dto.request.ForgotPasswordRequest;
 import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
 import com.stockmaster.auth.dto.request.RefreshTokenRequest;
@@ -486,6 +487,47 @@ class AuthControllerTest {
                             .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.errorCode").value("AUTH_005"));
+        }
+    }
+
+    // ========================================================================
+    // US-011 — POST /api/v1/auth/forgot-password
+    // ========================================================================
+
+    @Nested
+    @DisplayName("POST /api/v1/auth/forgot-password")
+    class ForgotPasswordEndpoint {
+
+        @Test
+        @DisplayName("200 OK — email valide (existant ou non)")
+        void shouldReturn200WhenEmailValid() throws Exception {
+            ForgotPasswordRequest request = ForgotPasswordRequest.builder()
+                    .email("jean.kamga@epicerie.cm")
+                    .build();
+
+            mockMvc.perform(post("/api/v1/auth/forgot-password")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request))
+                            .with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.message").value("Si cet email existe, un lien de réinitialisation vous a été envoyé."));
+
+            verify(authService).forgotPassword(any(ForgotPasswordRequest.class));
+        }
+
+        @Test
+        @DisplayName("400 BAD REQUEST — email vide")
+        void shouldReturn400WhenEmailBlank() throws Exception {
+            ForgotPasswordRequest request = ForgotPasswordRequest.builder()
+                    .email("")
+                    .build();
+
+            mockMvc.perform(post("/api/v1/auth/forgot-password")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request))
+                            .with(csrf()))
+                    .andExpect(status().isBadRequest());
         }
     }
 }

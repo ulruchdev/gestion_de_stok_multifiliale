@@ -136,6 +136,47 @@ et DOCUMENT.UPLOAD.
 - **Screenshots ou logs** fournis dans la description
 - Résoudre tous les commentaires avant de merger (ou justifier pourquoi on ne le fait pas)
 
+---
+
+### 📮 Collection Postman — Maintenance obligatoire
+
+> **Règle : La collection Postman DOIT être mise à jour dans la même PR que toute modification d'API.**
+
+Le fichier `document/postman_collection.json` est la **collection officielle importable** du projet. Elle est versionnée avec le code et doit toujours être prête à être importée et exécutée dans Postman.
+
+#### Quand mettre à jour la collection ?
+
+- ✅ **Nouvel endpoint** → Ajouter la requête dans le dossier correspondant
+- ✅ **Modification d'un endpoint** → Mettre à jour la requête ou la réponse attendue
+- ✅ **Nouveau domaine** (ex: Groupe, Stock, Ventes) → Créer un nouveau dossier
+- ✅ **Nouvelle variable d'environnement** → Ajouter dans la section `variable`
+
+#### Comment mettre à jour ?
+
+1. Ouvrir `document/postman_collection.json`
+2. Ajouter/modifier l'item dans le JSON (format Collection v2.1)
+3. Inclure **toujours** :
+   - La requête HTTP (méthode, URL, headers, body)
+   - Les tests Postman (scripts `test`)
+   - L'authentification si nécessaire (Bearer token)
+4. Vérifier que le JSON est valide (un import dans Postman ne doit pas échouer)
+
+#### Alternative recommandée (pour les grosses modifications)
+
+1. Importer la collection dans Postman
+2. Modifier visuellement dans Postman
+3. Exporter au format v2.1
+4. Remplacer `document/postman_collection.json` par le nouvel export
+
+#### Fichiers concernés
+
+| Fichier | Rôle |
+|---|---|
+| `document/postman_collection.json` | Collection importable directement dans Postman (format JSON v2.1) |
+| `document/test_postman.md` | Documentation lisible des endpoints, versionnée et maintenue parallèlement |
+
+> ⚠️ Les deux fichiers (`postman_collection.json` + `test_postman.md`) doivent être cohérents. Une modification dans l'un doit être répercutée dans l'autre.
+
 ### Labels GitLab à appliquer
 
 Chaque MR doit avoir au minimum :
