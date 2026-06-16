@@ -9,6 +9,7 @@ import com.stockmaster.auth.domain.enums.PlanAbonnement;
 import com.stockmaster.auth.domain.enums.RoleUtilisateur;
 import com.stockmaster.auth.domain.enums.ScopeUtilisateur;
 import com.stockmaster.auth.domain.enums.TypeEntreprise;
+import com.stockmaster.auth.dto.request.ForgotPasswordRequest;
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
 import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
@@ -36,6 +37,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -44,6 +46,8 @@ import java.util.concurrent.TimeUnit;
 public class AuthServiceImpl implements AuthService {
 
     private static final String REFRESH_KEY_PREFIX = "refresh:";
+    private static final String RESET_KEY_PREFIX = "reset:";
+    private static final long RESET_TOKEN_TTL_SECONDS = 900; // 15 minutes
 
     private final TenantGroupRepository tenantGroupRepository;
     private final EntrepriseRepository entrepriseRepository;
@@ -239,6 +243,37 @@ public class AuthServiceImpl implements AuthService {
                 .role(role)
                 .scope(scope)
                 .build();
+    }
+
+    // ========================================================================
+    // US-011 — Mot de passe oublié
+    // ========================================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public void forgotPassword(ForgotPasswordRequest request) {
+        String email = request.getEmail();
+
+        // Toujours retourner le même message (évite l'énumération d'emails)
+        log.debug("Demande de réinitialisation de mot de passe pour: {}", email);
+
+        // Vérifier silencieusement si l'email existe
+        utilisateurRepository.findByEmail(email).ifPresent(utilisateur -> {
+            // Générer un token de réinitialisation unique
+            String token = UUID.randomUUID().toString();
+            String redisKey = RESET_KEY_PREFIX + token;
+
+            // Stocker le token dans Redis avec TTL
+            redisTemplate.opsForValue().set(redisKey,
+                    String.valueOf(utilisateur.getId()),
+                    RESET_TOKEN_TTL_SECONDS, TimeUnit.SECONDS);
+
+            // Journaliser le lien (remplacé par l'envoi d'email quand le module notification sera implémenté)
+            String resetLink = "/api/v1/auth/reset-password?token=" + token;
+            log.info("Token de réinitialisation généré pour userId={}: {}", utilisateur.getId(), resetLink);
+        });
+
+        log.info("Demande de réinitialisation traitée pour: {}", email);
     }
 
     // ========================================================================

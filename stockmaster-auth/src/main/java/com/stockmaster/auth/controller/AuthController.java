@@ -1,6 +1,7 @@
 package com.stockmaster.auth.controller;
 
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
+import com.stockmaster.auth.dto.request.ForgotPasswordRequest;
 import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
 import com.stockmaster.auth.dto.request.RefreshTokenRequest;
@@ -81,5 +82,17 @@ public class AuthController {
 
         return ResponseEntity.ok()
                 .body(ApiResponse.success("Déconnexion réussie"));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request) {
+
+        log.debug("Demande de réinitialisation de mot de passe pour: {}", request.getEmail());
+
+        authService.forgotPassword(request);
+
+        return ResponseEntity.ok()
+                .body(ApiResponse.success("Si cet email existe, un lien de réinitialisation vous a été envoyé."));
     }
 }

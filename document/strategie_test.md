@@ -175,7 +175,7 @@ mvn compile -q
 mvn verify
 ```
 
-**Résultat attendu :** `BUILD SUCCESS` + `21 tests (18 unitaires + 3 intégration)` + `Coverage ≥ 80%`
+**Résultat attendu :** `BUILD SUCCESS` + `46 tests (43 unitaires + 3 intégration)` + `Coverage ≥ 80%`
 
 ### ✅ Étape 3 — Build JAR
 
@@ -330,7 +330,12 @@ mvn spring-boot:run -pl stockmaster-shared
 | Méthode | Endpoint | Description | Body requis | Authentification |
 |---|---|---|---|---|
 | POST | `/api/v1/auth/inscription/entreprise-unique` | Inscription boutique unique | `InscriptionEntrepriseUniqueRequest` | ❌ Non |
+| POST | `/api/v1/auth/inscription/groupe` | Inscription groupe multi-sites | `InscriptionGroupeRequest` | ❌ Non |
 | POST | `/api/v1/auth/login` | Connexion JWT | `LoginRequest` | ❌ Non |
+| POST | `/api/v1/auth/refresh` | Refresh token | `RefreshTokenRequest` | ❌ Non |
+| POST | `/api/v1/auth/logout` | Déconnexion (révocation refresh token) | Aucun (Bearer token) | ✅ Oui |
+| POST | `/api/v1/auth/forgot-password` | Mot de passe oublié | `ForgotPasswordRequest` | ❌ Non |
+| POST | `/api/v1/auth/reset-password` | Réinitialisation mot de passe | `ResetPasswordRequest` | ❌ Non (🔜) |
 
 **Exemple de test — Inscription :**
 

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -23,9 +24,12 @@ public class RateLimitFilter implements Filter {
     private static final int MAX_ATTEMPTS = 5;
     private static final Duration WINDOW = Duration.ofMinutes(15);
 
-    private static final Map<String, String> RATE_LIMIT_ENDPOINTS = Map.of(
-            "/api/v1/auth/login", "login",
-            "/api/v1/auth/refresh", "refresh"
+    private static final Map<String, String> RATE_LIMIT_ENDPOINTS = new HashMap<>(
+            Map.of(
+                    "/api/v1/auth/login", "login",
+                    "/api/v1/auth/refresh", "refresh",
+                    "/api/v1/auth/forgot-password", "forgot-password"
+            )
     );
 
     @Override
