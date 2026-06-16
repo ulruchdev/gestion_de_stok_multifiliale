@@ -13,6 +13,7 @@ import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.ForgotPasswordRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
 import com.stockmaster.auth.dto.request.RefreshTokenRequest;
+import com.stockmaster.auth.dto.request.ResetPasswordRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
 import com.stockmaster.auth.dto.response.RefreshTokenResponse;
@@ -604,6 +605,60 @@ class AuthServiceImplTest {
             // Assert
             verify(utilisateurRepository).findByEmail("jean.kamga@epicerie.cm");
             verify(redisTemplate, never()).opsForValue();
+        }
+    }
+
+    // ========================================================================
+    // US-012 — Réinitialisation du mot de passe
+    // ========================================================================
+
+    @Nested
+    @DisplayName("Réinitialisation mot de passe (US-012)")
+    class ResetPassword {
+
+        private ResetPasswordRequest resetPasswordRequest;
+
+        @BeforeEach
+        void setUp() {
+            resetPasswordRequest = ResetPasswordRequest.builder()
+                    .token("valid-reset-token")
+                    .nouveauMotDePasse("NewPass@2026")
+                    .build();
+
+            lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        }
+
+        @Test
+        @DisplayName("✅ Hache le nouveau mot de passe, sauvegarde, supprime le token et révoque refresh")
+        void shouldResetPasswordWhenTokenValid() {
+            // Arrange
+            when(valueOperations.get("reset:valid-reset-token")).thenReturn("1");
+            when(utilisateurRepository.findById(1L)).thenReturn(Optional.of(savedUtilisateur));
+            when(passwordEncoder.encode("NewPass@2026")).thenReturn("$2a$10$newhash");
+
+            // Act
+            authService.resetPassword(resetPasswordRequest);
+
+            // Assert
+            verify(passwordEncoder).encode("NewPass@2026");
+            verify(utilisateurRepository).save(argThat(u ->
+                    u.getMotDePasse().equals("$2a$10$newhash")));
+            verify(redisTemplate).delete("reset:valid-reset-token");
+            verify(redisTemplate).delete("refresh:1");
+        }
+
+        @Test
+        @DisplayName("❌ Lève AUTH_RESET_TOKEN_INVALID quand le token est invalide ou expiré")
+        void shouldThrowWhenResetTokenInvalid() {
+            // Arrange
+            when(valueOperations.get("reset:valid-reset-token")).thenReturn(null);
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.resetPassword(resetPasswordRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_RESET_TOKEN_INVALID);
+
+            verify(utilisateurRepository, never()).save(any());
         }
     }
 }

@@ -9,6 +9,8 @@ import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
 import com.stockmaster.auth.dto.response.RefreshTokenResponse;
 
+import com.stockmaster.auth.dto.request.ResetPasswordRequest;
+
 public interface AuthService {
 
     InscriptionResponse inscrireEntrepriseUnique(InscriptionEntrepriseUniqueRequest request);
@@ -22,4 +24,6 @@ public interface AuthService {
     void logout();
 
     void forgotPassword(ForgotPasswordRequest request);
+
+    void resetPassword(ResetPasswordRequest request);
 }

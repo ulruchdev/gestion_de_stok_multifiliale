@@ -431,11 +431,41 @@ main ─────────────────────────
 | AuthServiceImplTest — forgot-password | 2 (email existe → token stocké + email inexistant → pas d'action) |
 | AuthControllerTest — forgot-password | 2 (200 OK + 400 email vide) |
 
-## US-012 — Réinitialisation mot de passe 🔜
+## US-012 — Réinitialisation mot de passe ✅
 
-> **Statut :** NON COMMENCÉ
-> **Sprint :** 2 | **Points :** 3 | **Priorité :** P0
-> **Endpoint :** `POST /api/v1/auth/reset-password`
+> **Statut :** IMPLÉMENTÉ — Pushé, en attente de PR
+> **Branche :** `feature/GS-012-reset-password`
+> **Priorité :** P0 | **Sprint :** 2 | **Points :** 3
+> **Endpoint :** `POST /api/v1/auth/reset-password` (public)
+> **Fichiers créés/modifiés :** 7
+
+### Détail des fichiers
+
+| Fichier | Changement |
+|---|---|
+| `ResetPasswordRequest.java` | 🆕 DTO : token (@NotBlank) + nouveauMotDePasse (@Pattern robustesse) |
+| `AuthService.java` | 📝 Nouvelle méthode `resetPassword()` |
+| `AuthServiceImpl.java` | 📝 Validation token Redis → hash BCrypt → sauvegarde → suppression token → révocation refresh tokens |
+| `AuthController.java` | 📝 Nouvel endpoint `POST /api/v1/auth/reset-password` → 200 OK |
+| `RateLimitFilter.java` | 📝 Endpoint ajouté à la Map (5/15min) |
+| `AuthServiceImplTest.java` | 🆕 2 tests (token valide + token invalide) |
+| `AuthControllerTest.java` | 🆕 3 tests (200 OK + 400 token blank + 400 mot de passe faible) |
+
+### Logique métier
+
+1. Endpoint public (dans `.permitAll()` de SecurityConfig)
+2. Token UUID validé dans Redis (clé `reset:{token}` → userId)
+3. Token invalide ou expiré → `400 BAD REQUEST` avec `ErrorCode.AUTH_RESET_TOKEN_INVALID`
+4. Nouveau mot de passe haché avec BCrypt et sauvegardé
+5. Token supprimé de Redis (usage unique)
+6. Tous les refresh tokens de l'utilisateur révoqués en Redis (sécurité)
+
+### Tests (5 nouveaux, 51 total)
+
+| Catégorie | Tests |
+|---|---|
+| AuthServiceImplTest — reset-password | 2 (token valide + token invalide) |
+| AuthControllerTest — reset-password | 3 (200 OK + 400 token blank + 400 password faible) |
 
 ## US-013 — Changement mot de passe 🔜
 
@@ -479,7 +509,7 @@ main ─────────────────────────
 | **US-009** | Refresh token | 🚧 Implémenté | feature/GS-009-refresh-token | `5a39023` | ✅ | 7 | +180 |
 | **US-010** | Déconnexion | 🚧 Implémenté | feature/GS-010-logout | `7b687f5` | ✅ | 5 | +120 |
 | **US-011** | Mot de passe oublié | 🚧 Implémenté | feature/GS-011-forgot-password | `0008438` | ✅ | 6 | +130 |
-| **US-012** | Réinitialisation mot de passe | 🔜 Non commencé | — | — | — | — | — |
+| **US-012** | Réinitialisation mot de passe | 🚧 Implémenté | feature/GS-012-reset-password | — | — | 7 | +150 |
 | **US-013** | Changement mot de passe | 🔜 Non commencé | — | — | — | — | — |
 | **US-014 à 080** | EPIC 3 à 13 (67 US) | 🔜 Non commencé | — | — | — | — | — |
 
@@ -496,20 +526,21 @@ main ─────────────────────────
 | `feature/GS-009-refresh-token` | `5a39023` | 🚧 PR en attente |
 | `feature/GS-010-logout` | `7b687f5` | 🚧 PR en attente |
 | `feature/GS-011-forgot-password` | `0008438` | 🚧 PR en attente |
+| `feature/GS-012-reset-password` | — | 🚧 En cours |
 
 ### Bilan global
 
 | Métrique | Valeur |
 |---|---|
 | US terminées | 8 sur 75 (US-001 à US-008) |
-| US en attente de PR | 3 (US-009, US-010, US-011) |
-| US non commencées | 64 |
+| US en attente de PR | 4 (US-009, US-010, US-011, US-012) |
+| US non commencées | 63 |
 | Total commits (sur main) | 24 |
 | Total fichiers créés/modifiés | ~95 |
 | Total lignes de code | ~10 000 |
-| Tests unitaires auth | **46** (18 service tests + 28 contrôleur tests) |
+| Tests unitaires auth | **51** (20 service tests + 31 contrôleur tests) |
 | Tests unitaires shared | 18 |
-| Branches créées | 10 (7 mergées + 3 actives: GS-009, GS-010, GS-011) |
+| Branches créées | 11 (7 mergées + 4 actives: GS-009, GS-010, GS-011, GS-012) |
 | Modules avec code + tests | 2 sur 11 (shared + auth) |
 | Modules vides | 9 sur 11 |
 
