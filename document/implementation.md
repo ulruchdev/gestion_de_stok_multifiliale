@@ -4,7 +4,7 @@
 > **Stack :** Java 21, Spring Boot 3.3.5, PostgreSQL 16, Redis 7, MinIO
 > **Architecture :** Monolithe modulaire (11 modules)
 > **Version :** 1.0.0-SNAPSHOT
-> **Dernière mise à jour :** 14 juin 2026
+> **Dernière mise à jour :** 16 juin 2026
 
 ---
 
@@ -359,10 +359,11 @@ main ─────────────────────────
 5. L'ancien access token reste valide jusqu'à sa propre expiration (15 min)
 6. Token invalide/expiré/absent de Redis → `401 UNAUTHORIZED` → client doit se reconnecter
 
-## US-010 — Déconnexion 🚧
+## US-010 — Déconnexion ✅
 
-> **Statut :** IMPLÉMENTÉ — En attente de push
+> **Statut :** IMPLÉMENTÉ — Pushé, en attente de PR
 > **Branche :** `feature/GS-010-logout`
+> **Commit :** `7b687f5`
 > **Priorité :** P0 | **Sprint :** 2 | **Points :** 2
 > **Endpoint :** `POST /api/v1/auth/logout` (authentifié)
 > **Fichiers modifiés :** 5
@@ -393,10 +394,11 @@ main ─────────────────────────
 | AuthServiceImplTest — logout | 3 (succès Redis + pas de token en Redis + non authentifié) |
 | AuthControllerTest — logout | 2 (200 OK + 401 via service mock) |
 
-## US-011 — Mot de passe oublié 🚧
+## US-011 — Mot de passe oublié ✅
 
-> **Statut :** IMPLÉMENTÉ — En attente de push
+> **Statut :** IMPLÉMENTÉ — Pushé, en attente de PR
 > **Branche :** `feature/GS-011-forgot-password`
+> **Commit :** `0008438`
 > **Priorité :** P0 | **Sprint :** 2 | **Points :** 3
 > **Endpoint :** `POST /api/v1/auth/forgot-password` (public)
 > **Fichiers créés/modifiés :** 6
@@ -430,10 +432,15 @@ main ─────────────────────────
 | AuthControllerTest — forgot-password | 2 (200 OK + 400 email vide) |
 
 ## US-012 — Réinitialisation mot de passe 🔜
+
+> **Statut :** NON COMMENCÉ
+> **Sprint :** 2 | **Points :** 3 | **Priorité :** P0
+> **Endpoint :** `POST /api/v1/auth/reset-password`
+
 ## US-013 — Changement mot de passe 🔜
 
 > **Statut :** NON COMMENCÉ
-> **Sprint :** 2-3
+> **Sprint :** 3 | **Points :** 2 | **Priorité :** P1
 
 ---
 
@@ -469,9 +476,9 @@ main ─────────────────────────
 | **US-006** | Inscription entreprise unique | ✅ Terminé | feature/GS-006 | `9fed1df` | ✅ | 17 | +500 |
 | **US-007** | Inscription groupe multi-sites | ✅ Terminé | feature/GS-007 | — | ✅ | 9 | +350 |
 | **US-008** | Connexion JWT | ✅ Terminé | feature/GS-006 | `9fed1df` | ✅ | 7 | +457 |
-| **US-009** | Refresh token | 🚧 Implémenté (branche) | feature/GS-009-refresh-token | — | — | 7 | +180 |
-| **US-010** | Déconnexion | 🔜 Non commencé | — | — | — | — | — |
-| **US-011** | Mot de passe oublié | 🔜 Non commencé | — | — | — | — | — |
+| **US-009** | Refresh token | 🚧 Implémenté | feature/GS-009-refresh-token | `5a39023` | ✅ | 7 | +180 |
+| **US-010** | Déconnexion | 🚧 Implémenté | feature/GS-010-logout | `7b687f5` | ✅ | 5 | +120 |
+| **US-011** | Mot de passe oublié | 🚧 Implémenté | feature/GS-011-forgot-password | `0008438` | ✅ | 6 | +130 |
 | **US-012** | Réinitialisation mot de passe | 🔜 Non commencé | — | — | — | — | — |
 | **US-013** | Changement mot de passe | 🔜 Non commencé | — | — | — | — | — |
 | **US-014 à 080** | EPIC 3 à 13 (67 US) | 🔜 Non commencé | — | — | — | — | — |
@@ -486,19 +493,23 @@ main ─────────────────────────
 | `feature/GS-003-centralized-error-handling` | `c03bff2` | ✅ Mergée (PR #1) |
 | `feature/GS-004-ci-cd-pipeline` | `02b441c` | ✅ Mergée (PR #2 → #4) |
 | `feature/GS-006-jwt-auth` | `9fed1df` | ✅ Mergée |
+| `feature/GS-009-refresh-token` | `5a39023` | 🚧 PR en attente |
+| `feature/GS-010-logout` | `7b687f5` | 🚧 PR en attente |
+| `feature/GS-011-forgot-password` | `0008438` | 🚧 PR en attente |
 
 ### Bilan global
 
 | Métrique | Valeur |
 |---|---|
-| US terminées | 7 sur 75 (US-001 à US-008) + 1 en attente de merge (US-009) |
-| US en cours | US-009 (en attente push + PR) |
-| US non commencées | 67 |
+| US terminées | 8 sur 75 (US-001 à US-008) |
+| US en attente de PR | 3 (US-009, US-010, US-011) |
+| US non commencées | 64 |
 | Total commits (sur main) | 24 |
-| Total fichiers créés/modifiés | ~92 |
-| Total lignes de code | ~9 700 |
-| Tests unitaires | **57** (18 shared + 3 intégration + 36 auth : 14 service + 22 contrôleur) |
-| Branches créées | 8 (7 mergées + 1 active: feature/GS-009-refresh-token) |
+| Total fichiers créés/modifiés | ~95 |
+| Total lignes de code | ~10 000 |
+| Tests unitaires auth | **46** (18 service tests + 28 contrôleur tests) |
+| Tests unitaires shared | 18 |
+| Branches créées | 10 (7 mergées + 3 actives: GS-009, GS-010, GS-011) |
 | Modules avec code + tests | 2 sur 11 (shared + auth) |
 | Modules vides | 9 sur 11 |
 
@@ -515,7 +526,7 @@ main ─────────────────────────
 
 > **Règle de gestion du journal :** Ce fichier doit être mis à jour à chaque nouveau commit mergé dans `main`.
 > La section de la US modifiée doit refléter le hash du commit et le statut de merge.
-> **Prochaine mise à jour prévue :** Après implémentation de US-007, US-009, US-010.
+> **Prochaine mise à jour prévue :** Après implémentation de US-012 (Reset Password).
 
 ---
 
