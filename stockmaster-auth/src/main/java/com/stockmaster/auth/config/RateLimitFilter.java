@@ -28,7 +28,8 @@ public class RateLimitFilter implements Filter {
             Map.of(
                     "/api/v1/auth/login", "login",
                     "/api/v1/auth/refresh", "refresh",
-                    "/api/v1/auth/forgot-password", "forgot-password"
+                    "/api/v1/auth/forgot-password", "forgot-password",
+                    "/api/v1/auth/reset-password", "reset-password"
             )
     );
 

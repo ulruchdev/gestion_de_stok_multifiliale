@@ -7,6 +7,7 @@ import com.stockmaster.auth.dto.request.ForgotPasswordRequest;
 import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
 import com.stockmaster.auth.dto.request.RefreshTokenRequest;
+import com.stockmaster.auth.dto.request.ResetPasswordRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
 import com.stockmaster.auth.dto.response.RefreshTokenResponse;
@@ -524,6 +525,64 @@ class AuthControllerTest {
                     .build();
 
             mockMvc.perform(post("/api/v1/auth/forgot-password")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request))
+                            .with(csrf()))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    // ========================================================================
+    // US-012 — POST /api/v1/auth/reset-password
+    // ========================================================================
+
+    @Nested
+    @DisplayName("POST /api/v1/auth/reset-password")
+    class ResetPasswordEndpoint {
+
+        @Test
+        @DisplayName("200 OK — token valide et nouveau mot de passe")
+        void shouldReturn200WhenResetPasswordValid() throws Exception {
+            ResetPasswordRequest request = ResetPasswordRequest.builder()
+                    .token("valid-reset-token")
+                    .nouveauMotDePasse("NewPass@2026")
+                    .build();
+
+            mockMvc.perform(post("/api/v1/auth/reset-password")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request))
+                            .with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.message").value("Mot de passe réinitialisé avec succès."));
+
+            verify(authService).resetPassword(any(ResetPasswordRequest.class));
+        }
+
+        @Test
+        @DisplayName("400 BAD REQUEST — token vide")
+        void shouldReturn400WhenTokenBlank() throws Exception {
+            ResetPasswordRequest request = ResetPasswordRequest.builder()
+                    .token("")
+                    .nouveauMotDePasse("NewPass@2026")
+                    .build();
+
+            mockMvc.perform(post("/api/v1/auth/reset-password")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request))
+                            .with(csrf()))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("400 BAD REQUEST — mot de passe faible (pas de chiffre)")
+        void shouldReturn400WhenPasswordWeak() throws Exception {
+            ResetPasswordRequest request = ResetPasswordRequest.builder()
+                    .token("valid-reset-token")
+                    .nouveauMotDePasse("WeakPass!")
+                    .build();
+
+            mockMvc.perform(post("/api/v1/auth/reset-password")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request))
                             .with(csrf()))

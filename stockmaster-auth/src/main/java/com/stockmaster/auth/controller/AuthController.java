@@ -5,6 +5,7 @@ import com.stockmaster.auth.dto.request.ForgotPasswordRequest;
 import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
 import com.stockmaster.auth.dto.request.RefreshTokenRequest;
+import com.stockmaster.auth.dto.request.ResetPasswordRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
 import com.stockmaster.auth.dto.response.RefreshTokenResponse;
@@ -94,5 +95,17 @@ public class AuthController {
 
         return ResponseEntity.ok()
                 .body(ApiResponse.success("Si cet email existe, un lien de réinitialisation vous a été envoyé."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+
+        log.debug("Demande de réinitialisation avec token reçue");
+
+        authService.resetPassword(request);
+
+        return ResponseEntity.ok()
+                .body(ApiResponse.success("Mot de passe réinitialisé avec succès."));
     }
 }

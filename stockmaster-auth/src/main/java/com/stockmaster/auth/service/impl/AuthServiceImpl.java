@@ -14,6 +14,7 @@ import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
 import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
 import com.stockmaster.auth.dto.request.RefreshTokenRequest;
+import com.stockmaster.auth.dto.request.ResetPasswordRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
 import com.stockmaster.auth.dto.response.RefreshTokenResponse;
@@ -300,6 +301,47 @@ public class AuthServiceImpl implements AuthService {
 
         // Nettoyer le contexte de sécurité
         SecurityContextHolder.clearContext();
+    }
+
+    // ========================================================================
+    // US-012 — Réinitialisation du mot de passe
+    // ========================================================================
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void resetPassword(ResetPasswordRequest request) {
+        String token = request.getToken();
+        String redisKey = RESET_KEY_PREFIX + token;
+
+        // Vérifier le token dans Redis
+        String userIdStr = redisTemplate.opsForValue().get(redisKey);
+        if (userIdStr == null) {
+            log.warn("Token de réinitialisation invalide ou expiré");
+            throw new BusinessException(ErrorCode.AUTH_RESET_TOKEN_INVALID);
+        }
+
+        Long userId = Long.valueOf(userIdStr);
+
+        // Charger l'utilisateur
+        Utilisateur utilisateur = utilisateurRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("Utilisateur introuvable pour userId={}", userId);
+                    return new BusinessException(ErrorCode.AUTH_RESET_TOKEN_INVALID);
+                });
+
+        // Hacher le nouveau mot de passe
+        String nouveauMotDePasseHash = passwordEncoder.encode(request.getNouveauMotDePasse());
+        utilisateur.setMotDePasse(nouveauMotDePasseHash);
+        utilisateurRepository.save(utilisateur);
+
+        // Supprimer le token (usage unique)
+        redisTemplate.delete(redisKey);
+
+        // Révoquer tous les refresh tokens de l'utilisateur (sécurité)
+        String refreshKey = REFRESH_KEY_PREFIX + userId;
+        redisTemplate.delete(refreshKey);
+
+        log.info("Mot de passe réinitialisé avec succès pour userId={}", userId);
     }
 
     // ========================================================================
