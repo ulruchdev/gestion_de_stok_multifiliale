@@ -15,7 +15,6 @@ Module d'infrastructure partagé par tous les autres modules. Il contient les fo
 - ✅ Réponses API standardisées (RFC 7807)
 - ✅ Gestion centralisée des erreurs
 - ✅ Configuration Spring (JWT, CORS, Pagination)
-- ✅ Point d'entrée de l'application
 - ✅ Migrations Flyway (schéma BDD)
 
 ---
@@ -41,8 +40,9 @@ com.stockmaster.shared/
 │   └── InsufficientStockException.java ← 409 avec liste ruptures
 ├── handler/
 │   └── GlobalExceptionHandler.java  ← 9 cas d'erreur, logs, pas de stack trace
-└── StockMasterApplication.java      ← @SpringBootApplication (scan global)
 ```
+
+> ℹ️ Le point d'entrée Spring Boot (`StockMasterApplication.java`) a été déplacé vers le module `stockmaster-bootstrap`.
 
 ---
 

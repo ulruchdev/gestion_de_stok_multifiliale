@@ -1,4 +1,4 @@
-package com.stockmaster.shared;
+package com.stockmaster.bootstrap;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

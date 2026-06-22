@@ -40,7 +40,7 @@ public abstract class AbstractEntity implements Serializable {
 
     /**
      * Marque l'entité comme supprimée (soft delete).
-     * La ligne reste en base mais est filtrée dans toutes les requêtes.
+     * La ligne reste en base, mais est filtrée dans toutes les requêtes.
      */
     public void marquerCommeSupprime() {
         this.supprime = true;

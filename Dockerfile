@@ -20,6 +20,7 @@ COPY stockmaster-stock/pom.xml stockmaster-stock/
 COPY stockmaster-vente/pom.xml stockmaster-vente/
 COPY stockmaster-notification/pom.xml stockmaster-notification/
 COPY stockmaster-reporting/pom.xml stockmaster-reporting/
+COPY stockmaster-bootstrap/pom.xml stockmaster-bootstrap/
 
 # Download dependencies (layer caching)
 RUN --mount=type=cache,target=/root/.m2 \
@@ -27,12 +28,11 @@ RUN --mount=type=cache,target=/root/.m2 \
 
 # Copy source code
 COPY stockmaster-shared/src stockmaster-shared/src
-
-# Build layered JAR
-RUN --mount=type=cache,target=/root/.m2 \
+COPY stockmaster-bootstrap/src stockmaster-bootstrap/src    # Build layered JAR
+    RUN --mount=type=cache,target=/root/.m2 \
     ./mvnw package -DskipTests -q && \
-    # Use the executable jar produced with classifier "exec" so layertools is available
-    java -Djarmode=layertools -jar stockmaster-shared/target/*-exec.jar extract --destination extracted
+    # Use the executable jar produced by stockmaster-bootstrap so layertools is available
+    java -Djarmode=layertools -jar stockmaster-bootstrap/target/*.jar extract --destination extracted
 
 # ============================================================
 # Stage 2 : Runtime — JRE 21 Alpine (non-root)

@@ -107,9 +107,9 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <!-- Keep the normal library artifact for other modules
-                         while also producing an executable Spring Boot jar. -->
-                    <classifier>exec</classifier>
+                    <!-- stockmaster-shared est une librairie, pas un exécutable.
+                         Le fat JAR est produit par stockmaster-bootstrap. -->
+                    <skip>true</skip>
                 </configuration>
             </plugin>
 

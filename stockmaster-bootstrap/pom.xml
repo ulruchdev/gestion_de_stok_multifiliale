@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.stockmaster</groupId>
+        <artifactId>stockmaster-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>stockmaster-bootstrap</artifactId>
+    <packaging>jar</packaging>
+    <name>StockMaster CM — Bootstrap (point d'entrée &amp; assembly)</name>
+    <description>Module d'amorçage : contient le main() Spring Boot, dépend de tous les modules pour l'assembly du fat JAR exécutable</description>
+
+    <dependencies>
+        <!-- Tous les modules internes (pour l'assembly du fat JAR) -->
+        <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-shared</artifactId></dependency>
+        <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-auth</artifactId></dependency>
+        <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-groupe</artifactId></dependency>
+        <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-utilisateur</artifactId></dependency>
+        <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-catalogue</artifactId></dependency>
+        <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-tiers</artifactId></dependency>
+        <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-achat</artifactId></dependency>
+        <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-stock</artifactId></dependency>
+        <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-vente</artifactId></dependency>
+        <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-notification</artifactId></dependency>
+        <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-reporting</artifactId></dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.stockmaster.bootstrap.StockMasterApplication</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

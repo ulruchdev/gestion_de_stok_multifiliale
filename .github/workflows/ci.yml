@@ -87,7 +87,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: stockmaster-jar
-          path: stockmaster-shared/target/*.jar
+          path: stockmaster-bootstrap/target/*.jar
           retention-days: 7
 
       - name: Wait for PostgreSQL
@@ -117,7 +117,7 @@ jobs:
           SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 1
           SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
         run: |
-          java -Dspring.profiles.active=dev -jar stockmaster-shared/target/*-exec.jar > /tmp/app.log 2>&1 &
+          java -Dspring.profiles.active=dev -jar stockmaster-bootstrap/target/*.jar > /tmp/app.log 2>&1 &
           APP_PID=$!
           echo "PID application : $APP_PID"
           echo "⏳ Attente du démarrage (polling toutes les 5s, timeout 120s)..."
