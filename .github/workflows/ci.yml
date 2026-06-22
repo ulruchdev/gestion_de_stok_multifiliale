@@ -184,4 +184,4 @@ jobs:
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.projectKey=gestion_de_stok_multifiliale
           -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
-          -Dsonar.coverage.exclusions=**/config/**,**/dto/**
+          -Dsonar.coverage.exclusions=**/config/**,**/dto/**,**/StockMasterApplication.java
