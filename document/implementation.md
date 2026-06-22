@@ -382,10 +382,11 @@ main ─────────────────────────
 
 1. L'utilisateur doit être authentifié (Bearer token valide)
 2. Récupération de l'userId depuis `StockMasterPrincipal` (via `SecurityContextHolder`)
-3. Suppression de la clé Redis `refresh:{userId}` → révocation du refresh token
-4. Nettoyage du contexte de sécurité (`SecurityContextHolder.clearContext()`)
-5. Si aucun refresh token en Redis (déjà expiré/déconnecté) → succès quand même (idempotent)
-6. Si non authentifié → `AUTH_TOKEN_INVALID` (AUTH_005 → 401)
+3. Blacklistage du `jti` de l'access token courant dans Redis (TTL = durée restante du token) → toute requête ultérieure avec ce token sera rejetée
+4. Suppression de la clé Redis `refresh:{userId}` → révocation du refresh token
+5. Nettoyage du contexte de sécurité (`SecurityContextHolder.clearContext()`)
+6. Si aucun refresh token en Redis (déjà expiré/déconnecté) → succès quand même (idempotent)
+7. Si non authentifié → `AUTH_TOKEN_INVALID` (AUTH_005 → 401)
 
 ### Tests (5 nouveaux, 42 total)
 
@@ -433,7 +434,8 @@ main ─────────────────────────
 
 ## US-012 — Réinitialisation mot de passe ✅
 
-> **Statut :** IMPLÉMENTÉ — Pushé, en attente de PR
+> **Statut :** TERMINÉ — Mergé dans `main`
+> **Commit :** `dd5e823`
 > **Branche :** `feature/GS-012-reset-password`
 > **Priorité :** P0 | **Sprint :** 2 | **Points :** 3
 > **Endpoint :** `POST /api/v1/auth/reset-password` (public)
@@ -467,10 +469,42 @@ main ─────────────────────────
 | AuthServiceImplTest — reset-password | 2 (token valide + token invalide) |
 | AuthControllerTest — reset-password | 3 (200 OK + 400 token blank + 400 password faible) |
 
-## US-013 — Changement mot de passe 🔜
+## US-013 — Changement mot de passe ✅
 
-> **Statut :** NON COMMENCÉ
-> **Sprint :** 3 | **Points :** 2 | **Priorité :** P1
+> **Statut :** IMPLÉMENTÉ — En attente de validation push
+> **Branche :** `feature/GS-013-change-password`
+> **Priorité :** P1 | **Sprint :** 3 | **Points :** 2
+> **Endpoint :** `PUT /api/v1/auth/change-password` (authentifié)
+> **Fichiers créés/modifiés :** 6
+
+### Détail des fichiers
+
+| Fichier | Changement |
+|---|---|
+| `ChangePasswordRequest.java` | 🆕 DTO : ancienMotDePasse (@NotBlank) + nouveauMotDePasse (@NotBlank @Size @Pattern) |
+| `AuthService.java` | 📝 Nouvelle méthode `changePassword()` |
+| `AuthServiceImpl.java` | 📝 Vérification ancien mot de passe → hash BCrypt → sauvegarde → révocation refresh tokens (@Transactional) |
+| `AuthController.java` | 📝 Nouvel endpoint `PUT /api/v1/auth/change-password` → 200 OK |
+| `AuthServiceImplTest.java` | 🆕 3 tests (succès + ancien mdp incorrect + non authentifié) |
+| `AuthControllerTest.java` | 🆕 5 tests (200 OK + 400 ancien mdp vide + 400 ancien mdp incorrect + 400 nouveau mdp faible + 401 via service) |
+
+### Logique métier
+
+1. Endpoint authentifié (pas dans `.permitAll()`)
+2. Récupération de l'utilisateur connecté via `SecurityContextHolder` / `StockMasterPrincipal`
+3. Vérification de l'ancien mot de passe avec `passwordEncoder.matches()`
+4. Ancien mot de passe incorrect → `400 BAD REQUEST` avec `ErrorCode.SEC_INVALID_PASSWORD` (SEC_002)
+5. Nouveau mot de passe haché BCrypt et sauvegardé
+6. Tous les refresh tokens de l'utilisateur révoqués en Redis (sécurité)
+7. Si non authentifié → `AUTH_TOKEN_INVALID` (AUTH_005 → 401)
+
+### Tests (8 nouveaux, 59 total)
+
+| Catégorie | Tests |
+|---|---|
+| AuthServiceImplTest — change-password | 3 (succès + ancien mdp incorrect + non authentifié) |
+| AuthControllerTest — change-password | 5 (200 OK + 400 ancien mdp blank + 400 ancien mdp incorrect + 400 nouveau mdp faible + 401 token invalide) |
+
 
 ---
 
@@ -509,38 +543,40 @@ main ─────────────────────────
 | **US-009** | Refresh token | 🚧 Implémenté | feature/GS-009-refresh-token | `5a39023` | ✅ | 7 | +180 |
 | **US-010** | Déconnexion | 🚧 Implémenté | feature/GS-010-logout | `7b687f5` | ✅ | 5 | +120 |
 | **US-011** | Mot de passe oublié | 🚧 Implémenté | feature/GS-011-forgot-password | `0008438` | ✅ | 6 | +130 |
-| **US-012** | Réinitialisation mot de passe | 🚧 Implémenté | feature/GS-012-reset-password | — | — | 7 | +150 |
-| **US-013** | Changement mot de passe | 🔜 Non commencé | — | — | — | — | — |
+| **US-012** | Réinitialisation mot de passe | ✅ Terminé | feature/GS-012-reset-password | `dd5e823` | ✅ | 7 | +150 |
+| **US-013** | Changement mot de passe | 🚧 Implémenté | feature/GS-013-change-password | — | — | 6 | +180 |
 | **US-014 à 080** | EPIC 3 à 13 (67 US) | 🔜 Non commencé | — | — | — | — | — |
 
 ### Par branche — Statut de merge
 
 | Branche | Commit HEAD | Mergée dans `main` |
 |---|---|---|
-| `main` | `2577bc4` | ✅ Branche de référence |
+| `main` | `dd5e823` | ✅ Branche de référence (US-012 mergée) |
 | `feature/GS-001-initialize-spring-boot-project` | `0357763` | ✅ Mergée |
 | `feature/GS-002-flyway-migrations` | `df5759f` | ✅ Mergée (PR #3) |
 | `feature/GS-003-centralized-error-handling` | `c03bff2` | ✅ Mergée (PR #1) |
 | `feature/GS-004-ci-cd-pipeline` | `02b441c` | ✅ Mergée (PR #2 → #4) |
 | `feature/GS-006-jwt-auth` | `9fed1df` | ✅ Mergée |
+| `feature/GS-007-inscription-groupe` | `6edb067` | ✅ Mergée dans main (PR #6) |
 | `feature/GS-009-refresh-token` | `5a39023` | 🚧 PR en attente |
 | `feature/GS-010-logout` | `7b687f5` | 🚧 PR en attente |
 | `feature/GS-011-forgot-password` | `0008438` | 🚧 PR en attente |
-| `feature/GS-012-reset-password` | — | 🚧 En cours |
+| `feature/GS-012-reset-password` | `dd5e823` | ✅ Mergée dans main (PR #11) |
+| `feature/GS-013-change-password` | — | 🚧 En cours (non pushée) |
 
 ### Bilan global
 
 | Métrique | Valeur |
 |---|---|
-| US terminées | 8 sur 75 (US-001 à US-008) |
-| US en attente de PR | 4 (US-009, US-010, US-011, US-012) |
-| US non commencées | 63 |
+| US terminées | 9 sur 75 (US-001 à US-012) |
+| US en attente de PR | 4 (US-009, US-010, US-011, US-013) |
+| US non commencées | 62 |
 | Total commits (sur main) | 24 |
 | Total fichiers créés/modifiés | ~95 |
 | Total lignes de code | ~10 000 |
-| Tests unitaires auth | **51** (20 service tests + 31 contrôleur tests) |
+| Tests unitaires auth | **59** (23 service tests + 36 contrôleur tests) |
 | Tests unitaires shared | 18 |
-| Branches créées | 11 (7 mergées + 4 actives: GS-009, GS-010, GS-011, GS-012) |
+| Branches créées | 12 (8 mergées + 4 actives: GS-009, GS-010, GS-011, GS-013) |
 | Modules avec code + tests | 2 sur 11 (shared + auth) |
 | Modules vides | 9 sur 11 |
 
@@ -557,7 +593,7 @@ main ─────────────────────────
 
 > **Règle de gestion du journal :** Ce fichier doit être mis à jour à chaque nouveau commit mergé dans `main`.
 > La section de la US modifiée doit refléter le hash du commit et le statut de merge.
-> **Prochaine mise à jour prévue :** Après implémentation de US-012 (Reset Password).
+> **Prochaine mise à jour prévue :** Après implémentation de US-013 (Change Password — Sprint 3, P1, 2pts).
 
 ---
 

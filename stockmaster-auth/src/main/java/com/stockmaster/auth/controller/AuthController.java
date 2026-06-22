@@ -6,6 +6,7 @@ import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
 import com.stockmaster.auth.dto.request.RefreshTokenRequest;
 import com.stockmaster.auth.dto.request.ResetPasswordRequest;
+import com.stockmaster.auth.dto.request.ChangePasswordRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
 import com.stockmaster.auth.dto.response.RefreshTokenResponse;
@@ -107,5 +108,17 @@ public class AuthController {
 
         return ResponseEntity.ok()
                 .body(ApiResponse.success("Mot de passe réinitialisé avec succès."));
+    }
+
+    @PutMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request) {
+
+        log.debug("Demande de changement de mot de passe reçue");
+
+        authService.changePassword(request);
+
+        return ResponseEntity.ok()
+                .body(ApiResponse.success("Mot de passe modifié avec succès."));
     }
 }

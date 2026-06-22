@@ -8,6 +8,7 @@ import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
 import com.stockmaster.auth.dto.request.RefreshTokenRequest;
 import com.stockmaster.auth.dto.request.ResetPasswordRequest;
+import com.stockmaster.auth.dto.request.ChangePasswordRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
 import com.stockmaster.auth.dto.response.RefreshTokenResponse;
@@ -35,6 +36,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AuthController.class)
@@ -587,6 +589,102 @@ class AuthControllerTest {
                             .content(objectMapper.writeValueAsString(request))
                             .with(csrf()))
                     .andExpect(status().isBadRequest());
+        }
+    }
+
+    // ========================================================================
+    // US-013 — PUT /api/v1/auth/change-password
+    // ========================================================================
+
+    @Nested
+    @DisplayName("PUT /api/v1/auth/change-password")
+    class ChangePasswordEndpoint {
+
+        @Test
+        @DisplayName("200 OK — changement de mot de passe réussi")
+        void shouldReturn200WhenChangePasswordValid() throws Exception {
+            ChangePasswordRequest request = ChangePasswordRequest.builder()
+                    .ancienMotDePasse("MotDePasse@2026")
+                    .nouveauMotDePasse("NewPass@2026")
+                    .build();
+
+            mockMvc.perform(put("/api/v1/auth/change-password")
+                            .with(user("1").roles("ADMIN_GROUPE"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.message").value("Mot de passe modifié avec succès."));
+
+            verify(authService).changePassword(any(ChangePasswordRequest.class));
+        }
+
+        @Test
+        @DisplayName("400 BAD REQUEST — ancien mot de passe incorrect (service exception)")
+        void shouldReturn400WhenOldPasswordIncorrect() throws Exception {
+            ChangePasswordRequest request = ChangePasswordRequest.builder()
+                    .ancienMotDePasse("WrongPass@2026")
+                    .nouveauMotDePasse("NewPass@2026")
+                    .build();
+
+            doThrow(new BusinessException(ErrorCode.SEC_INVALID_PASSWORD))
+                    .when(authService).changePassword(any(ChangePasswordRequest.class));
+
+            mockMvc.perform(put("/api/v1/auth/change-password")
+                            .with(user("1").roles("ADMIN_GROUPE"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errorCode").value("SEC_002"));
+        }
+
+        @Test
+        @DisplayName("400 BAD REQUEST — ancien mot de passe vide")
+        void shouldReturn400WhenOldPasswordBlank() throws Exception {
+            ChangePasswordRequest request = ChangePasswordRequest.builder()
+                    .ancienMotDePasse("")
+                    .nouveauMotDePasse("NewPass@2026")
+                    .build();
+
+            mockMvc.perform(put("/api/v1/auth/change-password")
+                            .with(user("1").roles("ADMIN_GROUPE"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("400 BAD REQUEST — nouveau mot de passe faible")
+        void shouldReturn400WhenNewPasswordWeak() throws Exception {
+            ChangePasswordRequest request = ChangePasswordRequest.builder()
+                    .ancienMotDePasse("MotDePasse@2026")
+                    .nouveauMotDePasse("weak")
+                    .build();
+
+            mockMvc.perform(put("/api/v1/auth/change-password")
+                            .with(user("1").roles("ADMIN_GROUPE"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("401 UNAUTHORIZED — token invalide (simulé par le service)")
+        void shouldReturn401WhenTokenInvalid() throws Exception {
+            ChangePasswordRequest request = ChangePasswordRequest.builder()
+                    .ancienMotDePasse("MotDePasse@2026")
+                    .nouveauMotDePasse("NewPass@2026")
+                    .build();
+
+            doThrow(new BusinessException(ErrorCode.AUTH_TOKEN_INVALID))
+                    .when(authService).changePassword(any(ChangePasswordRequest.class));
+
+            mockMvc.perform(put("/api/v1/auth/change-password")
+                            .with(user("1").roles("ADMIN_GROUPE"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.errorCode").value("AUTH_005"));
         }
     }
 }

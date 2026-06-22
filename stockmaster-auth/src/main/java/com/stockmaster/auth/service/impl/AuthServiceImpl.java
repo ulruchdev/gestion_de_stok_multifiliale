@@ -15,6 +15,7 @@ import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
 import com.stockmaster.auth.dto.request.RefreshTokenRequest;
 import com.stockmaster.auth.dto.request.ResetPasswordRequest;
+import com.stockmaster.auth.dto.request.ChangePasswordRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
 import com.stockmaster.auth.dto.response.RefreshTokenResponse;
@@ -38,6 +39,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -294,8 +296,23 @@ public class AuthServiceImpl implements AuthService {
         }
 
         Long userId = principal.getUserId();
-        String redisKey = REFRESH_KEY_PREFIX + userId;
 
+        // Blacklister le jti de l'access token courant (TTL = durée restante du token)
+        String jti = principal.getClaims().get("jti", String.class);
+        if (jti != null) {
+            Date expiration = principal.getClaims().getExpiration();
+            long remainingTtl = (expiration != null)
+                    ? (expiration.getTime() - System.currentTimeMillis()) / 1000
+                    : jwtProperties.getAccessTokenExpiration(); // fallback TTL config
+            if (remainingTtl > 0) {
+                String blacklistKey = "blacklist:jti:" + jti;
+                redisTemplate.opsForValue().set(blacklistKey, "true", remainingTtl, TimeUnit.SECONDS);
+                log.debug("jti {} blacklisté pour {}s", jti, remainingTtl);
+            }
+        }
+
+        // Révoquer le refresh token
+        String redisKey = REFRESH_KEY_PREFIX + userId;
         redisTemplate.delete(redisKey);
         log.info("Refresh token révoqué pour userId={}", userId);
 
@@ -342,6 +359,45 @@ public class AuthServiceImpl implements AuthService {
         redisTemplate.delete(refreshKey);
 
         log.info("Mot de passe réinitialisé avec succès pour userId={}", userId);
+    }
+
+    // ========================================================================
+    // US-013 — Changement de mot de passe (utilisateur connecté)
+    // ========================================================================
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void changePassword(ChangePasswordRequest request) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof StockMasterPrincipal principal)) {
+            log.warn("Tentative de changement de mot de passe sans authentification valide");
+            throw new BusinessException(ErrorCode.AUTH_TOKEN_INVALID);
+        }
+
+        Long userId = principal.getUserId();
+
+        Utilisateur utilisateur = utilisateurRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("Utilisateur introuvable pour userId={}", userId);
+                    return new BusinessException(ErrorCode.AUTH_TOKEN_INVALID);
+                });
+
+        // Vérifier l'ancien mot de passe
+        if (!passwordEncoder.matches(request.getAncienMotDePasse(), utilisateur.getMotDePasse())) {
+            log.warn("Ancien mot de passe incorrect pour userId={}", userId);
+            throw new BusinessException(ErrorCode.SEC_INVALID_PASSWORD);
+        }
+
+        // Hacher et sauvegarder le nouveau mot de passe
+        String nouveauMotDePasseHash = passwordEncoder.encode(request.getNouveauMotDePasse());
+        utilisateur.setMotDePasse(nouveauMotDePasseHash);
+        utilisateurRepository.save(utilisateur);
+
+        // Révoquer tous les refresh tokens (sécurité)
+        String refreshKey = REFRESH_KEY_PREFIX + userId;
+        redisTemplate.delete(refreshKey);
+
+        log.info("Mot de passe modifié avec succès pour userId={}", userId);
     }
 
     // ========================================================================

@@ -175,7 +175,7 @@ mvn compile -q
 mvn verify
 ```
 
-**Résultat attendu :** `BUILD SUCCESS` + `46 tests (43 unitaires + 3 intégration)` + `Coverage ≥ 80%`
+**Résultat attendu :** `BUILD SUCCESS` + `77 tests (18 shared + 59 auth)` + `Coverage ≥ 80%`
 
 ### ✅ Étape 3 — Build JAR
 
@@ -211,7 +211,7 @@ git push origin ma-branche
 
 **Résultat attendu :** Le pipeline CI sur GitHub Actions doit passer :
 - ✅ Compilation (12/12 modules)
-- ✅ Tests unitaires (18) + Intégration (3) = 21 tests
+- ✅ Tests unitaires (18 shared + 59 auth = 77 tests)
 - ✅ JaCoCo coverage ≥ 80%
 - ✅ SonarCloud analysis
 - ✅ Build JAR
@@ -221,7 +221,7 @@ git push origin ma-branche
 ```
 Avant push :
   1. mvn compile -q                     → SUCCESS (12 modules)
-  2. mvn verify                          → SUCCESS (18 tests + 3 tests intégration + ≥80% coverage)
+  2. mvn verify                          → SUCCESS (77 tests : 18 shared + 59 auth + ≥80% coverage)
   3. mvn package -DskipTests             → SUCCESS (JAR généré)
   4. java -jar .../target/*.jar          → Vérifier /actuator/health = UP (optionnel)
   5. git push                             → CI pipeline vert
@@ -335,7 +335,8 @@ mvn spring-boot:run -pl stockmaster-shared
 | POST | `/api/v1/auth/refresh` | Refresh token | `RefreshTokenRequest` | ❌ Non |
 | POST | `/api/v1/auth/logout` | Déconnexion (révocation refresh token) | Aucun (Bearer token) | ✅ Oui |
 | POST | `/api/v1/auth/forgot-password` | Mot de passe oublié | `ForgotPasswordRequest` | ❌ Non |
-| POST | `/api/v1/auth/reset-password` | Réinitialisation mot de passe | `ResetPasswordRequest` | ❌ Non (🔜) |
+| POST | `/api/v1/auth/reset-password` | Réinitialisation mot de passe | `ResetPasswordRequest` | ❌ Non |
+| PUT | `/api/v1/auth/change-password` | Changement mot de passe (connecté) | `ChangePasswordRequest` | ✅ Oui |
 
 **Exemple de test — Inscription :**
 
@@ -378,7 +379,7 @@ mvn spring-boot:run -pl stockmaster-shared
     "refreshToken": "eyJ...",
     "expiresIn": 900,
     "role": "ADMIN_GROUPE",
-    "scope": "FILIALE"
+    "scope": "GROUPE"
   }
 }
 ```
