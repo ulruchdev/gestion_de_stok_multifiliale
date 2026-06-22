@@ -28,10 +28,21 @@ RUN --mount=type=cache,target=/root/.m2 \
 
 # Copy source code
 COPY stockmaster-shared/src stockmaster-shared/src
-COPY stockmaster-bootstrap/src stockmaster-bootstrap/src    # Build layered JAR
-    RUN --mount=type=cache,target=/root/.m2 \
+COPY stockmaster-auth/src stockmaster-auth/src
+COPY stockmaster-groupe/src stockmaster-groupe/src
+COPY stockmaster-utilisateur/src stockmaster-utilisateur/src
+COPY stockmaster-catalogue/src stockmaster-catalogue/src
+COPY stockmaster-tiers/src stockmaster-tiers/src
+COPY stockmaster-achat/src stockmaster-achat/src
+COPY stockmaster-stock/src stockmaster-stock/src
+COPY stockmaster-vente/src stockmaster-vente/src
+COPY stockmaster-notification/src stockmaster-notification/src
+COPY stockmaster-reporting/src stockmaster-reporting/src
+COPY stockmaster-bootstrap/src stockmaster-bootstrap/src
+
+# Build layered JAR
+RUN --mount=type=cache,target=/root/.m2 \
     ./mvnw package -DskipTests -q && \
-    # Use the executable jar produced by stockmaster-bootstrap so layertools is available
     java -Djarmode=layertools -jar stockmaster-bootstrap/target/*.jar extract --destination extracted
 
 # ============================================================
