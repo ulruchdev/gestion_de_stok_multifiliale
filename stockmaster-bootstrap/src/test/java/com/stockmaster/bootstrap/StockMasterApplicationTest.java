@@ -1,4 +1,4 @@
-package com.stockmaster.shared;
+package com.stockmaster.bootstrap;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    useMainMethod = SpringBootTest.UseMainMethod.ALWAYS,
     properties = {
         "springdoc.api-docs.enabled=false",
         "springdoc.swagger-ui.enabled=false"

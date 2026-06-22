@@ -91,6 +91,16 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         </dependency>
 
+        <!-- Flyway (migrations de schéma) -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
         <!-- PostgreSQL -->
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -107,9 +117,9 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <!-- Keep the normal library artifact for other modules
-                         while also producing an executable Spring Boot jar. -->
-                    <classifier>exec</classifier>
+                    <!-- stockmaster-shared est une librairie, pas un exécutable.
+                         Le fat JAR est produit par stockmaster-bootstrap. -->
+                    <skip>true</skip>
                 </configuration>
             </plugin>
 

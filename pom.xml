@@ -56,7 +56,7 @@
     </properties>
 
     <!-- ============================================================ -->
-    <!-- Modules (11 modules fonctionnels)                             -->
+    <!-- Modules (12 modules fonctionnels)                             -->
     <!-- ============================================================ -->
     <modules>
         <module>stockmaster-shared</module>
@@ -70,6 +70,7 @@
         <module>stockmaster-vente</module>
         <module>stockmaster-notification</module>
         <module>stockmaster-reporting</module>
+        <module>stockmaster-bootstrap</module>
     </modules>
 
     <!-- ============================================================ -->
@@ -131,6 +132,11 @@
             <dependency>
                 <groupId>com.stockmaster</groupId>
                 <artifactId>stockmaster-reporting</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.stockmaster</groupId>
+                <artifactId>stockmaster-bootstrap</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
