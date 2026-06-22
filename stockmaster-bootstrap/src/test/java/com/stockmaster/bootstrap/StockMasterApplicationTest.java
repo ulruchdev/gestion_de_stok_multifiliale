@@ -33,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    useMainMethod = SpringBootTest.UseMainMethod.ALWAYS,
     properties = {
         "springdoc.api-docs.enabled=false",
         "springdoc.swagger-ui.enabled=false"

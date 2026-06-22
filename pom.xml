@@ -266,11 +266,6 @@
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
                     <version>${jacoco-maven-plugin.version}</version>
-                    <configuration>
-                        <excludes>
-                            <exclude>**/StockMasterApplication.class</exclude>
-                        </excludes>
-                    </configuration>
                 </plugin>
 
                 <!-- OWASP Dependency Check -->
