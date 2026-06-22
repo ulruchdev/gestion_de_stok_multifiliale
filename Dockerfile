@@ -26,18 +26,9 @@ COPY stockmaster-bootstrap/pom.xml stockmaster-bootstrap/
 RUN --mount=type=cache,target=/root/.m2 \
     ./mvnw dependency:go-offline -q || true
 
-# Copy source code
+# Copy source code (modules actifs avec du code source)
 COPY stockmaster-shared/src stockmaster-shared/src
 COPY stockmaster-auth/src stockmaster-auth/src
-COPY stockmaster-groupe/src stockmaster-groupe/src
-COPY stockmaster-utilisateur/src stockmaster-utilisateur/src
-COPY stockmaster-catalogue/src stockmaster-catalogue/src
-COPY stockmaster-tiers/src stockmaster-tiers/src
-COPY stockmaster-achat/src stockmaster-achat/src
-COPY stockmaster-stock/src stockmaster-stock/src
-COPY stockmaster-vente/src stockmaster-vente/src
-COPY stockmaster-notification/src stockmaster-notification/src
-COPY stockmaster-reporting/src stockmaster-reporting/src
 COPY stockmaster-bootstrap/src stockmaster-bootstrap/src
 
 # Build layered JAR
