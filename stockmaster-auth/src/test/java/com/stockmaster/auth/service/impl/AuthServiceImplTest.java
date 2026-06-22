@@ -14,6 +14,7 @@ import com.stockmaster.auth.dto.request.ForgotPasswordRequest;
 import com.stockmaster.auth.dto.request.LoginRequest;
 import com.stockmaster.auth.dto.request.RefreshTokenRequest;
 import com.stockmaster.auth.dto.request.ResetPasswordRequest;
+import com.stockmaster.auth.dto.request.ChangePasswordRequest;
 import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
 import com.stockmaster.auth.dto.response.RefreshTokenResponse;
@@ -47,6 +48,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import static org.mockito.Mockito.*;
 
@@ -524,15 +528,31 @@ class AuthServiceImplTest {
         }
 
         @Test
-        @DisplayName("✅ Supprime le refresh token de Redis et vide le contexte de sécurité")
+        @DisplayName("✅ Supprime le refresh token, blackliste le jti et vide le contexte de sécurité")
         void shouldDeleteRefreshTokenAndClearContext() {
             // Arrange
+            Claims mockClaims = mock(Claims.class);
+            when(mockClaims.get("jti", String.class)).thenReturn("test-jti-123");
+            when(mockClaims.getExpiration()).thenReturn(java.util.Date.from(
+                    java.time.Instant.now().plusSeconds(900)));
+            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
             when(redisTemplate.delete("refresh:1")).thenReturn(true);
+
+            // Recréer le principal avec les claims mockés
+            StockMasterPrincipal principal = new StockMasterPrincipal(1L, mockClaims);
+            UsernamePasswordAuthenticationToken auth =
+                    new UsernamePasswordAuthenticationToken(principal, null, List.of());
+            SecurityContextHolder.getContext().setAuthentication(auth);
 
             // Act
             authService.logout();
 
             // Assert
+            verify(redisTemplate.opsForValue()).set(
+                    eq("blacklist:jti:test-jti-123"),
+                    eq("true"),
+                    anyLong(),
+                    eq(java.util.concurrent.TimeUnit.SECONDS));
             verify(redisTemplate).delete("refresh:1");
             assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         }
@@ -541,7 +561,17 @@ class AuthServiceImplTest {
         @DisplayName("✅ Ne lève pas d'erreur si le refresh token n'existe pas dans Redis")
         void shouldNotThrowWhenNoRefreshTokenInRedis() {
             // Arrange
+            Claims mockClaims = mock(Claims.class);
+            when(mockClaims.get("jti", String.class)).thenReturn("test-jti-123");
+            when(mockClaims.getExpiration()).thenReturn(java.util.Date.from(
+                    java.time.Instant.now().plusSeconds(900)));
+            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
             when(redisTemplate.delete("refresh:1")).thenReturn(false);
+
+            StockMasterPrincipal principal = new StockMasterPrincipal(1L, mockClaims);
+            UsernamePasswordAuthenticationToken auth =
+                    new UsernamePasswordAuthenticationToken(principal, null, List.of());
+            SecurityContextHolder.getContext().setAuthentication(auth);
 
             // Act (ne doit pas lever d'exception)
             authService.logout();
@@ -561,6 +591,8 @@ class AuthServiceImplTest {
             assertThatThrownBy(() -> authService.logout())
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_TOKEN_INVALID);
+
+            verify(redisTemplate, never()).delete(anyString());
         }
     }
 
@@ -659,6 +691,87 @@ class AuthServiceImplTest {
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_RESET_TOKEN_INVALID);
 
             verify(utilisateurRepository, never()).save(any());
+        }
+    }
+
+    // ========================================================================
+    // US-013 — Changement de mot de passe (utilisateur connecté)
+    // ========================================================================
+
+    @Nested
+    @DisplayName("Changement mot de passe (US-013)")
+    class ChangePassword {
+
+        private ChangePasswordRequest changePasswordRequest;
+
+        @BeforeEach
+        void setUp() {
+            changePasswordRequest = ChangePasswordRequest.builder()
+                    .ancienMotDePasse("MotDePasse@2026")
+                    .nouveauMotDePasse("NewPass@2026")
+                    .build();
+
+            // Simuler un utilisateur authentifié
+            StockMasterPrincipal principal = new StockMasterPrincipal(1L, mock(io.jsonwebtoken.Claims.class));
+            UsernamePasswordAuthenticationToken auth =
+                    new UsernamePasswordAuthenticationToken(principal, null, List.of());
+            SecurityContextHolder.getContext().setAuthentication(auth);
+
+            lenient().when(utilisateurRepository.findById(1L)).thenReturn(Optional.of(savedUtilisateur));
+            lenient().when(passwordEncoder.matches("MotDePasse@2026", savedUtilisateur.getMotDePasse())).thenReturn(true);
+        }
+
+        @AfterEach
+        void tearDown() {
+            SecurityContextHolder.clearContext();
+        }
+
+        @Test
+        @DisplayName("✅ Vérifie l'ancien mot de passe, hache le nouveau, sauvegarde et révoque refresh")
+        void shouldChangePasswordWhenOldPasswordValid() {
+            // Arrange
+            String ancienHash = savedUtilisateur.getMotDePasse();
+            when(passwordEncoder.encode("NewPass@2026")).thenReturn("$2a$10$newhash");
+            when(redisTemplate.delete("refresh:1")).thenReturn(true);
+
+            // Act
+            authService.changePassword(changePasswordRequest);
+
+            // Assert
+            verify(passwordEncoder).matches("MotDePasse@2026", ancienHash);
+            verify(passwordEncoder).encode("NewPass@2026");
+            verify(utilisateurRepository).save(argThat(u ->
+                    u.getMotDePasse().equals("$2a$10$newhash")));
+            verify(redisTemplate).delete("refresh:1");
+        }
+
+        @Test
+        @DisplayName("❌ Lève SEC_INVALID_PASSWORD quand l'ancien mot de passe est incorrect")
+        void shouldThrowWhenOldPasswordIncorrect() {
+            // Arrange
+            changePasswordRequest.setAncienMotDePasse("WrongPass@2026");
+            when(passwordEncoder.matches("WrongPass@2026", savedUtilisateur.getMotDePasse())).thenReturn(false);
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.changePassword(changePasswordRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SEC_INVALID_PASSWORD);
+
+            verify(passwordEncoder, never()).encode(any());
+            verify(utilisateurRepository, never()).save(any());
+            verify(redisTemplate, never()).delete(anyString());
+        }
+
+        @Test
+        @DisplayName("❌ Lève AUTH_TOKEN_INVALID quand aucun utilisateur n'est authentifié")
+        void shouldThrowWhenNotAuthenticated() {
+            // Arrange
+            SecurityContextHolder.clearContext();
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.changePassword(changePasswordRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_TOKEN_INVALID);
         }
     }
 }

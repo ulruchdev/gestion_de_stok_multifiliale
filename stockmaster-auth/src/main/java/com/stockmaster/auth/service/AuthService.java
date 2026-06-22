@@ -10,6 +10,7 @@ import com.stockmaster.auth.dto.response.LoginResponse;
 import com.stockmaster.auth.dto.response.RefreshTokenResponse;
 
 import com.stockmaster.auth.dto.request.ResetPasswordRequest;
+import com.stockmaster.auth.dto.request.ChangePasswordRequest;
 
 public interface AuthService {
 
@@ -26,4 +27,6 @@ public interface AuthService {
     void forgotPassword(ForgotPasswordRequest request);
 
     void resetPassword(ResetPasswordRequest request);
+
+    void changePassword(ChangePasswordRequest request);
 }

@@ -196,7 +196,7 @@ Content-Type: application/json
         "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
         "expiresIn": 900,
         "role": "ADMIN_GROUPE",
-        "scope": "FILIALE"
+        "scope": "GROUPE"
     }
 }
 ```
@@ -375,11 +375,119 @@ Content-Type: application/json
 
 ---
 
-### 1.7 POST — Réinitialisation mot de passe (futur)
+### 1.7 POST — Réinitialisation mot de passe
 
 > **US :** US-012
-> **Statut :** 🔜 Non implémenté
-> **Endpoint prévu :** `POST /api/v1/auth/reset-password`
+> **Statut :** ✅ Implémenté (PR #11 mergée dans `main`)
+> **Endpoint :** `POST /api/v1/auth/reset-password`
+> **Authentification :** ❌ Non
+
+#### Requête
+
+```http
+POST {{base_url}}/api/v1/auth/reset-password
+Content-Type: application/json
+
+{
+    "token": "uuid-reset-token",
+    "nouveauMotDePasse": "NewPass@2026"
+}
+```
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "message": "Mot de passe réinitialisé avec succès."
+}
+```
+
+#### Réponse — Token invalide/expiré (400 Bad Request)
+
+```json
+{
+    "type": "/errors/auth-009",
+    "title": "Requête invalide",
+    "status": 400,
+    "detail": "Token de réinitialisation invalide ou expiré",
+    "instance": "/api/v1/auth/reset-password",
+    "errorCode": "AUTH_009",
+    "timestamp": "2026-06-14T10:00:00Z"
+}
+```
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Message de succès", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.message).to.include("réinitialisé");
+});
+```
+
+---
+
+### 1.8 PUT — Changement de mot de passe
+
+> **US :** US-013
+> **Statut :** 🚧 Implémenté — En attente de PR
+> **Branche :** `feature/GS-013-change-password`
+> **Endpoint :** `PUT /api/v1/auth/change-password`
+> **Authentification :** ✅ Oui (Bearer token)
+
+#### Requête
+
+```http
+PUT {{base_url}}/api/v1/auth/change-password
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "ancienMotDePasse": "MotDePasse@2026",
+    "nouveauMotDePasse": "NewPass@2026"
+}
+```
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "message": "Mot de passe modifié avec succès."
+}
+```
+
+#### Réponse — Ancien mot de passe incorrect (400 Bad Request)
+
+```json
+{
+    "type": "/errors/sec-002",
+    "title": "Requête invalide",
+    "status": 400,
+    "detail": "Mot de passe incorrect",
+    "instance": "/api/v1/auth/change-password",
+    "errorCode": "SEC_002",
+    "timestamp": "2026-06-14T10:00:00Z"
+}
+```
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Message de succès", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.message).to.include("modifié");
+});
+```
 
 ---
 

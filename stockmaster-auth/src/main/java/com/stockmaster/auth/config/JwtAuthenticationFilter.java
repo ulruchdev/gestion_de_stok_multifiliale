@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,6 +28,7 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final StringRedisTemplate redisTemplate;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -39,6 +41,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(token)) {
             try {
                 Claims claims = jwtTokenProvider.validateToken(token);
+
+                // Vérifier si le jti est blacklisté (déconnexion)
+                String jti = claims.get("jti", String.class);
+                if (jti != null) {
+                    String blacklistKey = "blacklist:jti:" + jti;
+                    Boolean isBlacklisted = redisTemplate.hasKey(blacklistKey);
+                    if (Boolean.TRUE.equals(isBlacklisted)) {
+                        log.warn("Token blacklisté (jti={})", jti);
+                        response.setStatus(401);
+                        response.getWriter().write("{\"errorCode\":\"AUTH_005\",\"detail\":\"Token révoqué\"}");
+                        return;
+                    }
+                }
 
                 Long userId = claims.get("userId", Long.class);
                 String role = claims.get("role", String.class);
