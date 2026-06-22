@@ -43,6 +43,20 @@ CREATE TABLE entreprise (
 );
 COMMENT ON COLUMN entreprise.parent_id IS 'NULL = maison mere.';
 
+-- categorie
+CREATE TABLE categorie (
+    id                BIGSERIAL PRIMARY KEY,
+    entreprise_id     BIGINT       NOT NULL REFERENCES entreprise(id) ON DELETE RESTRICT,
+    code              VARCHAR(30)  NOT NULL,
+    designation       VARCHAR(150) NOT NULL,
+    taux_tva          NUMERIC(5,2) NOT NULL DEFAULT 19.25
+                      CHECK (taux_tva >= 0 AND taux_tva <= 100),
+    date_creation     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    date_modification TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    supprime          BOOLEAN      NOT NULL DEFAULT FALSE,
+    CONSTRAINT uq_categorie_code_entreprise UNIQUE (entreprise_id, code)
+);
+
 -- article
 CREATE TABLE article (
     id                BIGSERIAL PRIMARY KEY,
@@ -100,20 +114,6 @@ CREATE TABLE utilisateur (
     date_modification     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     supprime              BOOLEAN     NOT NULL DEFAULT FALSE,
     CONSTRAINT uq_utilisateur_email UNIQUE (email)
-);
-
--- categorie
-CREATE TABLE categorie (
-    id                BIGSERIAL PRIMARY KEY,
-    entreprise_id     BIGINT       NOT NULL REFERENCES entreprise(id) ON DELETE RESTRICT,
-    code              VARCHAR(30)  NOT NULL,
-    designation       VARCHAR(150) NOT NULL,
-    taux_tva          NUMERIC(5,2) NOT NULL DEFAULT 19.25
-                      CHECK (taux_tva >= 0 AND taux_tva <= 100),
-    date_creation     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    date_modification TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    supprime          BOOLEAN      NOT NULL DEFAULT FALSE,
-    CONSTRAINT uq_categorie_code_entreprise UNIQUE (entreprise_id, code)
 );
 
 -- commande_client
