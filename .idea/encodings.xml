@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/stockmaster-achat/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/stockmaster-auth/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/stockmaster-bootstrap/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/stockmaster-catalogue/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/stockmaster-groupe/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/stockmaster-notification/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/stockmaster-reporting/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/stockmaster-shared/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/stockmaster-stock/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/stockmaster-tiers/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/stockmaster-utilisateur/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/stockmaster-vente/src/main/java" charset="UTF-8" />
+  </component>
+</project>
