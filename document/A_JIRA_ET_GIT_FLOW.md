@@ -1,3 +1,4 @@
+
 # 🔄 JIRA & GIT FLOW — StockMaster CM
 
 > **Ce document définit le workflow exact du projet StockMaster CM. Il doit être appliqué strictement pour chaque User Story.**

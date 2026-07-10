@@ -1,5 +1,6 @@
 # Backlog Produit — StockMaster CM
-### Référence : GS-BACKLOG-2026-01 | Version : 1.0 | Date : Juin 2026 | Statut : Validé
+### Référence : GS-BACKLOG-2026-01 | Version : 1.1 | Date : Juillet 2026 | Statut : Validé
+### Changements v1.1 : intégration des décisions GS-CDA-2026-02 (vente directe non bloquante, mouvement `ANNULATION_VENTE`, fidélité client sur vente directe, durcissement sécurité auth)
 
 ---
 
@@ -382,6 +383,80 @@
 **Endpoint :** `PUT /api/v1/auth/change-password`
 
 **Corps :** `{ "ancienMotDePasse": "...", "nouveauMotDePasse": "..." }`
+
+---
+
+### US-014 — Rotation du Refresh Token avec détection de rejeu
+
+**Priorité :** P0 | **Sprint :** 3 | **Points :** 5
+
+**En tant que** responsable sécurité du produit,
+**je veux** qu'un refresh token ne soit utilisable qu'une seule fois et que sa réutilisation déclenche une révocation totale,
+**afin de** limiter drastiquement l'impact du vol d'un refresh token (téléphone volé, token intercepté).
+
+> **Contexte** : US-009 (refresh) ne fait aujourd'hui que vérifier l'existence du token en Redis — il n'y a pas de rotation. Un attaquant en possession d'un refresh token valide peut l'utiliser indéfiniment jusqu'à son expiration (7 jours), sans que l'utilisateur légitime ne le sache. C'est l'écart le plus important par rapport aux pratiques standard (RTR — Refresh Token Rotation) du secteur.
+
+**Critères d'acceptation :**
+- [ ] À chaque appel `POST /api/v1/auth/refresh` réussi : le refresh token présenté est immédiatement invalidé en Redis et un **nouveau** refresh token est émis (usage unique)
+- [ ] Les refresh tokens successifs d'un même utilisateur sont chaînés (`family_id` commun stocké en Redis avec chaque token de la famille)
+- [ ] Si un refresh token **déjà invalidé** est présenté à nouveau : toute la famille de tokens de cet utilisateur est révoquée immédiatement (déconnexion forcée de tous les appareils), et une `NotificationAlerte` de sécurité est créée pour l'utilisateur (email + in-app : "Activité suspecte détectée, vous avez été déconnecté")
+- [ ] Cet événement est loggé en `WARN` avec `event: "auth.refresh_reuse_detected"`, `userId`, `ip` — jamais le token lui-même
+
+**Endpoint :** modification de `POST /api/v1/auth/refresh` (US-009) — pas de nouvel endpoint
+
+---
+
+### US-015 — Hachage des mots de passe en Argon2id
+
+**Priorité :** P1 | **Sprint :** 3 | **Points :** 3
+
+**En tant que** responsable sécurité du produit,
+**je veux** que les mots de passe soient hachés avec Argon2id plutôt que BCrypt,
+**afin de** rester aligné sur le standard actuel recommandé (ANSSI/OWASP), plus résistant aux attaques par accélération matérielle (GPU/ASIC) que BCrypt.
+
+**Critères d'acceptation :**
+- [ ] `Argon2PasswordEncoder` configuré (paramètres recommandés OWASP : mémoire ≥ 19 MiB, itérations ≥ 2, parallélisme ≥ 1 — à ajuster selon charge serveur mesurée)
+- [ ] `DelegatingPasswordEncoder` utilisé pour supporter la **migration progressive** : les hachages `{bcrypt}` existants restent vérifiables, tout nouveau mot de passe (inscription, reset, changement) est haché en `{argon2}`
+- [ ] Migration transparente au prochain login réussi : si le hash stocké est `{bcrypt}` et le mot de passe fourni est correct, il est ré-haché en `{argon2}` et sauvegardé (upgrade-on-login, aucune action utilisateur requise)
+- [ ] Aucune donnée en clair, aucun mot de passe en log, à aucun moment
+
+**Endpoint :** aucun (changement transverse du `PasswordEncoder`)
+
+---
+
+### US-016 — Comportement fail-closed en cas d'indisponibilité de Redis
+
+**Priorité :** P0 | **Sprint :** 3 | **Points :** 3
+
+**En tant que** responsable sécurité du produit,
+**je veux** que les endpoints sensibles rejettent les requêtes plutôt que de les laisser passer si Redis est indisponible,
+**afin de** ne jamais transformer une panne d'infrastructure en faille de sécurité (contournement du rate limiting, de la blacklist de tokens, ou de la validation du refresh token).
+
+**Critères d'acceptation :**
+- [ ] Si Redis est injoignable : `login`, `refresh`, `logout`, `forgot-password`, `reset-password` retournent `503 SERVICE_UNAVAILABLE` avec `ErrorCode.SECURITY_STORE_UNAVAILABLE` — jamais un contournement silencieux du rate limit ou de la blacklist
+- [ ] Les endpoints métier déjà authentifiés (lecture d'un access token déjà émis, non blacklisté) continuent de fonctionner tant que le JWT est valide en local (vérification de signature ne dépend pas de Redis) — seule la blacklist explicite dépend de Redis
+- [ ] Alerte technique envoyée au Super Admin SaaS (canal interne, pas au client) si Redis reste injoignable plus de 60 secondes
+- [ ] Documenté explicitement dans le CDCT comme décision d'architecture (ADR) : fail-closed sur les opérations de sécurité, jamais fail-open
+
+**Endpoint :** aucun (comportement transverse des filtres de sécurité)
+
+---
+
+### US-017 — Logs d'audit structurés pour les événements d'authentification
+
+**Priorité :** P1 | **Sprint :** 3 | **Points :** 3
+
+**En tant qu'** Admin Groupe ou Super Admin SaaS,
+**je veux** que chaque événement d'authentification génère un log structuré et exploitable,
+**afin de** pouvoir investiguer un incident de sécurité et, à terme, brancher un outil de supervision (ELK, Datadog ou équivalent) sans réécrire l'instrumentation.
+
+**Critères d'acceptation :**
+- [ ] Chaque connexion réussie/échouée, déconnexion, changement de mot de passe, reset de mot de passe, et détection de rejeu de refresh token (US-014) génère un log JSON structuré : `{ "event": "auth.login_success", "userId", "entrepriseId", "ip", "timestamp" }` (adapter le champ `event` selon le cas)
+- [ ] **Jamais** de mot de passe, token complet, ou secret dans un log, à aucun niveau
+- [ ] Les logs d'échec de connexion incluent un compteur de tentatives consécutives (aide au diagnostic sans consulter Redis)
+- [ ] Format et champs documentés dans le CDCT (section Observabilité) pour préparer un branchement futur vers un SIEM externe
+
+**Endpoint :** aucun (instrumentation transverse, `SLF4J` structuré)
 
 ---
 
@@ -1413,10 +1488,13 @@
 **je veux** enregistrer rapidement une vente comptoir sans saisir de client,
 **afin de** traiter les transactions au point de vente sans délai.
 
+> **Décision validée GS-CDA-2026-02 (§1)** : la Vente Directe ne bloque **jamais** sur stock insuffisant. Le contrôle physique de disponibilité se fait par les yeux du caissier (l'article est devant lui), pas par le stock système. Bloquer créerait des pertes de vente pour un problème de donnée (désynchro, casse non enregistrée), pas un problème réel de disponibilité. Ce comportement diffère volontairement de la Commande Client (EPIC 9), où le stock retiré est dans un entrepôt non visible au moment de la saisie — le blocage y a du sens.
+
 **Critères d'acceptation :**
 - [ ] `@PreAuthorize("hasAnyRole('CAISSIER','COMMERCIAL','ADMIN_FILIALE','ADMIN_GROUPE')")`
-- [ ] Pas de client requis (vente anonyme)
-- [ ] Vérification stock pour chaque article → blocage si insuffisant
+- [ ] Pas de client requis (vente anonyme) — `clientId` optionnel (voir US-064b)
+- [ ] **Aucune vérification bloquante de stock** — le mouvement `SORTIE` est toujours créé, y compris si le stock réel devient négatif
+- [ ] Si le stock réel de l'article passe **strictement en dessous de 0** après la vente : une `NotificationAlerte` de type `ECART_STOCK_DETECTE` est créée à destination du Gestionnaire de Stock et de l'Admin Filiale (distincte de l'alerte `STOCK_BAS` du seuil d'alerte — ici il s'agit d'une anomalie de données à vérifier physiquement, pas d'un seuil métier)
 - [ ] Code vente généré : `VNT-{DATE}-{SEQUENCE}`
 - [ ] **Opération atomique** : 1 mouvement `SORTIE` par ligne
 - [ ] Totaux HT / TVA / TTC calculés côté serveur
@@ -1427,6 +1505,7 @@
 **Corps :**
 ```json
 {
+  "clientId": null,
   "lignes": [
     { "articleId": 10, "quantite": 2, "prixUnitaire": 18500 },
     { "articleId": 15, "quantite": 1, "prixUnitaire": 5000 }
@@ -1434,6 +1513,26 @@
   "commentaire": "Vente comptoir"
 }
 ```
+
+---
+
+### US-064b — Associer un client existant à une vente directe
+
+**Priorité :** P1 | **Sprint :** 8 | **Points :** 2
+
+**En tant que** Caissier,
+**je veux** pouvoir rattacher optionnellement une vente comptoir à un client déjà enregistré,
+**afin de** faire remonter les achats des clients réguliers du comptoir dans leur historique et dans les statistiques de fidélité (STAT-02), sans les faire passer par le cycle complet de Commande Client.
+
+> **Décision validée GS-CDA-2026-02 (§3)** : STAT-02 / CLI-05 ne s'appuyaient que sur `CommandeClient` (B2B), rendant invisibles les clients réguliers achetant au comptoir — majoritaires pour un commerce général/quincaillerie. Ce gap est corrigé par un champ nullable, pas par un changement de workflow.
+
+**Critères d'acceptation :**
+- [ ] Champ `client_id` (FK nullable vers `Client`) ajouté à l'entité `Vente`
+- [ ] Vente sans `clientId` reste 100% valide (vente anonyme conservée par défaut)
+- [ ] Si `clientId` fourni : la vente apparaît dans l'historique du client (CLI-05) et contribue à STAT-02
+- [ ] Aucun impact sur les règles US-064 (pas de vérification stock, pas de blocage)
+
+**Endpoint :** inclus dans `POST /api/v1/ventes` (champ `clientId` déjà présent dans le corps ci-dessus) + `GET /api/v1/clients/{id}/historique` mis à jour pour inclure les ventes directes rattachées
 
 ---
 
@@ -1468,17 +1567,27 @@
 
 ### US-067 — Annuler une vente directe
 
-**Priorité :** P1 | **Sprint :** 9 | **Points :** 3
+**Priorité :** P1 | **Sprint :** 9 | **Points :** 5
 
 **En tant que** Caissier ou Admin Filiale,
 **je veux** annuler une vente du jour en cas d'erreur,
-**afin de** corriger une saisie fautive avant la clôture de caisse.
+**afin de** corriger une saisie fautive avant la clôture de caisse, sans jamais modifier le journal de mouvements de stock.
+
+> **Décision validée GS-CDA-2026-02 (§2)** : `CORRECTION_POS` est réservé aux corrections d'inventaire (écart constaté physiquement, motif = "Inventaire du ..."). L'utiliser pour une annulation de vente masquerait la cause réelle du mouvement dans le journal (`origine_type` perdrait son sens) et rendrait impossible de distinguer, a posteriori, "on a vendu et annulé" de "on a fait un inventaire". D'où l'introduction d'un type dédié `ANNULATION_VENTE`, qui reste une entrée compensatoire mais garde une traçabilité exacte de sa cause.
+
+**Modification du modèle (à répercuter sur CDCT + migration Flyway) :**
+- [ ] Nouvelle valeur d'enum `type_mouvement` : `ANNULATION_VENTE` (entrée compensatoire — remet la quantité en stock, au même titre que `ENTREE`/`CORRECTION_POS`/`TRANSFERT_ENTREE` dans la formule de stock réel)
+- [ ] Nouvel état sur l'entité `Vente` : `statut` (enum `VALIDEE` | `ANNULEE`), remplace le booléen `annulee` — aligne `Vente` sur la même logique de machine à états que `CommandeFournisseur`/`CommandeClient` (jusqu'ici seule entité de vente sans état documenté)
 
 **Critères d'acceptation :**
-- [ ] Annulation possible uniquement si vente du jour même (`date_vente::date = CURRENT_DATE`)
-- [ ] Annulation crée des mouvements `CORRECTION_POS` de restitution pour chaque ligne
-- [ ] Vente marquée `annulee = true` (jamais supprimée physiquement)
-- [ ] `motif` obligatoire
+- [ ] `@PreAuthorize("hasAnyRole('CAISSIER','ADMIN_FILIALE','ADMIN_GROUPE')")`
+- [ ] Annulation possible uniquement si vente du jour même (`date_vente::date = CURRENT_DATE`) et `statut = VALIDEE`
+- [ ] Vente déjà `ANNULEE` → `409 CONFLICT` avec `ErrorCode.VENTE_DEJA_ANNULEE`
+- [ ] **Le mouvement `SORTIE` original n'est ni modifié ni supprimé** (immuabilité absolue du journal, règle CDA §6.4)
+- [ ] Un mouvement `ANNULATION_VENTE` est créé pour chaque ligne de la vente annulée, avec `origine_type = ANNULATION_VENTE` et `origine_id` = id de la vente annulée
+- [ ] La vente passe à `statut = ANNULEE` (jamais supprimée physiquement — cohérent avec le soft delete général)
+- [ ] `motif` obligatoire (même exigence que pour les corrections manuelles — traçabilité de l'audit trail)
+- [ ] **Opération atomique** : tous les mouvements `ANNULATION_VENTE` créés + statut mis à jour, ou aucun (transaction)
 
 **Endpoint :** `POST /api/v1/ventes/{id}/annuler`
 
@@ -1751,19 +1860,22 @@
 | **Sprint 1** | 2 sem. | US-001 à US-005 | 19 | Fondations techniques, CI/CD, Docker |
 | **Sprint 2** | 2 sem. | US-006 à US-012 | 21 | Authentification complète P0 |
 | **Sprint 3** | 2 sem. | US-013 à US-021, US-074 | 22 | Groupe, Filiales, Utilisateurs, Email bienvenue |
+| **Sprint 3 (sécu)** | inclus | US-014 à US-017 *(nouveau — GS-CDA-2026-02)* | +14 | Rotation refresh token, Argon2id, fail-closed, audit logs |
 | **Sprint 4** | 2 sem. | US-019, US-022 à US-026, US-075 | 20 | Employés, Profil, Activation |
 | **Sprint 5** | 2 sem. | US-027 à US-043 | 24 | Catalogue complet, Clients, Fournisseurs |
 | **Sprint 6** | 2 sem. | US-044 à US-050 | 23 | Cycle d'achat complet avec mouvements ENTREE |
 | **Sprint 7** | 2 sem. | US-051 à US-054, US-056 à US-062 | 34 | Stock réel, Corrections, Ventes B2B |
-| **Sprint 8** | 2 sem. | US-055, US-064 à US-070, US-071 | 31 | Stock consolidé, Caisse, Transferts, Alertes |
-| **Sprint 9** | 2 sem. | US-063, US-067, US-072 à US-073, US-075 | 14 | Facture PDF, Annulation vente, Centre alertes |
+| **Sprint 8** | 2 sem. | US-055, US-064, US-064b *(nouveau)*, US-065 à US-070, US-071 | 33 | Stock consolidé, Caisse (non bloquante), Transferts, Alertes |
+| **Sprint 9** | 2 sem. | US-063, US-067 *(revu, 3→5 pts)*, US-072 à US-073, US-075 | 16 | Facture PDF, Annulation vente (mouvement compensatoire dédié), Centre alertes |
 | **Sprint 10** | 2 sem. | US-076 à US-079 | 14 | Reporting et statistiques P1 |
 | **Sprint 11** | 2 sem. | US-080 | 3 | Export CSV P2 |
 
-**Total P0 :** 49 user stories — 175 points estimés
-**Total P1 :** 22 user stories — 80 points estimés
+**Total P0 :** 51 user stories — 183 points estimés
+**Total P1 :** 25 user stories — 90 points estimés
 **Total P2 :** 4 user stories — 12 points estimés
-**Total backlog :** **75 user stories** | **267 story points**
+**Total backlog :** **80 user stories** | **285 story points**
+
+> **Changelog GS-CDA-2026-02 (voir addendum dédié)** : +5 US, +18 points par rapport à la version 1.0 — US-014 à US-017 (durcissement sécurité auth) et US-064b (fidélité client sur vente directe) ajoutées ; US-064 et US-067 revues en profondeur (comportement non bloquant + mouvement `ANNULATION_VENTE` dédié).
 
 ---
 

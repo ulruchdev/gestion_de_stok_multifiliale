@@ -33,7 +33,7 @@
           "",
           "// 2. Vérifier le token pour les endpoints protégés",
           "const isPublic = publicEndpoints.some(ep => requestUrl.includes(ep));",
-          "const token = pm.environment.get(\"access_token\");",
+          "const token = pm.collectionVariables.get(\"access_token\");",
           "",
           "if (!isPublic && (!token || token === \"\")) {",
           "    console.warn(\"⚠️  [StockMaster] Token manquant ! Exécutez d'abord 'Connexion JWT (US-008)'\");",
@@ -46,7 +46,7 @@
           "}",
           "",
           "// 4. Logger refresh_token si présent",
-          "const refreshToken = pm.environment.get(\"refresh_token\");",
+          "const refreshToken = pm.collectionVariables.get(\"refresh_token\");",
           "if (refreshToken) {",
           "    console.log(`🔄  Refresh: ${refreshToken.substring(0, 25)}...`);",
           "}"
@@ -131,7 +131,7 @@
                   "pm.variables.set('genQuartier', quartier);",
                   "",
                   "// Stocker l'email pour les requêtes suivantes du flow",
-                  "pm.environment.set('current_email', email);",
+                  "pm.collectionVariables.set('current_email', email);",
                   "",
                   "console.log(`[StockMaster] 🏪 Inscription entreprise unique : ${prenom} ${nom} <${email}>`);"
                 ],
@@ -157,7 +157,7 @@
                   "if (pm.response.code === 201) {",
                   "    const json = pm.response.json();",
                   "    if (json.data.groupId) {",
-                  "        pm.environment.set('current_group_id', json.data.groupId.toString());",
+                  "        pm.collectionVariables.set('current_group_id', json.data.groupId.toString());",
                   "    }",
                   "    console.log(`[StockMaster] ✅ Entreprise créée — groupId: ${json.data.groupId}, email: ${json.data.email}`);",
                   "}"
@@ -208,8 +208,8 @@
                   "",
                   "if (pm.response.code === 200) {",
                   "    const json = pm.response.json();",
-                  "    pm.environment.set('access_token', json.data.accessToken);",
-                  "    pm.environment.set('refresh_token', json.data.refreshToken);",
+                  "    pm.collectionVariables.set('access_token', json.data.accessToken);",
+                  "    pm.collectionVariables.set('refresh_token', json.data.refreshToken);",
                   "    console.log(`[StockMaster] 🔐 Connecté — rôle: ${json.data.role}, scope: ${json.data.scope}`);",
                   "}"
                 ],
@@ -256,7 +256,7 @@
                   "",
                   "if (pm.response.code === 200) {",
                   "    const json = pm.response.json();",
-                  "    pm.environment.set('access_token', json.data.accessToken);",
+                  "    pm.collectionVariables.set('access_token', json.data.accessToken);",
                   "    console.log('[StockMaster] 🔄 Token rafraîchi avec succès');",
                   "}"
                 ],
@@ -301,8 +301,8 @@
                   "});",
                   "",
                   "// Nettoyer les tokens après déconnexion",
-                  "pm.environment.unset('access_token');",
-                  "pm.environment.unset('refresh_token');",
+                  "pm.collectionVariables.unset('access_token');",
+                  "pm.collectionVariables.unset('refresh_token');",
                   "console.log('[StockMaster] 🚪 Déconnecté — tokens nettoyés');"
                 ],
                 "type": "text/javascript"
@@ -360,7 +360,7 @@
                   "pm.variables.set('genEmailContact', emailContact);",
                   "",
                   "// Stocker l'email admin pour les requêtes suivantes du flow",
-                  "pm.environment.set('current_email', emailAdmin);",
+                  "pm.collectionVariables.set('current_email', emailAdmin);",
                   "",
                   "console.log(`[StockMaster] 🏢 Inscription groupe : ${groupe} — admin: ${prenom} ${nom} <${emailAdmin}>`);"
                 ],
@@ -385,7 +385,7 @@
                   "if (pm.response.code === 201) {",
                   "    const json = pm.response.json();",
                   "    if (json.data.groupId) {",
-                  "        pm.environment.set('current_group_id', json.data.groupId.toString());",
+                  "        pm.collectionVariables.set('current_group_id', json.data.groupId.toString());",
                   "    }",
                   "    console.log(`[StockMaster] ✅ Groupe créé — groupId: ${json.data.groupId}, email: ${json.data.email}`);",
                   "}"
@@ -434,8 +434,8 @@
                   "",
                   "if (pm.response.code === 200) {",
                   "    const json = pm.response.json();",
-                  "    pm.environment.set('access_token', json.data.accessToken);",
-                  "    pm.environment.set('refresh_token', json.data.refreshToken);",
+                  "    pm.collectionVariables.set('access_token', json.data.accessToken);",
+                  "    pm.collectionVariables.set('refresh_token', json.data.refreshToken);",
                   "    console.log(`[StockMaster] 🔐 Admin Groupe connecté — rôle: ${json.data.role}`);",
                   "}"
                 ],
@@ -481,7 +481,7 @@
                   "",
                   "if (pm.response.code === 200) {",
                   "    const json = pm.response.json();",
-                  "    pm.environment.set('access_token', json.data.accessToken);",
+                  "    pm.collectionVariables.set('access_token', json.data.accessToken);",
                   "    console.log('[StockMaster] 🔄 Token groupe rafraîchi');",
                   "}"
                 ],
@@ -525,8 +525,8 @@
                   "    pm.expect(json.message).to.include('Déconnexion');",
                   "});",
                   "",
-                  "pm.environment.unset('access_token');",
-                  "pm.environment.unset('refresh_token');",
+                  "pm.collectionVariables.unset('access_token');",
+                  "pm.collectionVariables.unset('refresh_token');",
                   "console.log('[StockMaster] 🚪 Admin Groupe déconnecté — tokens nettoyés');"
                 ],
                 "type": "text/javascript"
