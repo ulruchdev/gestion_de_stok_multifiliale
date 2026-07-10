@@ -10,7 +10,18 @@
 
 **Tous les documents `.md` vivent dans `document/`, réorganisés en sous-dossiers.** Le chat (moi) sert à produire/corriger les docs, jamais à les stocker — la version dans le repo fait foi, un point c'est tout.
 
-### Structure cible du repo (état demain matin, après le PR de mise en ordre)
+### Equipe
+
+| Role | Nom | Competences | Priorite Sprint 0 |
+|---|---|---|---|
+| **Lead Technique / Fullstack / DevOps** | **Ulrich** (toi) | Java 21, Spring Boot, React, Docker, CI/CD, PostgreSQL, Redis, architecture | Merge les 5 PR, reorganiser documents, CI |
+| **Fullstack Developer** | **Stephan** | Backend (Java/Spring) + Frontend (React/TypeScript), integration API | Onboarding code, `frontend/` init, lire les docs |
+| **Designer UX/UI** | **Siko** | Figma, Design System, prototypage, recherche utilisateur | US-D001 a D007 (EPIC-D00 Design System), lire les docs |
+
+> **Repo GitHub** : `github.com/ulruchdev/gestion_de_stok_multifiliale`
+> **Communication** : voir `document/03-pilotage/GS-RACI-2026-01_matrice_livraison.md` pour les portes G1 a G7
+
+### Structure cible du repo (apres mise en ordre)
 
 ```
 gestion_de_stok_multifiliale/
