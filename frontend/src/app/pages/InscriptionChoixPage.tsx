@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Building2, Store, ArrowRight, ShieldCheck, Globe, Users } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { Card, CardContent } from '@/shared/ui/Card';
@@ -47,6 +47,8 @@ const options: InscriptionOption[] = [
 ];
 
 export function InscriptionChoixPage() {
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-6 animate-fade-in-up">
       {/* En-tête */}
@@ -120,7 +122,7 @@ export function InscriptionChoixPage() {
                       className="w-full group/btn"
                       onClick={(e) => {
                         e.preventDefault();
-                        window.location.href = option.path;
+                        navigate(option.path);
                       }}
                     >
                       Choisir {option.title.toLowerCase()}

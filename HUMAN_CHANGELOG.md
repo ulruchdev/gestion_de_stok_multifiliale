@@ -16,6 +16,16 @@
 
 ### Sprint 1 — Design System StockMaster
 
+- **Pages d'authentification créées (EPIC-F01)** :
+  - `LoginPage` — Formulaire de connexion avec validation Zod, show/hide password, comptes de démonstration en dev
+  - `InscriptionChoixPage` — Choix entre Entreprise unique et Groupe multi-sites (2 cartes interactives)
+  - `InscriptionEntrepriseUniquePage` — Formulaire multi-étapes avec stepper, validation mot de passe forte
+  - `InscriptionGroupePage` — Formulaire 4 étapes (Groupe → Filiale → Admin → Confirmation)
+  - `ForgotPasswordPage` — Email de réinitialisation avec sécurité (ne révèle pas l'existence du compte)
+  - `ResetPasswordPage` — Nouveau mot de passe avec validation Zod, gestion token expiré
+  - Routes mises à jour avec lazy loading (React.lazy + Suspense)
+  - Handlers MSW ajoutés pour les endpoints forgot-password et reset-password
+
 - **Création du design système propriétaire StockMaster CM** dans le frontend React :
   - Palette de couleurs spécifique (indigo `#533afd`, textes contrastés, états stock warning/danger/success)
   - Mode sombre complet avec adaptation des contrastes

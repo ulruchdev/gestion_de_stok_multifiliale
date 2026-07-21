@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Store,
   Building2,
   ArrowLeft,
   ArrowRight,
@@ -16,6 +15,7 @@ import {
   User,
   Lock,
   FileText,
+  Globe,
 } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
@@ -33,10 +33,14 @@ const passwordSchema = z
   .regex(/[0-9]/, 'Au moins un chiffre')
   .regex(/[!@#$%^&*()_+={}\[\]|:;<>,.?/~`-]/, 'Au moins un caractère spécial');
 
-const inscriptionSchema = z.object({
+const inscriptionGroupeSchema = z.object({
+  nomGroupe: z
+    .string()
+    .min(2, 'Le nom du groupe est requis')
+    .max(100, 'Maximum 100 caractères'),
   nomEntreprise: z
     .string()
-    .min(2, 'Le nom de l\'entreprise est requis')
+    .min(2, "Le nom de l'entreprise est requis")
     .max(100, 'Maximum 100 caractères'),
   nif: z
     .string()
@@ -44,8 +48,8 @@ const inscriptionSchema = z.object({
     .max(20, 'Maximum 20 caractères'),
   email: z
     .string()
-    .min(1, 'L\'email est requis')
-    .email('Format d\'email invalide'),
+    .min(1, "L'email est requis")
+    .email("Format d'email invalide"),
   telephone: z
     .string()
     .min(8, 'Numéro de téléphone invalide')
@@ -66,12 +70,13 @@ const inscriptionSchema = z.object({
   path: ['confirmMotDePasse'],
 });
 
-type InscriptionFormData = z.infer<typeof inscriptionSchema>;
+type InscriptionGroupeFormData = z.infer<typeof inscriptionGroupeSchema>;
 
 const steps = [
-  { id: 'entreprise', label: 'Entreprise', icon: Building2 },
-  { id: 'administrateur', label: 'Administrateur', icon: User },
-  { id: 'confirmation', label: 'Confirmation', icon: Check },
+  { id: 'groupe', label: 'Groupe', icon: Globe },
+  { id: 'entreprise', label: 'Filiale', icon: Building2 },
+  { id: 'administrateur', label: 'Admin', icon: User },
+  { id: 'confirmation', label: 'Confirmer', icon: Check },
 ];
 
 const passwordChecks = [
@@ -81,14 +86,7 @@ const passwordChecks = [
   { label: 'Un caractère spécial', test: (v: string) => /[!@#$%^&*()_+={}\[\]|:;<>,.?/~`-]/.test(v) },
 ];
 
-// Sous-composant : checklist de force du mot de passe
-function PasswordStrengthChecklist({
-  password,
-  checks,
-}: {
-  password: string;
-  checks: Array<{ label: string; test: (v: string) => boolean }>;
-}) {
+function PasswordStrengthChecklist({ password, checks }: { password: string; checks: Array<{ label: string; test: (v: string) => boolean }> }) {
   return (
     <div className="rounded-lg bg-[var(--brand-canvas-soft)] p-3">
       <p className="text-xs font-medium text-[var(--brand-ink-muted)] mb-2">
@@ -121,7 +119,7 @@ function PasswordStrengthChecklist({
   );
 }
 
-export function InscriptionEntrepriseUniquePage() {
+export function InscriptionGroupePage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
@@ -133,9 +131,10 @@ export function InscriptionEntrepriseUniquePage() {
     trigger,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<InscriptionFormData>({
-    resolver: zodResolver(inscriptionSchema),
+  } = useForm<InscriptionGroupeFormData>({
+    resolver: zodResolver(inscriptionGroupeSchema),
     defaultValues: {
+      nomGroupe: '',
       nomEntreprise: '',
       nif: '',
       email: '',
@@ -150,8 +149,10 @@ export function InscriptionEntrepriseUniquePage() {
   const nextStep = async () => {
     const fieldsToValidate =
       step === 0
-        ? (['nomEntreprise', 'nif', 'email', 'telephone'] as const)
-        : (['adminNom', 'adminPrenom', 'adminMotDePasse', 'confirmMotDePasse'] as const);
+        ? ['nomGroupe']
+        : step === 1
+          ? ['nomEntreprise', 'nif', 'email', 'telephone']
+          : ['adminNom', 'adminPrenom', 'adminMotDePasse', 'confirmMotDePasse'];
 
     const isValid = await trigger(fieldsToValidate as any);
     if (isValid) setStep((prev) => Math.min(prev + 1, steps.length - 1));
@@ -159,9 +160,10 @@ export function InscriptionEntrepriseUniquePage() {
 
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 0));
 
-  const onSubmit = async (data: InscriptionFormData) => {
+  const onSubmit = async (data: InscriptionGroupeFormData) => {
     try {
-      await apiClient.post('/auth/inscription/entreprise-unique', {
+      await apiClient.post('/auth/inscription/groupe', {
+        nomGroupe: data.nomGroupe,
         nomEntreprise: data.nomEntreprise,
         nif: data.nif,
         email: data.email,
@@ -171,11 +173,11 @@ export function InscriptionEntrepriseUniquePage() {
         adminMotDePasse: data.adminMotDePasse,
       });
 
-      toast.success('Inscription réussie !', 'Votre compte a été créé. Vous pouvez maintenant vous connecter.');
+      toast.success('Inscription réussie !', 'Votre groupe a été créé. Vous pouvez maintenant vous connecter.');
       navigate('/login');
     } catch (error) {
       const message = getErrorMessage(error);
-      toast.error('Échec de l\'inscription', message);
+      toast.error("Échec de l'inscription", message);
     }
   };
 
@@ -184,13 +186,13 @@ export function InscriptionEntrepriseUniquePage() {
       {/* En-tête */}
       <div className="text-center space-y-2">
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--brand-primary-bg)] mb-1">
-          <Store className="h-6 w-6 text-[var(--brand-primary)]" />
+          <Globe className="h-6 w-6 text-[var(--brand-primary)]" />
         </div>
         <h1 className="text-2xl font-semibold font-display tracking-tight text-[var(--brand-ink)]">
-          Entreprise unique
+          Groupe multi-sites
         </h1>
         <p className="text-sm text-[var(--brand-ink-muted)]">
-          Créez votre espace de gestion en quelques étapes
+          Créez votre groupe et votre première filiale
         </p>
       </div>
 
@@ -231,23 +233,39 @@ export function InscriptionEntrepriseUniquePage() {
       <Card variant="elevated">
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent padding="lg" className="space-y-5">
-            {/* Étape 1 : Informations entreprise */}
+            {/* Étape 1 : Informations du groupe */}
             {step === 0 && (
               <div className="space-y-4 animate-fade-in-up">
                 <h2 className="text-base font-semibold font-display text-[var(--brand-ink)] flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-[var(--brand-primary)]" />
-                  Informations de l'entreprise
+                  <Globe className="h-4 w-4 text-[var(--brand-primary)]" />
+                  Informations du groupe
                 </h2>
-
                 <Input
-                  label="Nom de l'entreprise"
-                  placeholder="Ma Boutique"
+                  label="Nom du groupe"
+                  placeholder="Mon Groupe de Distribution"
+                  icon={<Globe className="h-4 w-4" />}
+                  error={errors.nomGroupe?.message}
+                  disabled={isSubmitting}
+                  {...register('nomGroupe')}
+                />
+              </div>
+            )}
+
+            {/* Étape 2 : Première filiale */}
+            {step === 1 && (
+              <div className="space-y-4 animate-fade-in-up">
+                <h2 className="text-base font-semibold font-display text-[var(--brand-ink)] flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-[var(--brand-primary)]" />
+                  Première filiale
+                </h2>
+                <Input
+                  label="Nom de la filiale"
+                  placeholder="Ma Boutique Centre"
                   icon={<Building2 className="h-4 w-4" />}
                   error={errors.nomEntreprise?.message}
                   disabled={isSubmitting}
                   {...register('nomEntreprise')}
                 />
-
                 <Input
                   label="NIF (Numéro d'Identification Fiscale)"
                   placeholder="P0123456789012345"
@@ -256,12 +274,11 @@ export function InscriptionEntrepriseUniquePage() {
                   disabled={isSubmitting}
                   {...register('nif')}
                 />
-
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Input
                     label="Email professionnel"
                     type="email"
-                    placeholder="contact@boutique.cm"
+                    placeholder="contact@filiale.cm"
                     icon={<Mail className="h-4 w-4" />}
                     error={errors.email?.message}
                     disabled={isSubmitting}
@@ -280,14 +297,13 @@ export function InscriptionEntrepriseUniquePage() {
               </div>
             )}
 
-            {/* Étape 2 : Informations administrateur */}
-            {step === 1 && (
+            {/* Étape 3 : Administrateur */}
+            {step === 2 && (
               <div className="space-y-4 animate-fade-in-up">
                 <h2 className="text-base font-semibold font-display text-[var(--brand-ink)] flex items-center gap-2">
                   <User className="h-4 w-4 text-[var(--brand-primary)]" />
-                  Administrateur
+                  Administrateur du groupe
                 </h2>
-
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Input
                     label="Nom"
@@ -306,7 +322,6 @@ export function InscriptionEntrepriseUniquePage() {
                     {...register('adminPrenom')}
                   />
                 </div>
-
                 <div className="space-y-1">
                   <Input
                     label="Mot de passe"
@@ -326,7 +341,6 @@ export function InscriptionEntrepriseUniquePage() {
                     {showPassword ? <><EyeOff className="h-3 w-3" /> Masquer</> : <><Eye className="h-3 w-3" /> Afficher</>}
                   </button>
                 </div>
-
                 <div className="space-y-1">
                   <Input
                     label="Confirmer le mot de passe"
@@ -346,7 +360,6 @@ export function InscriptionEntrepriseUniquePage() {
                     {showConfirm ? <><EyeOff className="h-3 w-3" /> Masquer</> : <><Eye className="h-3 w-3" /> Afficher</>}
                   </button>
                 </div>
-
                 <PasswordStrengthChecklist
                   password={watch('adminMotDePasse') || ''}
                   checks={passwordChecks}
@@ -354,59 +367,67 @@ export function InscriptionEntrepriseUniquePage() {
               </div>
             )}
 
-            {/* Étape 3 : Résumé et confirmation */}
-            {step === 2 && (
+            {/* Étape 4 : Résumé */}
+            {step === 3 && (
               <div className="space-y-4 animate-fade-in-up">
                 <h2 className="text-base font-semibold font-display text-[var(--brand-ink)] flex items-center gap-2">
                   <Check className="h-4 w-4 text-[var(--stock-success)]" />
                   Vérification avant validation
                 </h2>
                 <p className="text-sm text-[var(--brand-ink-muted)]">
-                  Vérifiez les informations ci-dessous avant de créer votre compte.
+                  Vérifiez les informations ci-dessous avant de créer votre groupe.
                 </p>
                 <div className="rounded-lg border border-[var(--brand-hairline)] divide-y divide-[var(--brand-hairline)]">
-                  {[
-                    { label: 'Entreprise', value: watch('nomEntreprise') },
-                    { label: 'NIF', value: watch('nif') },
-                    { label: 'Email', value: watch('email') },
-                    { label: 'Téléphone', value: watch('telephone') },
-                    { label: 'Administrateur', value: `${watch('adminPrenom')} ${watch('adminNom')}` },
-                  ].map((item) => (
-                    <div key={item.label} className="p-3 flex items-center justify-between text-sm">
-                      <span className="text-[var(--brand-ink-muted)]">{item.label}</span>
-                      <span className="font-medium text-[var(--brand-ink)]">{item.value}</span>
-                    </div>
-                  ))}
+                  <div className="p-3 flex items-center justify-between text-sm">
+                    <span className="text-[var(--brand-ink-muted)]">Groupe</span>
+                    <span className="font-medium text-[var(--brand-ink)]">{watch('nomGroupe')}</span>
+                  </div>
+                  <div className="p-3 flex items-center justify-between text-sm">
+                    <span className="text-[var(--brand-ink-muted)]">Filiale</span>
+                    <span className="font-medium text-[var(--brand-ink)]">{watch('nomEntreprise')}</span>
+                  </div>
+                  <div className="p-3 flex items-center justify-between text-sm">
+                    <span className="text-[var(--brand-ink-muted)]">NIF</span>
+                    <span className="font-medium text-[var(--brand-ink)]">{watch('nif')}</span>
+                  </div>
+                  <div className="p-3 flex items-center justify-between text-sm">
+                    <span className="text-[var(--brand-ink-muted)]">Email</span>
+                    <span className="font-medium text-[var(--brand-ink)]">{watch('email')}</span>
+                  </div>
+                  <div className="p-3 flex items-center justify-between text-sm">
+                    <span className="text-[var(--brand-ink-muted)]">Téléphone</span>
+                    <span className="font-medium text-[var(--brand-ink)]">{watch('telephone')}</span>
+                  </div>
+                  <div className="p-3 flex items-center justify-between text-sm">
+                    <span className="text-[var(--brand-ink-muted)]">Administrateur</span>
+                    <span className="font-medium text-[var(--brand-ink)]">{watch('adminPrenom')} {watch('adminNom')}</span>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Navigation buttons */}
+            {/* Navigation */}
             <div className="flex items-center justify-between pt-2 border-t border-[var(--brand-hairline)]">
               {step > 0 ? (
                 <Button type="button" variant="outline" onClick={prevStep} disabled={isSubmitting}>
-                  <ArrowLeft className="h-4 w-4" />
-                  Retour
+                  <ArrowLeft className="h-4 w-4" /> Retour
                 </Button>
               ) : (
                 <Link
                   to="/inscription"
                   className="inline-flex items-center gap-1 text-sm text-[var(--brand-ink-muted)] hover:text-[var(--brand-primary)] transition-colors"
                 >
-                  <ArrowLeft className="h-4 w-4" />
-                  Changer de type
+                  <ArrowLeft className="h-4 w-4" /> Changer de type
                 </Link>
               )}
 
               {step < steps.length - 1 ? (
                 <Button type="button" onClick={nextStep}>
-                  Suivant
-                  <ArrowRight className="h-4 w-4" />
+                  Suivant <ArrowRight className="h-4 w-4" />
                 </Button>
               ) : (
                 <Button type="submit" variant="brand" loading={isSubmitting} size="lg">
-                  <Check className="h-4 w-4" />
-                  Créer mon espace
+                  <Check className="h-4 w-4" /> Créer mon groupe
                 </Button>
               )}
             </div>

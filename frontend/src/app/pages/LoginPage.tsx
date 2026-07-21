@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/Card';
+import { Card, CardContent } from '@/shared/ui/Card';
 import { toast } from '@/shared/ui/Toast';
 import { useAuthStore } from '@/features/auth';
 import { getErrorMessage } from '@/shared/lib/api-client';

@@ -34,20 +34,35 @@
 | US-012 | Réinitialisation mot de passe | ✅ | Merge effectué |
 | US-013 | Changement mot de passe | ✅ | Merge effectué |
 
-## EPIC 3 à 13 — (à compléter par `doc-writer.ts`)
+## EPIC 3 à 13 — (non commencé)
 
 ---
 
-## Backend — US-F (Frontend)
+## Frontend — EPICs
 
-| US | Description | Statut | Notes |
-|----|-------------|--------|-------|
-| US-F001 | Init projet frontend Vite + React + TS | ✅ | Fait |
-| US-F002 | Design system Tailwind / tokens | ✅ | Tokens StockMaster — cf. DESIGN_CORRECTIONS.md |
-| US-F003 | Composants partagés (Button, Input, Table...) | ✅ | 15 composants (6 améliorés + 9 nouveaux) |
-| US-F004 | Client API Axios + intercepteur JWT | [~] | En cours |
-| US-F005 | Routing + Guards RBAC | ✅ | Fait (layouts + routes) |
-| US-F006 | Auth state (Zustand) | ✅ | Fait (store auth + provider) |
+### EPIC-F00 — Fondations techniques (41 SP)
+
+| US | Description | SP | Statut | Notes |
+|----|-------------|----|--------|-------|
+| US-F001 | Init projet frontend Vite + React + TS | 3 | ✅ | Fait |
+| US-F002 | Design system Tailwind / tokens | 5 | ✅ | Tokens StockMaster — cf. DESIGN_CORRECTIONS.md |
+| US-F003 | Composants partagés (Button, Input, Table...) | 8 | ✅ | 15 composants (6 améliorés + 9 nouveaux) |
+| US-F004 | Client API Axios + intercepteur JWT | 5 | ✅ | Intercepteur refresh + file d'attente |
+| US-F005 | Routing + Guards RBAC | 5 | ✅ | Layouts AuthLayout + DashboardLayout |
+| US-F006 | Auth state (Zustand) | 3 | ✅ | Store auth + AuthProvider |
+| US-F007 | Layout par rôle (sidebar/menu) | 5 | ✅ | Menu filtré par rôle, responsive |
+
+### EPIC-F01 — Onboarding public (24 SP)
+
+| US | Description | SP | Statut | Notes |
+|----|-------------|----|--------|-------|
+| US-F010 | Page d'accueil publique | 2 | ❌ | Placeholder — pas encore implémentée |
+| US-F011 | Écran de choix du type d'inscription | 2 | ✅ | InscriptionChoixPage — 2 cartes avec features |
+| US-F012 | Formulaire Entreprise Unique | 5 | ✅ | Stepper 3 étapes + validation Zod + API |
+| US-F013 | Formulaire Groupe multi-sites | 5 | ✅ | Stepper 4 étapes + validation Zod + API |
+| US-F014 | Écran de connexion | 3 | ✅ | LoginPage — validation, démos, toast |
+| US-F015 | Flow mot de passe oublié + réinitialisation | 5 | ✅ | ForgotPasswordPage + ResetPasswordPage |
+| US-F016 | Écran d'activation de compte | 2 | ❌ | Pas implémenté (P1) |
 
 ---
 
