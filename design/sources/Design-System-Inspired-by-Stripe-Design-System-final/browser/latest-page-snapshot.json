@@ -1,0 +1,11 @@
+{
+  "schema": "open-design.browser-page-archive.v1",
+  "capturedAt": 1784116923088,
+  "title": "designmd://design-system-inspired-by-stripe - Google Search",
+  "url": "https://www.google.com/search?q=designmd%3A%2F%2Fdesign-system-inspired-by-stripe&sei=WXZXarHzMJa_p84PupCmiAQ",
+  "baseUrl": "https://www.google.com/search?q=designmd%3A%2F%2Fdesign-system-inspired-by-stripe&sei=WXZXarHzMJa_p84PupCmiAQ",
+  "htmlFile": "browser/snapshots/google.com-2026-07-15T12-00-59-009Z/page.html",
+  "cssFile": "browser/snapshots/google.com-2026-07-15T12-00-59-009Z/styles.css",
+  "manifestFile": "browser/snapshots/google.com-2026-07-15T12-00-59-009Z/manifest.json",
+  "resources": []
+}

@@ -1,0 +1,263 @@
+/* StockMaster CM Design System - Design Tokens */
+/* Generated from DESIGN.md - StockMaster color palette */
+
+:root {
+  /* ===== CORE BRAND TOKENS ===== */
+  
+  /* Colors */
+  --bg: #ffffff;
+  --fg: #0d253d;
+  --accent: #533afd;
+  --surface: #f6f9fc;
+  --muted: #64748d;
+  --border: #e3e8ee;
+  --accent-secondary: #1c1e54;
+  
+  /* Semantic colors */
+  --color-success: #10b981;
+  --color-error: #ea2261;
+  --color-warning: #9b6829;
+  --color-info: #f96bee;
+  
+  /* Text colors */
+  --color-text-primary: #0d253d;
+  --color-text-secondary: #273951;
+  --color-text-tertiary: #64748d;
+  --color-text-quaternary: #61718a;
+  
+  /* Background colors */
+  --color-background: #ffffff;
+  --color-surface: #f6f9fc;
+  
+  /* StockMaster named colors */
+  --canvas: #ffffff;
+  --canvas-soft: #f6f9fc;
+  --ink: #0d253d;
+  --ink-secondary: #273951;
+  --ink-mute: #64748d;
+  --ink-mute-2: #61718a;
+  --hairline: #e3e8ee;
+  --hairline-input: #a8c3de;
+  --primary: #533afd;
+  --primary-deep: #4434d4;
+  --primary-press: #2e2b8c;
+  --primary-soft: #665efd;
+  --primary-bg-subdued-hover: #b9b9f9;
+  --brand-dark-900: #1c1e54;
+  --ruby: #ea2261;
+  --magenta: #f96bee;
+  --lemon: #9b6829;
+  --shadow-blue: #003770;
+  --on-primary: #ffffff;
+  
+  /* ===== TYPOGRAPHY ===== */
+  
+  /* Font families */
+  --font-display: "SF Pro Display", system-ui, -apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif;
+  --font-body: system-ui, -apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  
+  /* Font weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-thin: 300;
+  
+  /* Font sizes - Display */
+  --font-size-display-xxl: clamp(48px, 8vw, 80px);
+  --font-size-display-xl: clamp(48px, 8vw, 60px);
+  --font-size-display-lg: clamp(32px, 6vw, 48px);
+  --font-size-display-md: clamp(26px, 5vw, 36px);
+  --font-size-display-sm: clamp(24px, 4vw, 32px);
+  --font-size-display-xs: clamp(20px, 3.5vw, 28px);
+  
+  /* Font sizes - Heading */
+  --font-size-h1: clamp(28px, 6vw, 40px);
+  --font-size-h2: clamp(24px, 5vw, 32px);
+  --font-size-h3: clamp(20px, 4vw, 28px);
+  --font-size-h4: clamp(18px, 3.5vw, 24px);
+  --font-size-h5: clamp(16px, 3vw, 20px);
+  --font-size-h6: clamp(14px, 2.5vw, 18px);
+  
+  /* Font sizes - Body */
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-sm: 14px;
+  --font-size-xs: 12px;
+  
+  /* Line heights */
+  --line-height-display: 1.03;
+  --line-height-heading: 1.15;
+  --line-height-body: 1.5;
+  --line-height-dense: 1.4;
+  --line-height-relaxed: 1.6;
+  
+  /* Letter spacing (StockMaster signature negative tracking) */
+  --letter-spacing-display-xxl: -1.4px;
+  --letter-spacing-display-xl: -0.96px;
+  --letter-spacing-display-lg: -0.64px;
+  --letter-spacing-display-md: -0.26px;
+  --letter-spacing-display-sm: -0.26px;
+  --letter-spacing-heading-lg: -0.22px;
+  --letter-spacing-heading-md: -0.2px;
+  
+  /* ===== SPACING ===== */
+  
+  /* 8px baseline grid */
+  --space-0: 0;
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-28: 28px;
+  --space-32: 32px;
+  --space-36: 36px;
+  --space-40: 40px;
+  --space-44: 44px;
+  --space-48: 48px;
+  --space-52: 52px;
+  --space-56: 56px;
+  --space-60: 60px;
+  --space-64: 64px;
+  
+  /* Negative spacing */
+  --space-neg-2: -2px;
+  --space-neg-4: -4px;
+  --space-neg-8: -8px;
+  
+  /* Aliases */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+  --spacing-3xl: 48px;
+  
+  /* ===== BORDER RADIUS ===== */
+  
+  --radius-none: 0;
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+  
+  /* StockMaster specific radii */
+  --rounded-xs: 4px;
+  --rounded-sm: 6px;
+  --rounded-md: 8px;
+  --rounded-lg: 12px;
+  --rounded-xl: 16px;
+  --rounded-pill: 9999px;
+  
+  /* ===== BORDERS ===== */
+  
+  --border-width-none: 0;
+  --border-width-sm: 1px;
+  --border-width-md: 2px;
+  --border-width-lg: 4px;
+  
+  --border-style-solid: solid;
+  --border-style-dashed: dashed;
+  --border-style-dotted: dotted;
+  
+  --border-default: 1px solid var(--border);
+  
+  /* ===== SHADOWS ===== */
+  
+  --shadow-none: none;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.25);
+  
+  /* StockMaster blue shadows */
+  --shadow-blue-sm: 0 1px 2px rgba(28, 30, 84, 0.05);
+  --shadow-blue-md: 0 4px 6px rgba(28, 30, 84, 0.1);
+  --shadow-blue-lg: 0 10px 15px rgba(28, 30, 84, 0.15);
+  
+  /* ===== MOTION ===== */
+  
+  --duration-fast: 0.1s;
+  --duration-mid: 0.2s;
+  --duration-slow: 0.3s;
+  --duration-slower: 0.5s;
+  --duration-slowest: 1s;
+  
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* StockMaster easing */
+  --stockmaster-ease: cubic-bezier(0.645, 0.045, 0.355, 1);
+  
+  /* Transitions */
+  --transition-fast: var(--duration-fast) var(--ease);
+  --transition-mid: var(--duration-mid) var(--ease);
+  --transition-slow: var(--duration-slow) var(--ease);
+  --transition-colors: var(--duration-mid) var(--ease);
+  --transition-opacity: var(--duration-mid) var(--ease);
+  --transition-shadow: var(--duration-mid) var(--ease);
+  --transition-transform: var(--duration-mid) var(--ease);
+  --transition-all: all var(--duration-mid) var(--ease);
+}
+
+/* Dark theme */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Background */
+    --bg: #0f172a;
+    --fg: #ffffff;
+    --accent: #6366f1;
+    --surface: #1e293b;
+    --muted: #64748b;
+    --border: #334155;
+    --accent-secondary: #4338ca;
+    
+    /* Semantic colors */
+    --color-success: #10b981;
+    --color-error: #f43f5e;
+    --color-warning: #fbbf24;
+    --color-info: #8b5cf6;
+    
+    /* Text colors */
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #94a3b8;
+    --color-text-tertiary: #64748b;
+    --color-text-quaternary: #475569;
+    
+    /* StockMaster named colors - dark */
+    --canvas: #0f172a;
+    --canvas-soft: #1e293b;
+    --ink: #ffffff;
+    --ink-secondary: #94a3b8;
+    --ink-mute: #64748b;
+    --ink-mute-2: #475569;
+    --hairline: #334155;
+    --hairline-input: #475569;
+    --primary: #6366f1;
+    --primary-deep: #4f46e5;
+    --primary-press: #4338ca;
+    --primary-soft: #818cf8;
+    --primary-bg-subdued-hover: #312e81;
+    --brand-dark-900: #4338ca;
+    --ruby: #f43f5e;
+    --magenta: #8b5cf6;
+    --lemon: #fbbf24;
+    --on-primary: #ffffff;
+    
+    /* Background colors */
+    --color-background: #0f172a;
+    --color-surface: #1e293b;
+  }
+}

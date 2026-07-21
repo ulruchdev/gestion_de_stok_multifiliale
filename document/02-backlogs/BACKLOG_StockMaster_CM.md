@@ -174,8 +174,9 @@
 - [ ] Création atomique dans une seule transaction : `TenantGroup` + `Entreprise` (type `MERE`, `parent_id = null`) + `Utilisateur` (rôle `ADMIN_GROUPE`)
 - [ ] Si l'email existe déjà → `409 CONFLICT` avec `ErrorCode.EMAIL_ALREADY_EXISTS`
 - [ ] Mot de passe haché avec BCrypt (jamais en clair)
-- [ ] Email de confirmation envoyé après inscription (async)
-- [ ] Rollback complet si l'envoi d'email échoue (transaction annulée)
+- [ ] Email de bienvenue envoyé de façon **asynchrone** après inscription (`InscriptionSuccessEvent` publié via `ApplicationEventPublisher`)
+- [ ] L'envoi de l'email **ne bloque pas** la transaction d'inscription — l'utilisateur est créé même si l'email échoue (comportement volontaire : ne pas pénaliser l'utilisateur pour un problème d'email temporaire)
+- [ ] En cas d'échec d'email, un mécanisme de retry sera implémenté dans le module Notification (EPIC 12) — voir US-074
 - [ ] Validation Jakarta sur tous les champs obligatoires
 
 **Endpoint :** `POST /api/v1/auth/inscription/entreprise-unique`

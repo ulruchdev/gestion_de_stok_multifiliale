@@ -1,0 +1,173 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===================================================================
+   DESIGN SYSTEM — StockMaster CM
+   Design system propriétaire pour SaaS multi-tenant de gestion de stock
+   Contexte : PME camerounaises (usage mobile dominant, coupures réseau)
+   Inspiré des meilleures pratiques de l'industrie (awesome-design-md)
+   =================================================================== */
+
+@layer base {
+  :root {
+    /* === Palette principale StockMaster (C-001) === */
+    --background: 0 0% 100%;                     /* Fond page: #ffffff */
+    --foreground: 210 65% 15%;                   /* Texte principal: #0d253d */
+    --card: 210 50% 98%;                          /* Fond cartes: #f6f9fc */
+    --card-foreground: 210 65% 15%;               /* Texte cartes: #0d253d */
+    --popover: 0 0% 100%;                         /* Popover: #ffffff */
+    --popover-foreground: 208 35% 25%;            /* Texte popover: #2a3f54 */
+    --primary: 249 98% 61%;                       /* Action principale: #533afd */
+    --primary-foreground: 0 0% 100%;              /* Texte sur action: #ffffff */
+    --secondary: 210 10% 95%;                     /* Fond secondaire: #f0f2f3 */
+    --secondary-foreground: 208 35% 25%;          /* Texte secondaire: #2a3f54 */
+    --muted: 210 8% 96%;                          /* Fond atténué: #f5f6f7 */
+    --muted-foreground: 215 16% 47%;              /* Texte atténué: #64748b */
+    --accent: 252 100% 97%;                       /* Fond accent: #f4f0ff */
+    --accent-foreground: 249 98% 61%;             /* Texte accent: #533afd */
+    --destructive: 359 100% 65%;                  /* Erreur: #ff4d4f */
+    --destructive-foreground: 0 0% 100%;          /* Texte erreur: #ffffff */
+    --border: 218 20% 91%;                        /* Bordure légère: #e3e8ee */
+    --input: 215 15% 87%;                         /* Bordure input: #dbdee2 */
+    --ring: 249 98% 61%;                          /* Focus: #533afd */
+    --radius: 0.375rem;                           /* 6px */
+
+    /* === Tokens spécifiques StockMaster CM === */
+    /* Marque */
+    --brand-primary: #533afd;
+    --brand-primary-hover: #7d63ff;
+    --brand-primary-active: #3727d6;
+    --brand-primary-bg: #f4f0ff;
+    --brand-primary-border: #c6b5ff;
+    --brand-ink: #0d253d;
+    --brand-ink-muted: #64748b;
+    --brand-canvas: #ffffff;
+    --brand-canvas-soft: #f6f9fc;
+    --brand-hairline: #e3e8ee;
+    --brand-dark: #1c1e54;
+
+    /* Stock semantic colors (contexte camerounais) */
+    --stock-warning: #faad14;
+    --stock-warning-bg: #fffbe6;
+    --stock-danger: #ff4d4f;
+    --stock-danger-bg: #fff2f0;
+    --stock-success: #52c41a;
+    --stock-success-bg: #f6ffed;
+    --stock-info: #533afd;
+
+    /* Typography */
+    --brand-font-display: 'SF Pro Display', system-ui, -apple-system, sans-serif;
+    --brand-font-body: system-ui, -apple-system, sans-serif;
+    --brand-font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+
+    /* Grille d'espacement 8px */
+    --brand-space-xxs: 2px;
+    --brand-space-xs: 4px;
+    --brand-space-sm: 8px;
+    --brand-space-md: 16px;
+    --brand-space-lg: 24px;
+    --brand-space-xl: 32px;
+    --brand-space-xxl: 48px;
+    --brand-space-huge: 64px;
+
+    /* Motion */
+    --brand-duration-fast: 100ms;
+    --brand-duration-mid: 200ms;
+    --brand-duration-slow: 400ms;
+    --brand-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --brand-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+    /* Border radius */
+    --brand-radius-sm: 3px;
+    --brand-radius-md: 6px;
+    --brand-radius-lg: 12px;
+    --brand-radius-pill: 9999px;
+  }
+
+  .dark {
+    /* === Palette mode sombre StockMaster (C-002) === */
+    --background: 0 0% 11%;                      /* Fond page: #1d1d1d */
+    --foreground: 0 0% 86%;                      /* Texte: #dcdcdc */
+    --card: 0 0% 8%;                              /* Fond carte: #141414 */
+    --card-foreground: 0 0% 86%;                  /* Texte carte: #dcdcdc */
+    --popover: 0 0% 15%;                          /* Fond popover: #272727 */
+    --popover-foreground: 0 0% 86%;               /* Texte popover: #dcdcdc */
+    --primary: 249 65% 60%;                       /* Action: #6d57dc */
+    --primary-foreground: 256 75% 91%;            /* Texte action: #e1d8f8 */
+    --secondary: 0 0% 19%;                        /* Fond secondaire: #303030 */
+    --secondary-foreground: 0 0% 68%;             /* Texte secondaire: #adadad */
+    --muted: 0 0% 15%;                            /* Fond atténué: #272727 */
+    --muted-foreground: 0 0% 49%;                 /* Texte atténué: #7e7e7e */
+    --accent: 249 36% 14%;                        /* Fond accent: #191731 */
+    --accent-foreground: 249 65% 60%;             /* Texte accent: #6d57dc */
+    --destructive: 2 62% 63%;                     /* Erreur: #dc6966 */
+    --destructive-foreground: 0 0% 100%;          /* Texte erreur: #ffffff */
+    --border: 0 0% 24%;                           /* Bordure: #3e3e3e */
+    --input: 0 0% 24%;                            /* Bordure input: #3e3e3e */
+    --ring: 249 65% 60%;                          /* Focus: #6d57dc */
+    --radius: 0.375rem;
+
+    /* Brand tokens dark */
+    --brand-primary: #6d57dc;
+    --brand-primary-hover: #9580e8;
+    --brand-primary-active: #5847ad;
+    --brand-primary-bg: #191731;
+    --brand-primary-border: #342c5b;
+    --brand-ink: #dcdcdc;
+    --brand-ink-muted: #7e7e7e;
+    --brand-canvas: #141414;
+    --brand-canvas-soft: #1d1d1d;
+    --brand-hairline: #3e3e3e;
+    --brand-dark: #0d0d2e;
+
+    /* Stock semantic colors dark */
+    --stock-warning: #dcaa37;
+    --stock-warning-bg: #312512;
+    --stock-danger: #dc6966;
+    --stock-danger-bg: #32191a;
+    --stock-success: #64b537;
+    --stock-success-bg: #192913;
+    --stock-info: #6d57dc;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--brand-font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'tnum' on;
+  }
+
+  /* Focus ring style StockMaster */
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring));
+  }
+
+  /* Selection style */
+  ::selection {
+    background: hsl(var(--primary) / 0.2);
+    color: hsl(var(--primary));
+  }
+
+  /* Headings typography */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--brand-font-display);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+
+  /* Code / financial data */
+  code, pre, .tabular-nums {
+    font-family: var(--brand-font-mono);
+  }
+}

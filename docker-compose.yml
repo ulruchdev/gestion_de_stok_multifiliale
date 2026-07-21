@@ -7,7 +7,7 @@ services:
   # ========== API ==========
   api:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     container_name: stockmaster-api
     ports:

@@ -1,0 +1,566 @@
+/**
+ * StockMaster CM - Colors and Typography CSS
+ * Fichier centralisé pour les tokens de couleurs et typographie
+ * 
+ * Usage:
+ * <link rel="stylesheet" href="colors_and_type.css">
+ * 
+ * Ce fichier contient toutes les variables CSS pour le Design System
+ * Il peut être utilisé seul ou en complément de system/variables.css
+ */
+
+/* ============================================================================
+   STOCKMASTER DESIGN SYSTEM
+   Couleurs et Typographie Centralisées
+   ============================================================================ */
+
+/* ------------------------------------------------------------------------ */
+/* 1. CORE BRAND TOKENS (StockMaster)
+/* ------------------------------------------------------------------------ */
+
+:root {
+  /* ======================================== */
+  /* COULEURS DE BASE (7 couleurs - StockMaster) */
+  /* ======================================== */
+  
+  /* Background */
+  --bg: #ffffff;
+  --background: #ffffff;
+  
+  /* Foreground / Text */
+  --fg: #0d253d;
+  --text-primary: #0d253d;
+  
+  /* Accent Principal */
+  --accent: #533afd;
+  --primary: #533afd;
+  
+  /* Surface */
+  --surface: #f6f9fc;
+  
+  /* Muted */
+  --muted: #64748d;
+  
+  /* Border */
+  --border: #e3e8ee;
+  --border-default: #e3e8ee;
+  
+  /* Accent Secondaire */
+  --accent-secondary: #1c1e54;
+  --brand-dark: #1c1e54;
+  --brand-dark-900: #1c1e54;
+  
+  /* ======================================== */
+  /* COULEURS SÉMANTIQUES (4 couleurs - StockMaster) */
+  /* ======================================== */
+  
+  /* Success */
+  --color-success: #10b981;
+  --color-success-light: rgba(16, 185, 129, 0.1);
+  --color-success-dark: #059669;
+  
+  /* Error */
+  --color-error: #ea2261;
+  --color-error-light: rgba(234, 34, 97, 0.1);
+  --color-error-dark: #d61f57;
+  --ruby: #ea2261;
+  
+  /* Warning */
+  --color-warning: #9b6829;
+  --color-warning-light: rgba(155, 104, 41, 0.1);
+  --color-warning-dark: #7a5220;
+  --lemon: #9b6829;
+  
+  /* Info */
+  --color-info: #f96bee;
+  --color-info-light: rgba(249, 107, 238, 0.1);
+  --color-info-dark: #e854d8;
+  --magenta: #f96bee;
+  
+  /* ======================================== */
+  /* TEXTE - ÉCHELLE COMPLÈTE (StockMaster) */
+  /* ======================================== */
+  
+  /* Texte principal */
+  --brand-color-text: #0d253d;
+  --color-text-primary: var(--fg);
+  --ink: #0d253d;
+  
+  /* Texte secondaire */
+  --brand-color-text-secondary: #273951;
+  --color-text-secondary: #273951;
+  --ink-secondary: #273951;
+  
+  /* Texte tertiaire */
+  --brand-color-text-tertiary: #64748d;
+  --color-text-tertiary: #64748d;
+  --ink-mute: #64748d;
+  
+  /* Texte quaternaire */
+  --brand-color-text-quaternary: #61718a;
+  --color-text-quaternary: #61718a;
+  --ink-mute-2: #61718a;
+  
+  /* On Primary (texte sur fond coloré) */
+  --on-primary: #ffffff;
+  
+  /* ======================================== */
+  /* SURFACE ET BACKGROUND (StockMaster) */
+  /* ======================================== */
+  
+  --brand-color-background: #ffffff;
+  --brand-color-surface: #f6f9fc;
+  --brand-color-surface-hover: #e8f0eb;
+  --canvas: #ffffff;
+  --canvas-soft: #f6f9fc;
+  
+  /* ======================================== */
+  /* BORDURES (StockMaster) */
+  /* ======================================== */
+  
+  --brand-color-border: #e3e8ee;
+  --brand-color-border-strong: #a8c3de;
+  --brand-color-border-light: rgba(0, 55, 112, 0.05);
+  --hairline: #e3e8ee;
+  --hairline-input: #a8c3de;
+}
+
+/* ------------------------------------------------------------------------ */
+/* 2. EXTENDED PALETTE (pour usage étendu) */
+/* ------------------------------------------------------------------------ */
+
+:root {
+  /* Verts supplémentaires */
+  --color-green-1: #f0fff4;
+  --color-green-2: #d9f7be;
+  --color-green-3: #b7eb8f;
+  --color-green-4: #95de64;
+  --color-green-5: #7cd438;
+  --color-green-6: #52c41a;
+  --color-green-7: #38a108;
+  --color-green-8: #237804;
+  --color-green-9: #185203;
+  --color-green-10: #0d2d02;
+  
+  /* Bleus supplémentaires */
+  --color-blue-1: #e6f4ff;
+  --color-blue-2: #bae0ff;
+  --color-blue-3: #91caff;
+  --color-blue-4: #69b1ff;
+  --color-blue-5: #4096ff;
+  --color-blue-6: #1677ff;
+  --color-blue-7: #0958d9;
+  --color-blue-8: #003eb3;
+  --color-blue-9: #002c8c;
+  --color-blue-10: #001d66;
+  
+  /* Gris supplémentaires */
+  --color-gray-1: #f5f5f5;
+  --color-gray-2: #e8e8e8;
+  --color-gray-3: #d9d9d9;
+  --color-gray-4: #c9c9c9;
+  --color-gray-5: #bbbbbb;
+  --color-gray-6: #aaaaaa;
+  --color-gray-7: #999999;
+  --color-gray-8: #888888;
+  --color-gray-9: #777777;
+  --color-gray-10: #666666;
+  --color-gray-11: #555555;
+  --color-gray-12: #444444;
+  --color-gray-13: #333333;
+  --color-gray-14: #222222;
+  --color-gray-15: #111111;
+}
+
+/* ------------------------------------------------------------------------ */
+/* 3. TYPOGRAPHIE (StockMaster) */
+/* ------------------------------------------------------------------------ */
+
+:root {
+  /* ======================================== */
+  /* FAMILLES DE POLICES */
+  /* ======================================== */
+  
+  /* Display - Pour les titres et gros texte (SF Pro Display comme StockMaster) */
+  --font-display: "SF Pro Display", system-ui, -apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif;
+  
+  /* Body - Pour le texte standard */
+  --font-body: system-ui, -apple-system, Segoe UI, Helvetica Neue, Arial, sans-serif;
+  
+  /* Mono - Pour le code et données techniques */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  
+  /* ======================================== */
+  /* POIDS */
+  /* ======================================== */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  /* ======================================== */
+  /* TAILLES DE TEXTE */
+  /* ======================================== */
+  
+  /* Display */
+  --font-size-display-xl: clamp(48px, 8vw, 80px);
+  --font-size-display-lg: clamp(36px, 6vw, 60px);
+  --font-size-display-md: clamp(30px, 5vw, 48px);
+  --font-size-display-sm: clamp(24px, 4vw, 36px);
+  --font-size-display-xs: clamp(20px, 3.5vw, 28px);
+  
+  /* Heading */
+  --font-size-h1: clamp(28px, 6vw, 40px);
+  --font-size-h2: clamp(24px, 5vw, 32px);
+  --font-size-h3: clamp(20px, 4vw, 28px);
+  --font-size-h4: clamp(18px, 3.5vw, 24px);
+  --font-size-h5: clamp(16px, 3vw, 20px);
+  --font-size-h6: clamp(14px, 2.5vw, 18px);
+  
+  /* Body */
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-sm: 14px;
+  --font-size-xs: 12px;
+  
+  /* ======================================== */
+  /* HAUTEURS DE LIGNE */
+  /* ======================================== */
+  --line-height-display: 1.2;
+  --line-height-heading: 1.3;
+  --line-height-body: 1.5;
+  --line-height-dense: 1.4;
+  --line-height-relaxed: 1.6;
+  
+  /* ======================================== */
+  /* LETTER SPACING */
+  /* ======================================== */
+  --letter-spacing-normal: normal;
+  --letter-spacing-wide: 0.5px;
+  --letter-spacing-wider: 1px;
+  
+  /* ======================================== */
+  /* TEXT TRANSFORM */
+  /* ======================================== */
+  --text-transform-none: none;
+  --text-transform-uppercase: uppercase;
+  --text-transform-capitalize: capitalize;
+}
+
+/* ------------------------------------------------------------------------ */
+/* 4. SPACING SYSTEM (8px Baseline Grid) */
+/* ------------------------------------------------------------------------ */
+
+:root {
+  /* Baseline grid - Multiples de 8px */
+  --space-0: 0;
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-8: 8px;    /* Baseline */
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-28: 28px;
+  --space-32: 32px;
+  --space-36: 36px;
+  --space-40: 40px;
+  --space-44: 44px;
+  --space-48: 48px;
+  --space-52: 52px;
+  --space-56: 56px;
+  --space-60: 60px;
+  --space-64: 64px;
+  
+  /* Spacing négatif */
+  --space-neg-2: -2px;
+  --space-neg-4: -4px;
+  --space-neg-8: -8px;
+  --space-neg-12: -12px;
+  --space-neg-16: -16px;
+  
+  /* Alias pour compatibilité */
+  --spacing-xs: var(--space-2);
+  --spacing-sm: var(--space-4);
+  --spacing-md: var(--space-8);
+  --spacing-lg: var(--space-16);
+  --spacing-xl: var(--space-24);
+  --spacing-2xl: var(--space-32);
+  --spacing-3xl: var(--space-48);
+}
+
+/* ------------------------------------------------------------------------ */
+/* 5. BORDER RADIUS */
+/* ------------------------------------------------------------------------ */
+
+:root {
+  /* Border radius standard */
+  --radius-none: 0;
+  --radius-sm: 3px;
+  --radius: 4px;          /* Boutons, inputs */
+  --radius-md: 8px;      /* Cards, containers */
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px; /* Cercle */
+  
+  /* Alias */
+  --border-radius: var(--radius);
+  --border-radius-sm: var(--radius-sm);
+  --border-radius-md: var(--radius-md);
+  --border-radius-lg: var(--radius-lg);
+}
+
+/* ------------------------------------------------------------------------ */
+/* 6. BORDERS */
+/* ------------------------------------------------------------------------ */
+
+:root {
+  /* Width */
+  --border-width-none: 0;
+  --border-width-sm: 1px;
+  --border-width-md: 2px;
+  --border-width-lg: 4px;
+  
+  /* Style */
+  --border-style-solid: solid;
+  --border-style-dashed: dashed;
+  --border-style-dotted: dotted;
+  
+  /* Colors */
+  --border-color: var(--brand-color-border, #e5edf5);
+  --border-color-strong: var(--brand-color-border-strong, #d1d5db);
+  --border-color-light: var(--brand-color-border-light);
+  
+  /* Default border */
+  --border-default: 1px solid var(--border-default, #e5edf5);
+}
+
+/* ------------------------------------------------------------------------ */
+/* 7. SHADOWS */
+/* ------------------------------------------------------------------------ */
+
+:root {
+  --shadow-none: none;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.25);
+  
+  /* Shadows colorées (héritage StockMaster) */
+  --shadow-blue-sm: 0 1px 2px rgba(28, 30, 84, 0.05);
+  --shadow-blue-md: 0 4px 6px rgba(28, 30, 84, 0.1);
+  --shadow-blue-lg: 0 10px 15px rgba(28, 30, 84, 0.15);
+  
+  /* Inner shadows */
+  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* ------------------------------------------------------------------------ */
+/* 8. Z-INDEX SCALE */
+/* ------------------------------------------------------------------------ */
+
+:root {
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-fixed: 300;
+  --z-modal-backdrop: 400;
+  --z-modal: 500;
+  --z-popover: 600;
+  --z-tooltip: 700;
+  --z-toast: 800;
+  --z-max: 9999;
+}
+
+/* ------------------------------------------------------------------------ */
+/* 9. MOTION & ANIMATION */
+/* ------------------------------------------------------------------------ */
+
+:root {
+  /* Durations */
+  --duration-fast: 0.1s;
+  --duration-mid: 0.2s;
+  --duration-slow: 0.3s;
+  --duration-slower: 0.5s;
+  --duration-slowest: 1s;
+  
+  /* Timing Functions */
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in-out-expo: cubic-bezier(0.87, 0, 0.13, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-expo: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-out-cubic: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --ease-in-cubic: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+  
+  /* StockMaster easing (héritage) */
+  --stockmaster-ease: cubic-bezier(0.645, 0.045, 0.355, 1);
+  
+  /* Transitions */
+  --transition-fast: var(--duration-fast) var(--ease);
+  --transition-mid: var(--duration-mid) var(--ease);
+  --transition-slow: var(--duration-slow) var(--ease);
+  --transition-colors: var(--duration-mid) var(--ease);
+  --transition-opacity: var(--duration-mid) var(--ease);
+  --transition-shadow: var(--duration-mid) var(--ease);
+  --transition-transform: var(--duration-mid) var(--ease);
+  --transition-all: all var(--duration-mid) var(--ease);
+}
+
+/* ------------------------------------------------------------------------ */
+/* 10. THEME SOMBRE (StockMaster) */
+/* ------------------------------------------------------------------------ */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Background */
+    --bg: #0f172a;
+    --background: #0f172a;
+    --canvas: #0f172a;
+    
+    /* Foreground */
+    --fg: #ffffff;
+    --text-primary: #ffffff;
+    --ink: #ffffff;
+    
+    /* Accent Principal */
+    --accent: #6366f1;
+    --primary: #6366f1;
+    
+    /* Surface */
+    --surface: #1e293b;
+    --canvas-soft: #1e293b;
+    
+    /* Muted */
+    --muted: #64748b;
+    --ink-mute: #64748b;
+    
+    /* Border */
+    --border: #334155;
+    --border-default: #334155;
+    --hairline: #334155;
+    
+    /* Accent Secondaire */
+    --accent-secondary: #4338ca;
+    --brand-dark: #4338ca;
+    --brand-dark-900: #4338ca;
+    
+    /* Texte */
+    --brand-color-text: #ffffff;
+    --brand-color-text-secondary: #94a3b8;
+    --brand-color-text-tertiary: #64748b;
+    --brand-color-text-quaternary: #475569;
+    --ink-secondary: #94a3b8;
+    --ink-mute: #64748b;
+    --ink-mute-2: #475569;
+    --on-primary: #ffffff;
+    
+    /* Surface */
+    --brand-color-background: #0f172a;
+    --brand-color-surface: #1e293b;
+    --brand-color-surface-hover: #334155;
+    
+    /* Bordures */
+    --brand-color-border: #334155;
+    --brand-color-border-strong: #475569;
+    --brand-color-border-light: rgba(0, 55, 112, 0.05);
+    --hairline-input: #475569;
+    
+    /* Sémantiques */
+    --color-success: #10b981;
+    --color-success-light: rgba(16, 185, 129, 0.15);
+    --color-success-dark: #059669;
+    --ruby: #f43f5e;
+    
+    --color-error: #f43f5e;
+    --color-error-light: rgba(244, 63, 94, 0.15);
+    --color-error-dark: #e11d48;
+    
+    --color-warning: #fbbf24;
+    --color-warning-light: rgba(251, 191, 36, 0.15);
+    --color-warning-dark: #f59e0b;
+    --lemon: #fbbf24;
+    
+    --color-info: #8b5cf6;
+    --color-info-light: rgba(139, 92, 246, 0.15);
+    --color-info-dark: #7c3aed;
+    --magenta: #8b5cf6;
+  }
+}
+
+/* ------------------------------------------------------------------------ */
+/* 11. UTILITY CLASSES */
+/* ------------------------------------------------------------------------ */
+
+/* Couleurs de texte */
+.text-primary { color: var(--brand-color-text, #0d253d); }
+.text-secondary { color: var(--brand-color-text-secondary, #273951); }
+.text-tertiary { color: var(--brand-color-text-tertiary, #64748d); }
+.text-muted { color: var(--muted, #64748d); }
+.text-success { color: var(--color-success, #10b981); }
+.text-error { color: var(--color-error, #ea2261); }
+.text-warning { color: var(--color-warning, #9b6829); }
+.text-info { color: var(--color-info, #f96bee); }
+
+/* Background */
+.bg-background { background-color: var(--bg, #ffffff); }
+.bg-surface { background-color: var(--surface, #f6f9fc); }
+.bg-success-light { background-color: var(--color-success-light); }
+.bg-error-light { background-color: var(--color-error-light); }
+.bg-warning-light { background-color: var(--color-warning-light); }
+.bg-info-light { background-color: var(--color-info-light); }
+
+/* Typographie */
+.font-display { font-family: var(--font-display); }
+.font-body { font-family: var(--font-body); }
+.font-mono { font-family: var(--font-mono); }
+
+/* Tailles */
+.text-xs { font-size: var(--font-size-xs, 12px); }
+.text-sm { font-size: var(--font-size-sm, 14px); }
+.text-base { font-size: var(--font-size-base, 16px); }
+.text-lg { font-size: var(--font-size-lg, 18px); }
+.text-xl { font-size: var(--font-size-xl, 20px); }
+
+/* Poids */
+.font-normal { font-weight: var(--font-weight-normal, 400); }
+.font-medium { font-weight: var(--font-weight-medium, 500); }
+.font-semibold { font-weight: var(--font-weight-semibold, 600); }
+.font-bold { font-weight: var(--font-weight-bold, 700); }
+
+/* Espacement */
+.m-0 { margin: 0; }
+.m-2 { margin: var(--space-2); }
+.m-4 { margin: var(--space-4); }
+.m-8 { margin: var(--space-8); }
+.m-12 { margin: var(--space-12); }
+.m-16 { margin: var(--space-16); }
+.m-24 { margin: var(--space-24); }
+.m-32 { margin: var(--space-32); }
+
+/* Padding */
+.p-0 { padding: 0; }
+.p-2 { padding: var(--space-2); }
+.p-4 { padding: var(--space-4); }
+.p-8 { padding: var(--space-8); }
+.p-12 { padding: var(--space-12); }
+.p-16 { padding: var(--space-16); }
+.p-24 { padding: var(--space-24); }
+.p-32 { padding: var(--space-32); }
+
+/* Border Radius */
+.rounded-none { border-radius: var(--radius-none); }
+.rounded-sm { border-radius: var(--radius-sm); }
+.rounded { border-radius: var(--radius); }
+.rounded-md { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
+.rounded-full { border-radius: var(--radius-full); }
+
+/* ============================================================================
+   FIN DU FICHIER
+   ============================================================================ */

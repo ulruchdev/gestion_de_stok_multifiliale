@@ -15,6 +15,9 @@ jobs:
   build:
     name: Build & Test
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
 
     services:
       postgres:
@@ -87,7 +90,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: stockmaster-jar
-          path: stockmaster-bootstrap/target/*.jar
+          path: backend/stockmaster-bootstrap/target/*.jar
           retention-days: 7
 
       - name: Wait for PostgreSQL
@@ -144,6 +147,9 @@ jobs:
 
   sonar:
     name: SonarCloud Analysis
+    defaults:
+      run:
+        working-directory: ./backend
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.base_ref == 'main')

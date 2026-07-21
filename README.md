@@ -101,15 +101,18 @@ docker compose up -d
 cp .env.example .env
 # Éditer .env : générer un JWT_SECRET avec `openssl rand -base64 32`
 
-# 4. Compiler
-mvn compile -q
+# 4. Compiler (backend)
+cd backend && ./mvnw compile -q
 
 # 5. Lancer l'application (profil dev)
-mvn spring-boot:run -pl stockmaster-shared
+./mvnw spring-boot:run -pl stockmaster-shared
 
 # 6. Vérifier
 curl http://localhost:8080/actuator/health
 # → {"status":"UP"}
+
+# 7. Frontend (dans un autre terminal)
+cd ../frontend && npm run dev
 ```
 
 ---
@@ -134,30 +137,32 @@ curl http://localhost:8080/actuator/health
 
 ```
 gestionulrich/
-├── pom.xml                     ← Parent POM (Spring Boot 3.3.5, 11 modules)
-├── README.md                   ← Ce fichier
-├── .gitignore
-├── Dockerfile                  ← Multi-stage container
+│
+├── backend/                    ← Backend Spring Boot (11 modules)
+│   ├── pom.xml                 ← Parent POM (Spring Boot 3.3.5)
+│   ├── Dockerfile              ← Multi-stage container
+│   ├── mvnw + .mvn/            ← Maven wrapper
+│   ├── stockmaster-shared/     ← Infrastructure commune
+│   ├── stockmaster-auth/       ← Authentification JWT
+│   ├── stockmaster-bootstrap/  ← Point d'entrée Spring Boot
+│   ├── stockmaster-achat/      ← (stub)
+│   ├── stockmaster-catalogue/  ← (stub)
+│   ├── stockmaster-groupe/     ← (stub)
+│   ├── stockmaster-notification/ ← (stub)
+│   ├── stockmaster-reporting/  ← (stub)
+│   ├── stockmaster-stock/      ← (stub)
+│   ├── stockmaster-tiers/      ← (stub)
+│   ├── stockmaster-utilisateur/ ← (stub)
+│   └── stockmaster-vente/      ← (stub)
+│
+├── frontend/                   ← React/TypeScript (Vite)
+├── document/                   ← Spécifications & guides
+├── .agents/                    ← Agents Freebuff
 ├── docker-compose.yml          ← Dev environment
 ├── sonar-project.properties    ← SonarCloud config
-├── .env.example                ← Variables d'environnement
-├── .github/workflows/
-│   ├── ci.yml                  ← CI pipeline
-│   └── cd.yml                  ← CD pipeline
-├── document/                   ← Spécifications & guides
-└── stockmaster-{module}/
-    ├── pom.xml
-    ├── README.md               ← README du module
-    └── src/
-        ├── main/java/com/stockmaster/{module}/
-        │   ├── controller/     ← API REST
-        │   ├── service/        ← Interfaces + implémentations
-        │   ├── repository/     ← Accès données (Spring Data JPA)
-        │   ├── domain/         ← Entités JPA + énumérations
-        │   ├── dto/            ← Request/Response
-        │   ├── mapper/         ← MapStruct
-        │   └── event/          ← Événements Spring
-        └── test/java/
+├── README.md                   ← Ce fichier
+├── .gitignore
+└── .env.example
 ```
 
 ---

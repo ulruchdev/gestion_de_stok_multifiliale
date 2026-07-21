@@ -1,0 +1,190 @@
+{
+  "name": "StockMaster CM Design System",
+  "tagline": "Signature indigo gradients, weight-300 elegance, pill-shaped buttons.",
+  "description": "Category: Fintech & Crypto > Payment infrastructure. Signature indigo gradients with atmospheric mesh backdrops, weight-300 thin typography as editorial-density signature, pill-shaped buttons with transactional feel.",
+  "sourceUrl": "designmd://design-system-inspired-by-stockmaster",
+  "logo": {
+    "primary": null,
+    "alternates": [],
+    "notes": "No logo supplied in pasted DESIGN.md."
+  },
+  "colors": [
+    {
+      "role": "background",
+      "hex": "#ffffff",
+      "oklch": "",
+      "name": "Canvas",
+      "usage": "page canvas"
+    },
+    {
+      "role": "foreground",
+      "hex": "#0d253d",
+      "oklch": "",
+      "name": "Ink",
+      "usage": "body text and headings"
+    },
+    {
+      "role": "accent",
+      "hex": "#533afd",
+      "oklch": "",
+      "name": "Primary",
+      "usage": "primary actions and emphasis"
+    },
+    {
+      "role": "surface",
+      "hex": "#f6f9fc",
+      "oklch": "",
+      "name": "Canvas Soft",
+      "usage": "cards and panels"
+    },
+    {
+      "role": "muted",
+      "hex": "#64748d",
+      "oklch": "",
+      "name": "Ink Mute",
+      "usage": "secondary text and metadata"
+    },
+    {
+      "role": "border",
+      "hex": "#e3e8ee",
+      "oklch": "",
+      "name": "Hairline",
+      "usage": "rules and dividers"
+    },
+    {
+      "role": "accent-secondary",
+      "hex": "#1c1e54",
+      "oklch": "",
+      "name": "Brand Dark 900",
+      "usage": "dashboard chrome, featured tiers"
+    }
+  ],
+  "typography": {
+    "display": {
+      "family": "SF Pro Display",
+      "fallbacks": [
+        "system-ui",
+        "-apple-system",
+        "Segoe UI",
+        "Helvetica Neue",
+        "Arial",
+        "sans-serif"
+      ],
+      "weights": [
+        300,
+        400,
+        500,
+        600,
+        700
+      ]
+    },
+    "body": {
+      "family": "system-ui",
+      "fallbacks": [
+        "-apple-system",
+        "Segoe UI",
+        "Helvetica Neue",
+        "Arial",
+        "sans-serif"
+      ],
+      "weights": [
+        300,
+        400
+      ]
+    },
+    "mono": {
+      "family": "ui-monospace",
+      "fallbacks": [
+        "SFMono-Regular",
+        "Menlo",
+        "monospace"
+      ],
+      "weights": [
+        400,
+        700
+      ]
+    }
+  },
+  "voice": {
+    "adjectives": [
+      "Professional",
+      "innovative",
+      "clean",
+      "trustworthy",
+      "modern",
+      "elegant",
+      "precise",
+      "accessible"
+    ],
+    "tone": "Signature indigo gradients with atmospheric mesh backdrops, weight-300 thin typography as editorial-density signature, pill-shaped buttons with transactional feel.",
+    "messagingPillars": [
+      "Signature indigo gradients with atmospheric mesh backdrops",
+      "Weight-300 thin typography as editorial-density signature",
+      "Pill-shaped buttons with transactional feel",
+      "Single-indigo CTA hierarchy",
+      "Tabular-figure body type for money and numerics"
+    ],
+    "vocabulary": {
+      "use": [
+        "Payment",
+        "infrastructure",
+        "transaction",
+        "platform",
+        "integrate",
+        "scale",
+        "secure",
+        "instant",
+        "global",
+        "developer",
+        "business",
+        "API",
+        "dashboard",
+        "terminal",
+        "code",
+        "data"
+      ],
+      "avoid": [
+        "Complex",
+        "complicated",
+        "hard",
+        "difficult",
+        "old-fashioned",
+        "legacy",
+        "outdated",
+        "slow",
+        "unstable",
+        "unreliable",
+        "ERP",
+        "SAP"
+      ]
+    }
+  },
+  "imagery": {
+    "style": "Gradient mesh backdrops, product UI mockups, composited dashboard screenshots",
+    "subjects": [
+      "Product interfaces",
+      "code terminals",
+      "pricing cards",
+      "feature explanations"
+    ],
+    "treatment": "Atmospheric color washes, subtle shadows, clean product photography",
+    "avoid": [
+      "Overly decorative elements",
+      "busy patterns",
+      "non-product imagery"
+    ],
+    "samples": []
+  },
+  "layout": {
+    "radius": "4px (hairline tags), 6px (form inputs), 8px (cards), 12px (pricing cards), 16px (dashboard chrome), 9999px (pill buttons)",
+    "borderWeight": "1px",
+    "spacing": "8px baseline grid (2, 4, 8, 12, 16, 24, 32, 48, 64px)",
+    "postureRules": [
+      "Marketing pages center in ~1200px container with gradient mesh extending edge-to-edge",
+      "Pricing collapses 4-up to 2-up to 1-up at 1024/768 breakpoints",
+      "Dashboard uses internal 12-col grids for tables and 3-col for cards",
+      "Section padding: 64-96px marketing, 32-48px dashboard",
+      "Card internal padding: 32px feature cards, 24px dashboard mockups"
+    ]
+  }
+}

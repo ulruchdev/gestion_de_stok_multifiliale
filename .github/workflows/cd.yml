@@ -16,6 +16,9 @@ jobs:
   deploy:
     name: Build & Deploy
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
     permissions:
       contents: read
       packages: write
@@ -61,8 +64,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: ./Dockerfile
+          context: ./backend
+          file: ./backend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

@@ -1,0 +1,26 @@
+{
+  "candidateId": "cc328d65-8651-4f95-a23e-30d2be879808",
+  "projectId": "brand-design-system-inspired-by-stockmaster-9db9b9",
+  "runId": "7d5912f3-110a-45cf-b607-59bd5e83bc00",
+  "conversationId": "f9e7d7e4-8e7d-447d-ab5f-b9713b47b100",
+  "provenance": {
+    "summary": "Detected from README.md, SKILL.md after a successful run.",
+    "detectedAt": 1784111791443
+  },
+  "sourceRefs": [
+    {
+      "kind": "file",
+      "value": "README.md",
+      "label": "README.md",
+      "size": 10349,
+      "copied": true
+    },
+    {
+      "kind": "file",
+      "value": "SKILL.md",
+      "label": "SKILL.md",
+      "size": 9198,
+      "copied": true
+    }
+  ]
+}
