@@ -29,14 +29,6 @@ function processQueue(error: unknown, token: string | null = null) {
   failedQueue = [];
 }
 
-interface RefreshResponse {
-  data: {
-    data: {
-      accessToken: string;
-    };
-  };
-}
-
 // Intercepteur Request : ajoute le token JWT
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = localStorage.getItem('access_token');

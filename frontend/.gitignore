@@ -4,3 +4,5 @@ dist/
 .env.local
 *.tsbuildinfo
 public/mockServiceWorker.js
+*.d.ts
+!src/vite-env.d.ts

@@ -127,6 +127,24 @@ export const handlers = [
     });
   }),
 
+  http.post(`${API_BASE}/auth/forgot-password`, () => {
+    return HttpResponse.json({
+      success: true,
+      message: 'Email envoyé',
+      data: null,
+      timestamp: new Date().toISOString(),
+    });
+  }),
+
+  http.post(`${API_BASE}/auth/reset-password`, () => {
+    return HttpResponse.json({
+      success: true,
+      message: 'Mot de passe réinitialisé',
+      data: null,
+      timestamp: new Date().toISOString(),
+    });
+  }),
+
   // === Ventes directes ===
   http.get(`${API_BASE}/ventes`, () => {
     return HttpResponse.json({

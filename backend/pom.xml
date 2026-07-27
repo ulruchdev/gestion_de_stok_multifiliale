@@ -296,6 +296,13 @@
                         </excludes>
                     </configuration>
                 </plugin>
+
+                <!-- SonarCloud (analyse de qualité) -->
+                <plugin>
+                    <groupId>org.sonarsource.scanner.maven</groupId>
+                    <artifactId>sonar-maven-plugin</artifactId>
+                    <version>5.7.0.6970</version>
+                </plugin>
             </plugins>
         </pluginManagement>
 

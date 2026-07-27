@@ -1,14 +1,13 @@
 import { Outlet } from 'react-router-dom';
+import { Logo } from '@/shared/ui/Logo';
 
 export function AuthLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-[var(--brand-canvas-soft)]">
-      {/* Header minimal */}
+      {/* Header avec logo */}
       <header className="border-b border-[var(--brand-hairline)] bg-background">
         <div className="container flex h-14 items-center">
-          <span className="text-lg font-semibold font-display text-primary">
-            StockMaster CM
-          </span>
+          <Logo variant="auth" size="md" />
         </div>
       </header>
 

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth';
 import { RoleUtilisateur } from '@/shared/types';
@@ -5,12 +6,29 @@ import { DashboardLayout } from './layouts/DashboardLayout';
 import { AuthLayout } from './layouts/AuthLayout';
 
 // Lazy loading des pages
-// Ces composants seront créés au fur et à mesure du développement
+const AccueilPage = lazy(() => import('./pages/AccueilPage').then(m => ({ default: m.AccueilPage })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const InscriptionChoixPage = lazy(() => import('./pages/InscriptionChoixPage').then(m => ({ default: m.InscriptionChoixPage })));
+const InscriptionEntrepriseUniquePage = lazy(() => import('./pages/InscriptionEntrepriseUniquePage').then(m => ({ default: m.InscriptionEntrepriseUniquePage })));
+const InscriptionGroupePage = lazy(() => import('./pages/InscriptionGroupePage').then(m => ({ default: m.InscriptionGroupePage })));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
+
+// Placeholder pour les pages non encore implémentées
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center h-64">
     <p className="text-muted-foreground text-lg">{title} — à implémenter</p>
   </div>
 );
+
+// Suspense fallback pour le lazy loading
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[300px]">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
+}
 
 // Guards de route
 function RequireAuth({ roles }: { roles?: RoleUtilisateur[] }) {
@@ -43,17 +61,21 @@ function RedirectIfAuthenticated() {
 export function AppRoutes() {
   return (
     <Routes>
-      {/* Routes publiques (non authentifié) — cf. GS-IA-2026-01 §7 */}
+      {/* Page d'accueil publique (pleine largeur, hors AuthLayout) */}
       <Route element={<RedirectIfAuthenticated />}>
+        <Route path="/" element={<Suspense fallback={<PageLoader />}><AccueilPage /></Suspense>} />
+
+        {/* Pages d'authentification simples (layout centré max-w-sm) */}
         <Route element={<AuthLayout />}>
-          <Route path="/" element={<PlaceholderPage title="Accueil" />} />
-          <Route path="/login" element={<PlaceholderPage title="Connexion" />} />
-          <Route path="/inscription" element={<PlaceholderPage title="Choix type inscription" />} />
-          <Route path="/inscription/entreprise-unique" element={<PlaceholderPage title="Inscription entreprise unique" />} />
-          <Route path="/inscription/groupe" element={<PlaceholderPage title="Inscription groupe" />} />
-          <Route path="/mot-de-passe-oublie" element={<PlaceholderPage title="Mot de passe oublié" />} />
-          <Route path="/reset-password" element={<PlaceholderPage title="Réinitialisation mot de passe" />} />
+          <Route path="/login" element={<Suspense fallback={<PageLoader />}><LoginPage /></Suspense>} />
+          <Route path="/mot-de-passe-oublie" element={<Suspense fallback={<PageLoader />}><ForgotPasswordPage /></Suspense>} />
+          <Route path="/reset-password" element={<Suspense fallback={<PageLoader />}><ResetPasswordPage /></Suspense>} />
         </Route>
+
+        {/* Pages d'inscription (pleine largeur, hors AuthLayout) */}
+        <Route path="/inscription" element={<Suspense fallback={<PageLoader />}><InscriptionChoixPage /></Suspense>} />
+        <Route path="/inscription/entreprise-unique" element={<Suspense fallback={<PageLoader />}><InscriptionEntrepriseUniquePage /></Suspense>} />
+        <Route path="/inscription/groupe" element={<Suspense fallback={<PageLoader />}><InscriptionGroupePage /></Suspense>} />
       </Route>
 
       {/* Routes protégées (authentifié) */}
