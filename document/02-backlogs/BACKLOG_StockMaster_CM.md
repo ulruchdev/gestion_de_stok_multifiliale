@@ -184,15 +184,17 @@
 **Corps de la requête :**
 ```json
 {
-  "nomBoutique": "Épicerie Centrale",
-  "ville": "Douala",
-  "quartier": "Akwa",
-  "prenom": "Jean",
-  "nom": "Kamga",
+  "nomEntreprise": "Épicerie Centrale",
+  "nif": "M123456789",
   "email": "jean.kamga@epicerie.cm",
+  "telephone": "+237691234567",
+  "adminNom": "Kamga",
+  "adminPrenom": "Jean",
   "motDePasse": "MotDePasse@2026"
 }
 ```
+
+> **Note (Juillet 2026) :** `ville` et `quartier` ont été retirés de l'inscription (décision UX — allègement du formulaire). Ils seront demandés dans l'étape de complétion du profil entreprise. Le `nif` est optionnel (les petites boutiques n'ont pas de NIF au Cameroun). Le `telephone` est obligatoire au format E.164 (+237XXXXXXXX).
 
 **Réponse succès :** `201 CREATED`
 ```json
@@ -255,7 +257,7 @@
 - [ ] Groupe suspendu → `403 FORBIDDEN` avec `ErrorCode.TENANT_SUSPENDED`
 - [ ] Access token : expiration 15 minutes, claims : `userId`, `entrepriseId`, `groupId`, `role`, `scope`, `jti`
 - [ ] Refresh token : expiration 7 jours, stocké en Redis avec clé `refresh:{userId}`
-- [ ] Rate limiting : 5 tentatives max en 15 minutes par IP (Redis)
+- [ ] Rate limiting : configurable via `stockmaster.rate-limiting` (application.yml). Défauts : 5 tentatives/15 min par IP, compteur global 100 requêtes/min, countdown progressif
 - [ ] `jjwt 0.12.x` utilisé — jamais 0.9.x
 
 **Endpoint :** `POST /api/v1/auth/login`
@@ -484,6 +486,41 @@
 - [ ] Modification partielle acceptée (PATCH sémantique)
 
 **Endpoint :** `PUT /api/v1/groupe`
+
+---
+
+### US-014b — Compléter les informations de l'entreprise (profil)
+
+**Priorité :** P1 | **Sprint :** 4 | **Points :** 3
+
+**En tant que** Admin Groupe ou Admin Filiale,
+**je veux** compléter les informations d'adresse de mon entreprise (ville, quartier, rue, région),
+**afin de** finaliser mon profil après une inscription allégée qui n'a demandé que le strict minimum.
+
+> **Contexte :** Lors de l'inscription (US-006, US-007), seuls les champs essentiels ont été demandés. `ville` et `quartier` ont été retirés pour alléger le formulaire. Cette US permet de les renseigner une fois connecté.
+
+**Critères d'acceptation :**
+- [ ] L'utilisateur connecté peut modifier les champs suivants de son entreprise : `ville`, `quartier`, `rue`, `région`, `pays`
+- [ ] Les champs sont pré-remplis si déjà saisis (modification, pas écrasement)
+- [ ] `@PreAuthorize("hasAnyRole('ADMIN_GROUPE','ADMIN_FILIALE')")`
+- [ ] Isolation multi-tenant : seul l'admin de l'entreprise concernée peut modifier ses propres infos
+- [ ] Une notification in-app "Pensez à compléter l'adresse de votre entreprise" s'affiche tant que `ville` ou `quartier` est vide
+- [ ] La modification est partielle (PATCH) : on peut changer seulement la rue sans retaper la ville
+
+**Endpoints :**
+- `GET /api/v1/entreprise/profil` — consulter les infos
+- `PATCH /api/v1/entreprise/profil` — modifier (partiel)
+
+**Corps de la requête (PATCH) :**
+```json
+{
+  "ville": "Douala",
+  "quartier": "Akwa",
+  "rue": "123 Rue de la Liberté",
+  "region": "Littoral",
+  "pays": "Cameroun"
+}
+```
 
 ---
 

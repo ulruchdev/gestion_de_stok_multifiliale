@@ -93,6 +93,43 @@ stockmaster:
     max-page-size: 100
     default-sort: dateCreation,desc
 
+  # ========== Rate Limiting ==========
+  rate-limiting:
+    enabled: true
+    global:
+      enabled: true
+      max-requests: 100
+      window-seconds: 60
+    endpoints:
+      login:
+        uri: /api/v1/auth/login
+        max-attempts: 5
+        window-seconds: 900
+      refresh:
+        uri: /api/v1/auth/refresh
+        max-attempts: 5
+        window-seconds: 900
+      inscription-entreprise-unique:
+        uri: /api/v1/auth/inscription/entreprise-unique
+        max-attempts: 3
+        window-seconds: 3600
+      inscription-groupe:
+        uri: /api/v1/auth/inscription/groupe
+        max-attempts: 3
+        window-seconds: 3600
+      forgot-password:
+        uri: /api/v1/auth/forgot-password
+        max-attempts: 3
+        window-seconds: 900
+      reset-password:
+        uri: /api/v1/auth/reset-password
+        max-attempts: 3
+        window-seconds: 900
+      change-password:
+        uri: /api/v1/auth/change-password
+        max-attempts: 5
+        window-seconds: 900
+
 # ========== Logging ==========
 logging:
   level:

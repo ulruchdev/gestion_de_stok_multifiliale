@@ -60,12 +60,12 @@ class AuthControllerTest {
     @BeforeEach
     void setUp() {
         inscriptionUniqueRequest = InscriptionEntrepriseUniqueRequest.builder()
-                .nomBoutique("Épicerie Centrale")
-                .ville("Douala")
-                .quartier("Akwa")
-                .prenom("Jean")
-                .nom("Kamga")
+                .nomEntreprise("Épicerie Centrale")
+                .nif("M123456789")
                 .email("jean.kamga@epicerie.cm")
+                .telephone("+237699000001")
+                .adminNom("Kamga")
+                .adminPrenom("Jean")
                 .motDePasse("MotDePasse@2026")
                 .build();
 
@@ -73,7 +73,7 @@ class AuthControllerTest {
                 .nomGroupe("Distribo Sarl")
                 .villesiege("Yaoundé")
                 .nif("M123456789")
-                .telephone("699000001")
+                .telephone("+237699000001")
                 .emailEntreprise("contact@distribo.cm")
                 .prenom("Paul")
                 .nom("Biya Jr")
@@ -119,9 +119,9 @@ class AuthControllerTest {
         }
 
         @Test
-        @DisplayName("400 BAD REQUEST — nomBoutique vide")
-        void shouldReturn400WhenNomBoutiqueIsBlank() throws Exception {
-            inscriptionUniqueRequest.setNomBoutique("");
+        @DisplayName("400 BAD REQUEST — nomEntreprise vide")
+        void shouldReturn400WhenNomEntrepriseIsBlank() throws Exception {
+            inscriptionUniqueRequest.setNomEntreprise("");
 
             mockMvc.perform(post("/api/v1/auth/inscription/entreprise-unique")
                             .contentType(MediaType.APPLICATION_JSON)
