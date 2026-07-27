@@ -108,7 +108,7 @@ class AuthServiceImplTest {
 
         inscriptionGroupeRequest = InscriptionGroupeRequest.builder()
                 .nomGroupe("Distribo Sarl")
-                .villesiege("Yaoundé")
+                .villeSiege("Yaoundé")
                 .nif("M123456789")
                 .telephone("+237699000001")
                 .emailEntreprise("contact@distribo.cm")
