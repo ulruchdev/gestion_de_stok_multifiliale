@@ -11,7 +11,7 @@ export interface PhoneInputFieldProps {
   disabled?: boolean;
   value?: Value;
   onChange?: (value?: Value) => void;
-  defaultCountry?: string;
+  defaultCountry?: Country;
   placeholder?: string;
   className?: string;
   id?: string;
@@ -52,7 +52,7 @@ export function PhoneInputField({
           id={inputId}
           value={value}
           onChange={onChange || (() => {})}
-          defaultCountry={defaultCountry as Country}
+          defaultCountry={defaultCountry}
           placeholder={placeholder}
           disabled={disabled}
           international

@@ -15,7 +15,7 @@ public class InscriptionGroupeRequest {
 
     @NotBlank(message = "La ville du siège est obligatoire")
     @Size(max = 100)
-    private String villesiege;
+    private String villeSiege;
 
     @Size(max = 20, message = "Le NIF ne peut pas dépasser 20 caractères")
     @Pattern(

@@ -35,7 +35,7 @@ public interface AuthMapper {
     @Mapping(target = "parent", ignore = true)
     @Mapping(target = "typeEntreprise", constant = "MERE")
     @Mapping(target = "nom", source = "nomGroupe")
-    @Mapping(target = "adresseVille", source = "villesiege")
+    @Mapping(target = "adresseVille", source = "villeSiege")
     @Mapping(target = "adressePays", constant = "Cameroun")
     @Mapping(target = "email", source = "emailEntreprise")
     @Mapping(target = "telephone", source = "telephone")
