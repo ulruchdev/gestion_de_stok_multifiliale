@@ -1,13 +1,12 @@
-import { type HTMLAttributes, type ReactNode, forwardRef } from 'react';
+import { type HTMLAttributes, forwardRef } from 'react';
 import { cn } from '../lib/utils';
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'elevated' | 'bordered' | 'interactive';
-  padding?: 'none' | 'sm' | 'md' | 'lg';
 }
 
 const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className, variant = 'default', padding = 'md', children, ...props }, ref) => {
+  ({ className, variant = 'default', children, ...props }, ref) => {
     return (
       <div
         ref={ref}

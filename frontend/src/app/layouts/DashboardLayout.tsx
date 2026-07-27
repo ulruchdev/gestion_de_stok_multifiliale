@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth';
 import { RoleUtilisateur } from '@/shared/types';
-import { Button } from '@/shared/ui/Button';
+import { Logo } from '@/shared/ui/Logo';
 import { ToastContainer } from '@/shared/ui/Toast';
 import {
   LayoutDashboard,
@@ -17,8 +17,8 @@ import {
   Menu,
   X,
 } from 'lucide-react';
-import { cn } from '@/shared/lib/utils';
 import { useState } from 'react';
+import { cn } from '@/shared/lib/utils';
 
 // Définition des entrées de menu par rôle (cf. GS-IA-2026-01)
 interface MenuEntry {
@@ -110,11 +110,9 @@ export function DashboardLayout() {
         )}
       >
         <div className="flex flex-col h-full">
-          {/* Logo */}
+          {/* Logo sidebar */}
           <div className="flex items-center justify-between h-14 px-5 border-b border-white/10">
-            <span className="text-base font-semibold font-display text-white">
-              StockMaster CM
-            </span>
+            <Logo variant="sidebar" size="md" />
             <button
               className="lg:hidden rounded-full p-1.5 text-white/70 hover:bg-white/10 transition-colors"
               onClick={() => setSidebarOpen(false)}
@@ -181,7 +179,7 @@ export function DashboardLayout() {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <span className="ml-3 font-semibold font-display text-sm">StockMaster CM</span>
+          <Logo variant="default" size="sm" className="ml-3" showText={false} />
         </header>
 
         {/* Page content */}

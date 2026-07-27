@@ -124,14 +124,14 @@ const TabsTrigger = forwardRef<HTMLButtonElement, TabsTriggerProps>(
             // pills variant
             'px-4 py-2 rounded-md text-[var(--brand-ink-muted)] hover:text-[var(--brand-ink)]':
               variant === 'pills',
-            'data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[var(--brand-ink)]':
-              variant === 'pills',
 
             // segmented variant
             'px-3 py-1.5 rounded-md text-[var(--brand-ink-muted)] hover:text-[var(--brand-ink)]':
               variant === 'segmented',
+
+            // shared active state for pills & segmented
             'data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[var(--brand-ink)]':
-              variant === 'segmented',
+              variant === 'pills' || variant === 'segmented',
           },
           className,
         )}

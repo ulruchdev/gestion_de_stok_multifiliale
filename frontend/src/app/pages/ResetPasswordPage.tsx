@@ -6,8 +6,8 @@ import { z } from 'zod';
 import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
-import { Card, CardContent } from '@/shared/ui/Card';
-import { toast } from '@/shared/ui/Toast';
+import { Card } from '@/shared/ui/Card';
+import { toast } from '@/shared/ui';
 import { apiClient, getErrorMessage } from '@/shared/lib/api-client';
 
 const resetPasswordSchema = z
@@ -19,7 +19,7 @@ const resetPasswordSchema = z
       .regex(/[A-Z]/, 'Au moins une majuscule')
       .regex(/[a-z]/, 'Au moins une minuscule')
       .regex(/[0-9]/, 'Au moins un chiffre')
-      .regex(/[!@#$%^&*()_+={}\[\]|:;<>,.?/~`-]/, 'Au moins un caractère spécial'),
+      .regex(/[!@#$%^&*()_+={}[\]|:;<>,.?/~`-]/, 'Au moins un caractère spécial'),
     confirmMotDePasse: z.string().min(1, 'Confirmation requise'),
   })
   .refine((data) => data.motDePasse === data.confirmMotDePasse, {
@@ -42,6 +42,7 @@ export function ResetPasswordPage() {
     formState: { errors, isSubmitting },
   } = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema),
+    mode: 'onChange',
     defaultValues: {
       motDePasse: '',
       confirmMotDePasse: '',
@@ -111,31 +112,26 @@ export function ResetPasswordPage() {
       {/* Formulaire */}
       <Card variant="elevated">
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
-          <div className="space-y-1">
-            <Input
-              label="Nouveau mot de passe"
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Minimum 8 caractères"
-              icon={<Lock className="h-4 w-4" />}
-              error={errors.motDePasse?.message}
-              autoComplete="new-password"
-              disabled={isSubmitting}
-              {...register('motDePasse')}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="text-xs text-[var(--brand-ink-muted)] hover:text-[var(--brand-primary)] transition-colors flex items-center gap-1"
-            >
-              {showPassword ? <><EyeOff className="h-3 w-3" /> Masquer</> : <><Eye className="h-3 w-3" /> Afficher</>}
-            </button>
-          </div>
+          <Input
+            label="Nouveau mot de passe"
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Minimum 8 caractères"
+            icon={<Lock className="h-4 w-4" />}
+            trailingIcon={showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            onTrailingIconClick={() => setShowPassword(!showPassword)}
+            error={errors.motDePasse?.message}
+            autoComplete="new-password"
+            disabled={isSubmitting}
+            {...register('motDePasse')}
+          />
 
           <Input
             label="Confirmer le mot de passe"
             type={showConfirm ? 'text' : 'password'}
             placeholder="Ressaisissez le mot de passe"
             icon={<Lock className="h-4 w-4" />}
+            trailingIcon={showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            onTrailingIconClick={() => setShowConfirm(!showConfirm)}
             error={errors.confirmMotDePasse?.message}
             autoComplete="new-password"
             disabled={isSubmitting}

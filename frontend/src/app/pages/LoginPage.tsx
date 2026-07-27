@@ -6,8 +6,8 @@ import { z } from 'zod';
 import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
-import { Card, CardContent } from '@/shared/ui/Card';
-import { toast } from '@/shared/ui/Toast';
+import { Card } from '@/shared/ui/Card';
+import { toast } from '@/shared/ui';
 import { useAuthStore } from '@/features/auth';
 import { getErrorMessage } from '@/shared/lib/api-client';
 
@@ -34,6 +34,7 @@ export function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    mode: 'onChange',
     defaultValues: {
       email: '',
       motDePasse: '',
@@ -68,7 +69,7 @@ export function LoginPage() {
 
       {/* Formulaire */}
       <Card variant="elevated">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 p-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 p-7">
           <Input
             label="Email professionnel"
             type="email"
@@ -77,32 +78,25 @@ export function LoginPage() {
             error={errors.email?.message}
             autoComplete="email"
             disabled={isSubmitting}
+            inputSize="lg"
             {...register('email')}
           />
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Input
               label="Mot de passe"
               type={showPassword ? 'text' : 'password'}
               placeholder="Votre mot de passe"
               icon={<Lock className="h-4 w-4" />}
+              trailingIcon={showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              onTrailingIconClick={() => setShowPassword(!showPassword)}
               error={errors.motDePasse?.message}
               autoComplete="current-password"
               disabled={isSubmitting}
+              inputSize="lg"
               {...register('motDePasse')}
             />
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="text-xs text-[var(--brand-ink-muted)] hover:text-[var(--brand-primary)] transition-colors flex items-center gap-1"
-              >
-                {showPassword ? (
-                  <><EyeOff className="h-3 w-3" /> Masquer</>
-                ) : (
-                  <><Eye className="h-3 w-3" /> Afficher</>
-                )}
-              </button>
+            <div className="flex justify-end">
               <Link
                 to="/mot-de-passe-oublie"
                 className="text-xs font-medium text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] transition-colors"
@@ -135,21 +129,7 @@ export function LoginPage() {
         </Link>
       </p>
 
-      {/* Comptes de démonstration (dev only) */}
-      {import.meta.env.DEV && (
-        <Card variant="bordered" className="border-dashed">
-          <CardContent padding="sm">
-            <p className="text-xs font-medium text-[var(--brand-ink-muted)] mb-2">
-              🧪 Comptes de démonstration (mode développement)
-            </p>
-            <div className="space-y-1 text-xs text-[var(--brand-ink-muted)]">
-              <p><strong>Admin Groupe :</strong> admin@groupe.test / Test1234!</p>
-              <p><strong>Admin Filiale :</strong> admin@filiale.test / Test1234!</p>
-              <p><strong>Caissier :</strong> caissier@filiale.test / Test1234!</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+
     </div>
   );
 }

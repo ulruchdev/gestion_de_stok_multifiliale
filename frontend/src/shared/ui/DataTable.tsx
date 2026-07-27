@@ -1,10 +1,10 @@
 import { type ReactNode, useState, useMemo } from 'react';
 import { cn } from '../lib/utils';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from './Table';
-import { Skeleton, SkeletonText, SkeletonTable } from './Skeleton';
+import { Skeleton, SkeletonTable } from './Skeleton';
 import { EmptyState } from './EmptyState';
 import { SearchInput } from './SearchInput';
-import { ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight, SearchX } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './Button';
 
 // --- Sorting ---

@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Store,
   Building2,
   ArrowLeft,
   ArrowRight,
@@ -17,10 +16,12 @@ import {
   Lock,
   FileText,
 } from 'lucide-react';
+import { Logo } from '@/shared/ui/Logo';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
+import { PhoneInputField } from '@/shared/ui/PhoneInput';
 import { Card, CardContent } from '@/shared/ui/Card';
-import { toast } from '@/shared/ui/Toast';
+import { toast } from '@/shared/ui';
 import { apiClient, getErrorMessage } from '@/shared/lib/api-client';
 import { cn } from '@/shared/lib/utils';
 
@@ -31,7 +32,7 @@ const passwordSchema = z
   .regex(/[A-Z]/, 'Au moins une majuscule')
   .regex(/[a-z]/, 'Au moins une minuscule')
   .regex(/[0-9]/, 'Au moins un chiffre')
-  .regex(/[!@#$%^&*()_+={}\[\]|:;<>,.?/~`-]/, 'Au moins un caractère spécial');
+  .regex(/[!@#$%^&*()_+={}[\]|:;<>,.?/~`-]/, 'Au moins un caractère spécial');
 
 const inscriptionSchema = z.object({
   nomEntreprise: z
@@ -49,8 +50,8 @@ const inscriptionSchema = z.object({
   telephone: z
     .string()
     .min(8, 'Numéro de téléphone invalide')
-    .max(15, 'Maximum 15 caractères')
-    .regex(/^[0-9+\-\s]+$/, 'Format invalide'),
+    .max(16, 'Maximum 16 caractères')
+    .regex(/^\+[1-9]\d{1,14}$/, 'Format international invalide'),
   adminNom: z
     .string()
     .min(2, 'Le nom est requis')
@@ -78,7 +79,7 @@ const passwordChecks = [
   { label: '8 caractères minimum', test: (v: string) => v.length >= 8 },
   { label: 'Une majuscule', test: (v: string) => /[A-Z]/.test(v) },
   { label: 'Un chiffre', test: (v: string) => /[0-9]/.test(v) },
-  { label: 'Un caractère spécial', test: (v: string) => /[!@#$%^&*()_+={}\[\]|:;<>,.?/~`-]/.test(v) },
+  { label: 'Un caractère spécial', test: (v: string) => /[!@#$%^&*()_+={}[\]|:;<>,.?/~`-]/.test(v) },
 ];
 
 // Sous-composant : checklist de force du mot de passe
@@ -132,9 +133,11 @@ export function InscriptionEntrepriseUniquePage() {
     handleSubmit,
     trigger,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<InscriptionFormData>({
     resolver: zodResolver(inscriptionSchema),
+    mode: 'onChange',
     defaultValues: {
       nomEntreprise: '',
       nif: '',
@@ -148,12 +151,12 @@ export function InscriptionEntrepriseUniquePage() {
   });
 
   const nextStep = async () => {
-    const fieldsToValidate =
+    const fieldsToValidate: (keyof InscriptionFormData)[] =
       step === 0
-        ? (['nomEntreprise', 'nif', 'email', 'telephone'] as const)
-        : (['adminNom', 'adminPrenom', 'adminMotDePasse', 'confirmMotDePasse'] as const);
+        ? ['nomEntreprise', 'nif', 'email', 'telephone']
+        : ['adminNom', 'adminPrenom', 'adminMotDePasse', 'confirmMotDePasse'];
 
-    const isValid = await trigger(fieldsToValidate as any);
+    const isValid = await trigger(fieldsToValidate);
     if (isValid) setStep((prev) => Math.min(prev + 1, steps.length - 1));
   };
 
@@ -180,22 +183,25 @@ export function InscriptionEntrepriseUniquePage() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
-      {/* En-tête */}
-      <div className="text-center space-y-2">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--brand-primary-bg)] mb-1">
-          <Store className="h-6 w-6 text-[var(--brand-primary)]" />
+    <div className="min-h-screen flex items-center justify-center py-8 px-4 sm:px-6">
+      <div className="w-full max-w-2xl mx-auto space-y-6 animate-fade-in-up">
+        {/* Logo centré */}
+        <div className="text-center">
+          <Logo variant="auth" size="md" />
         </div>
-        <h1 className="text-2xl font-semibold font-display tracking-tight text-[var(--brand-ink)]">
-          Entreprise unique
-        </h1>
-        <p className="text-sm text-[var(--brand-ink-muted)]">
-          Créez votre espace de gestion en quelques étapes
-        </p>
-      </div>
 
-      {/* Stepper */}
-      <div className="flex items-center justify-center gap-2">
+        {/* En-tête */}
+        <div className="text-center space-y-2 mt-6">
+          <h1 className="text-2xl font-semibold font-display tracking-tight text-[var(--brand-ink)]">
+            Entreprise unique
+          </h1>
+          <p className="text-sm text-[var(--brand-ink-muted)]">
+            Créez votre espace de gestion en quelques étapes
+          </p>
+        </div>
+
+        {/* Stepper */}
+        <div className="flex items-center justify-center gap-2">
         {steps.map((s, i) => {
           const StepIcon = s.icon;
           const isActive = i === step;
@@ -267,14 +273,15 @@ export function InscriptionEntrepriseUniquePage() {
                     disabled={isSubmitting}
                     {...register('email')}
                   />
-                  <Input
+                  <PhoneInputField
                     label="Téléphone"
-                    type="tel"
                     placeholder="691234567"
                     icon={<Phone className="h-4 w-4" />}
                     error={errors.telephone?.message}
                     disabled={isSubmitting}
-                    {...register('telephone')}
+                    value={watch('telephone') || undefined}
+                    onChange={(value) => setValue('telephone', value || '', { shouldValidate: true })}
+                    defaultCountry="CM"
                   />
                 </div>
               </div>
@@ -307,45 +314,31 @@ export function InscriptionEntrepriseUniquePage() {
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <Input
-                    label="Mot de passe"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Créez un mot de passe sécurisé"
-                    icon={<Lock className="h-4 w-4" />}
-                    error={errors.adminMotDePasse?.message}
-                    autoComplete="new-password"
-                    disabled={isSubmitting}
-                    {...register('adminMotDePasse')}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="text-xs text-[var(--brand-ink-muted)] hover:text-[var(--brand-primary)] transition-colors flex items-center gap-1 mt-1"
-                  >
-                    {showPassword ? <><EyeOff className="h-3 w-3" /> Masquer</> : <><Eye className="h-3 w-3" /> Afficher</>}
-                  </button>
-                </div>
+                <Input
+                  label="Mot de passe"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Créez un mot de passe sécurisé"
+                  icon={<Lock className="h-4 w-4" />}
+                  trailingIcon={showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  onTrailingIconClick={() => setShowPassword(!showPassword)}
+                  error={errors.adminMotDePasse?.message}
+                  autoComplete="new-password"
+                  disabled={isSubmitting}
+                  {...register('adminMotDePasse')}
+                />
 
-                <div className="space-y-1">
-                  <Input
-                    label="Confirmer le mot de passe"
-                    type={showConfirm ? 'text' : 'password'}
-                    placeholder="Ressaisissez le mot de passe"
-                    icon={<Lock className="h-4 w-4" />}
-                    error={errors.confirmMotDePasse?.message}
-                    autoComplete="new-password"
-                    disabled={isSubmitting}
-                    {...register('confirmMotDePasse')}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirm(!showConfirm)}
-                    className="text-xs text-[var(--brand-ink-muted)] hover:text-[var(--brand-primary)] transition-colors flex items-center gap-1 mt-1"
-                  >
-                    {showConfirm ? <><EyeOff className="h-3 w-3" /> Masquer</> : <><Eye className="h-3 w-3" /> Afficher</>}
-                  </button>
-                </div>
+                <Input
+                  label="Confirmer le mot de passe"
+                  type={showConfirm ? 'text' : 'password'}
+                  placeholder="Ressaisissez le mot de passe"
+                  icon={<Lock className="h-4 w-4" />}
+                  trailingIcon={showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  onTrailingIconClick={() => setShowConfirm(!showConfirm)}
+                  error={errors.confirmMotDePasse?.message}
+                  autoComplete="new-password"
+                  disabled={isSubmitting}
+                  {...register('confirmMotDePasse')}
+                />
 
                 <PasswordStrengthChecklist
                   password={watch('adminMotDePasse') || ''}
@@ -414,16 +407,17 @@ export function InscriptionEntrepriseUniquePage() {
         </form>
       </Card>
 
-      {/* Lien connexion */}
-      <p className="text-center text-sm text-[var(--brand-ink-muted)]">
-        Déjà un compte ?{' '}
-        <Link
-          to="/login"
-          className="font-semibold text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] transition-colors"
-        >
-          Se connecter
-        </Link>
-      </p>
+        {/* Lien connexion */}
+        <p className="text-center text-sm text-[var(--brand-ink-muted)]">
+          Déjà un compte ?{' '}
+          <Link
+            to="/login"
+            className="font-semibold text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] transition-colors"
+          >
+            Se connecter
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

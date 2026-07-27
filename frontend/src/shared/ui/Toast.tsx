@@ -1,56 +1,11 @@
-import { create } from 'zustand';
 import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
+import { useToastStore } from './toast-store';
+import type { ToastType } from './toast-store';
+import type { Toast } from './toast-store';
 
-type ToastType = 'success' | 'error' | 'warning' | 'info';
 type ToastPosition = 'bottom-right' | 'top-right' | 'top-center' | 'bottom-center';
-
-interface Toast {
-  id: string;
-  type: ToastType;
-  title: string;
-  message?: string;
-  duration?: number;
-}
-
-interface ToastStore {
-  toasts: Toast[];
-  addToast: (toast: Omit<Toast, 'id'>) => void;
-  removeToast: (id: string) => void;
-}
-
-export const useToastStore = create<ToastStore>((set) => ({
-  toasts: [],
-  addToast: (toast) => {
-    const id = Math.random().toString(36).substring(7);
-    set((state) => ({
-      toasts: [...state.toasts, { ...toast, id }],
-    }));
-    const duration = toast.duration || 5000;
-    setTimeout(() => {
-      set((state) => ({
-        toasts: state.toasts.filter((t) => t.id !== id),
-      }));
-    }, duration);
-  },
-  removeToast: (id) => {
-    set((state) => ({
-      toasts: state.toasts.filter((t) => t.id !== id),
-    }));
-  },
-}));
-
-export const toast = {
-  success: (title: string, message?: string) =>
-    useToastStore.getState().addToast({ type: 'success', title, message }),
-  error: (title: string, message?: string) =>
-    useToastStore.getState().addToast({ type: 'error', title, message }),
-  warning: (title: string, message?: string) =>
-    useToastStore.getState().addToast({ type: 'warning', title, message }),
-  info: (title: string, message?: string) =>
-    useToastStore.getState().addToast({ type: 'info', title, message }),
-};
 
 const icons = {
   success: CheckCircle,

@@ -5,7 +5,8 @@ import { RoleUtilisateur } from '@/shared/types';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { AuthLayout } from './layouts/AuthLayout';
 
-// Lazy loading des pages d'authentification
+// Lazy loading des pages
+const AccueilPage = lazy(() => import('./pages/AccueilPage').then(m => ({ default: m.AccueilPage })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const InscriptionChoixPage = lazy(() => import('./pages/InscriptionChoixPage').then(m => ({ default: m.InscriptionChoixPage })));
 const InscriptionEntrepriseUniquePage = lazy(() => import('./pages/InscriptionEntrepriseUniquePage').then(m => ({ default: m.InscriptionEntrepriseUniquePage })));
@@ -60,17 +61,21 @@ function RedirectIfAuthenticated() {
 export function AppRoutes() {
   return (
     <Routes>
-      {/* Routes publiques (non authentifié) — cf. GS-IA-2026-01 §7 */}
+      {/* Page d'accueil publique (pleine largeur, hors AuthLayout) */}
       <Route element={<RedirectIfAuthenticated />}>
+        <Route path="/" element={<Suspense fallback={<PageLoader />}><AccueilPage /></Suspense>} />
+
+        {/* Pages d'authentification simples (layout centré max-w-sm) */}
         <Route element={<AuthLayout />}>
-          <Route path="/" element={<PlaceholderPage title="Accueil" />} />
           <Route path="/login" element={<Suspense fallback={<PageLoader />}><LoginPage /></Suspense>} />
-          <Route path="/inscription" element={<Suspense fallback={<PageLoader />}><InscriptionChoixPage /></Suspense>} />
-          <Route path="/inscription/entreprise-unique" element={<Suspense fallback={<PageLoader />}><InscriptionEntrepriseUniquePage /></Suspense>} />
-          <Route path="/inscription/groupe" element={<Suspense fallback={<PageLoader />}><InscriptionGroupePage /></Suspense>} />
           <Route path="/mot-de-passe-oublie" element={<Suspense fallback={<PageLoader />}><ForgotPasswordPage /></Suspense>} />
           <Route path="/reset-password" element={<Suspense fallback={<PageLoader />}><ResetPasswordPage /></Suspense>} />
         </Route>
+
+        {/* Pages d'inscription (pleine largeur, hors AuthLayout) */}
+        <Route path="/inscription" element={<Suspense fallback={<PageLoader />}><InscriptionChoixPage /></Suspense>} />
+        <Route path="/inscription/entreprise-unique" element={<Suspense fallback={<PageLoader />}><InscriptionEntrepriseUniquePage /></Suspense>} />
+        <Route path="/inscription/groupe" element={<Suspense fallback={<PageLoader />}><InscriptionGroupePage /></Suspense>} />
       </Route>
 
       {/* Routes protégées (authentifié) */}

@@ -6,9 +6,9 @@ import { z } from 'zod';
 import { Mail, ArrowLeft, Send, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
-import { Card, CardContent } from '@/shared/ui/Card';
-import { toast } from '@/shared/ui/Toast';
-import { apiClient, getErrorMessage } from '@/shared/lib/api-client';
+import { Card } from '@/shared/ui/Card';
+import { toast } from '@/shared/ui';
+import { apiClient } from '@/shared/lib/api-client';
 
 const forgotPasswordSchema = z.object({
   email: z
@@ -28,6 +28,7 @@ export function ForgotPasswordPage() {
     formState: { errors, isSubmitting },
   } = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
+    mode: 'onChange',
     defaultValues: { email: '' },
   });
 
