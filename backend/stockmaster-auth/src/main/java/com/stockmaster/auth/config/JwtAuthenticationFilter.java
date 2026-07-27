@@ -67,15 +67,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (ExpiredJwtException e) {
-                log.warn("Token expiré");
-                response.setStatus(401);
-                response.getWriter().write("{\"errorCode\":\"AUTH_004\",\"detail\":\"Token expiré\"}");
-                return;
+                log.warn("Token expiré — poursuite sans authentification (endpoint public si permitAll)");
             } catch (JwtException e) {
-                log.warn("Token invalide: {}", e.getMessage());
-                response.setStatus(401);
-                response.getWriter().write("{\"errorCode\":\"AUTH_005\",\"detail\":\"Token invalide\"}");
-                return;
+                log.warn("Token invalide: {} — poursuite sans authentification", e.getMessage());
             }
         }
 

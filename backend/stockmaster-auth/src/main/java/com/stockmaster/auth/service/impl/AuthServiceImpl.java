@@ -79,7 +79,7 @@ public class AuthServiceImpl implements AuthService {
 
         // Création atomique : TenantGroup + Entreprise + Utilisateur
         TenantGroup groupe = TenantGroup.builder()
-                .nomGroupe(request.getNomBoutique())
+                .nomGroupe(request.getNomEntreprise())
                 .planAbonnement(PlanAbonnement.GRATUIT)
                 .limiteFiliales(1)
                 .actif(true)
@@ -99,8 +99,8 @@ public class AuthServiceImpl implements AuthService {
                 .entreprise(entreprise)
                 .scope(ScopeUtilisateur.GROUPE)
                 .role(RoleUtilisateur.ADMIN_GROUPE)
-                .nom(request.getNom())
-                .prenom(request.getPrenom())
+                .nom(request.getAdminNom())
+                .prenom(request.getAdminPrenom())
                 .email(request.getEmail())
                 .motDePasse(motDePasseHash)
                 .actif(true)

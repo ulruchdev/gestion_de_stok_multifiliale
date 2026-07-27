@@ -93,6 +93,24 @@ Le design system propriétaire StockMaster CM s'inspire des meilleures pratiques
 - **6 existants améliorés :** Button, Input, Badge, Modal, Table, Toast
 - **9 nouveaux :** Card, Avatar, Skeleton, EmptyState, Tabs, Select, SearchInput, DataTable, OfflineBanner
 
+## Décisions techniques (Juillet 2026)
+
+### Rate limiting configurable
+- `stockmaster.rate-limiting.global.max-requests`: 100 req/min/IP (détection de bots)
+- `stockmaster.rate-limiting.endpoints.*`: Configurable par endpoint (login, inscription, refresh, etc.)
+- Plus de constantes hardcodées — tout dans `application.yml`
+
+### JwtAuthenticationFilter — Bugfix endpoints publics
+- Les endpoints `.permitAll()` ne sont plus bloqués si le header `Authorization` contient un token expiré/invalide
+- Le filtre ne retourne plus 401 : il logge et continue sans authentification
+
+### DTO inscription entreprise unique — aligné frontend
+- `nomBoutique` → `nomEntreprise`
+- `ville`/`quartier` retirés (reportés au profil entreprise)
+- `prenom`/`nom` → `adminPrenom`/`adminNom`
+- `nif` ajouté (optionnel)
+- `telephone` ajouté (format E.164 obligatoire)
+
 ## Documents de référence (dans `document/`)
 - `00-fonctionnel/` : analyse fonctionnelle (GS-CDA-2026-01) + addendum décisions (GS-CDA-2026-02)
 - `01-architecture/` : CDCT, modèle de données (GS-DATA), arborescence navigation (GS-IA), séquences critiques (GS-SEQ), DESIGN_TOKENS_REFERENCE.md

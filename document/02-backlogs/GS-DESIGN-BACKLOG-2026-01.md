@@ -31,8 +31,9 @@ Ce backlog découpe la production des livrables UX/UI en user stories de design,
 | US-D005 | En tant que designer, je définis les grilles responsive (mobile-first, breakpoints tablette/desktop) | 3 | **P0** | Grille testée sur 360px (mobile bas de gamme), 768px (tablette), 1280px+ (desktop) — cohérent avec l'accès mobile dominant signalé en §1.4 |
 | US-D006 | En tant que designer, je documente les icônes utilisées (stock, alerte, transfert, facture, utilisateur) | 2 | P1 | Set d'icônes cohérent (lucide-react recommandé — déjà disponible côté frontend React) |
 | US-D007 | En tant que designer, je produis les templates d'état vide, de chargement et d'erreur réseau | 3 | **P0** | Gère explicitement les coupures réseau fréquentes (§1.4) — état "hors ligne" / "resynchronisation" prévu, pas seulement un spinner infini |
+| US-D008 | En tant que designer, je définis le logotype StockMaster (logomark, logotype, variantes, placement) | 2 | **P0** | Logo décliné en 4 variantes contextuelles (landing, sidebar, auth, default) ; tailles sm/md/lg ; cliquable sur toutes les pages sauf si variant=default ; logomark (icône Warehouse) + logotype "StockMaster." présent sur tous les layouts ; accessible (aria-label sur les liens) |
 
-**Sous-total EPIC-D00 : 23 SP**
+**Sous-total EPIC-D00 : 25 SP**
 
 ---
 
@@ -46,7 +47,7 @@ Ce backlog découpe la production des livrables UX/UI en user stories de design,
 | US-D011 | Wireframe + UI : écran de choix du type d'inscription (Entreprise unique vs Groupe) | 2 | **P0** | Les deux options sont présentées sans biais visuel favorisant l'une ou l'autre ; aide contextuelle expliquant la différence |
 | US-D012 | Wireframe + UI : formulaire Entreprise Unique (1 écran) | 3 | **P0** | Formulaire tenant sur un seul écran mobile sans scroll excessif ; validation inline des champs |
 | US-D013 | Wireframe + UI : formulaire Groupe multi-sites (2 blocs) | 3 | **P0** | Les 2 blocs (Groupe / Administrateur) sont visuellement séparés ; progression claire si multi-étapes |
-| US-D014 | Wireframe + UI : écran de connexion + mot de passe oublié | 2 | **P0** | Cohérent avec AUTH-02, AUTH-05 |
+| US-D014 | Wireframe + UI : écran de connexion + mot de passe oublié | 2 | **P0** | Cohérent avec AUTH-02, AUTH-05 ; logo StockMaster affiché en haut du card (via AuthLayout) |
 | US-D015 | Prototype cliquable : parcours d'inscription complet (2 chemins) | 3 | **P0** | Prototype Figma naviguant les 2 chemins A/B de bout en bout, testable en revue client |
 
 **Sous-total EPIC-D01 : 16 SP**
@@ -195,7 +196,7 @@ Ce backlog découpe la production des livrables UX/UI en user stories de design,
 | EPIC-D08 — Groupe/Filiales/Utilisateurs | 10 | P0/P1 | Sprint 1-2 |
 | EPIC-D09 — Statistiques | 9 | P1/P2 | Sprint 7+ |
 | EPIC-D10 — Back-office Super Admin | 8 | P1 | Sprint 8+ |
-| **Total** | **154 SP** | | |
+| **Total** | **156 SP** | | |
 
 **Règle de séquencement critique :** EPIC-D00 (Design System) doit être terminé et validé avant le démarrage de tout autre EPIC design — c'est un prérequis dur, pas une simple priorité haute. Un écran produit sans design system validé sera repris.
 

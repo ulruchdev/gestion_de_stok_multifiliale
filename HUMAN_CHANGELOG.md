@@ -1,3 +1,4 @@
+
 # 📜 HUMAN_CHANGELOG — StockMaster CM
 
 > Journal des changements en langage métier (non technique).
@@ -5,7 +6,22 @@
 
 ## Juillet 2026
 
-### Sprint 0 — Fondations
+### Sprint 2 — Corrections sécurité & alignement DTO (Semaine 3)
+
+- **Rate limiting rendu configurable** : Plus de valeurs hardcodées. Deux niveaux de protection :
+  - **Global** : 100 requêtes/minute/IP pour détecter les bots
+  - **Par endpoint** : login (5/15min), inscription (3/1h), refresh (5/15min), forgot-password (3/15min), reset-password (3/15min), change-password (5/15min)
+  - Tout est modifiable dans `application.yml` via la section `stockmaster.rate-limiting`
+- **Bug JWT critique corrigé** : Les endpoints publics (inscription, mot de passe oublié) ne sont plus bloqués quand le navigateur envoie un token périmé. Le filtre JWT ne retourne plus 401 sur les endpoints `.permitAll()`
+- **DTO inscription entreprise unique aligné avec le frontend** :
+  - `nomBoutique` → `nomEntreprise`
+  - `ville` et `quartier` retirés (seront demandés dans le profil plus tard)
+  - `prenom`/`nom` → `adminPrenom`/`adminNom`
+  - `nif` ajouté (optionnel — les petites boutiques n'ont pas de NIF au Cameroun)
+  - `telephone` ajouté (format international E.164 obligatoire, ex: +237691234567)
+- **Téléphone avec indicatif pays** : `react-phone-number-input` intégré dans le frontend avec sélecteur de pays + détection automatique
+
+### Sprint 1 — Design System StockMaster
 
 - Mise en place de l'architecture Freebuff pour piloter le projet avec des agents spécialisés
 - Initialisation des 6 agents : `session-bootstrap`, `task-architect`, `spring-module-guardian`, `react-frontend-guardian`, `doc-writer`, `git-committer`

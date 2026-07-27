@@ -25,7 +25,11 @@ public class InscriptionGroupeRequest {
     private String nif;
 
     @NotBlank(message = "Le téléphone est obligatoire")
-    @Size(max = 20, message = "Le téléphone ne peut pas dépasser 20 caractères")
+    @Size(max = 16, message = "Le téléphone ne peut pas dépasser 16 caractères")
+    @Pattern(
+        regexp = "^\\+[1-9]\\d{1,14}$",
+        message = "Le numéro de téléphone doit être au format international (ex: +237691234567)"
+    )
     private String telephone;
 
     @NotBlank(message = "L'email de l'entreprise est obligatoire")

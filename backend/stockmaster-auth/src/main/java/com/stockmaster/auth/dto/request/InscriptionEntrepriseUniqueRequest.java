@@ -9,30 +9,33 @@ import lombok.*;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class InscriptionEntrepriseUniqueRequest {
 
-    @NotBlank(message = "Le nom de la boutique est obligatoire")
-    @Size(max = 100, message = "Le nom de la boutique ne peut pas dépasser 100 caractères")
-    private String nomBoutique;
+    @NotBlank(message = "Le nom de l'entreprise est obligatoire")
+    @Size(max = 100, message = "Le nom de l'entreprise ne peut pas dépasser 100 caractères")
+    private String nomEntreprise;
 
-    @NotBlank(message = "La ville est obligatoire")
-    @Size(max = 100)
-    private String ville;
-
-    @NotBlank(message = "Le quartier est obligatoire")
-    @Size(max = 100)
-    private String quartier;
-
-    @NotBlank(message = "Le prénom est obligatoire")
-    @Size(max = 100)
-    private String prenom;
-
-    @NotBlank(message = "Le nom est obligatoire")
-    @Size(max = 100)
-    private String nom;
+    @Size(max = 20, message = "Le NIF ne peut pas dépasser 20 caractères")
+    private String nif;
 
     @NotBlank(message = "L'email est obligatoire")
     @Email(message = "Format d'email invalide")
     @Size(max = 150)
     private String email;
+
+    @NotBlank(message = "Le téléphone est obligatoire")
+    @Size(max = 16, message = "Le téléphone ne peut pas dépasser 16 caractères")
+    @Pattern(
+        regexp = "^\\+[1-9]\\d{1,14}$",
+        message = "Le numéro de téléphone doit être au format international (ex: +237691234567)"
+    )
+    private String telephone;
+
+    @NotBlank(message = "Le nom de l'administrateur est obligatoire")
+    @Size(max = 100)
+    private String adminNom;
+
+    @NotBlank(message = "Le prénom de l'administrateur est obligatoire")
+    @Size(max = 100)
+    private String adminPrenom;
 
     @NotBlank(message = "Le mot de passe est obligatoire")
     @Size(min = 8, max = 50, message = "Le mot de passe doit contenir entre 8 et 50 caractères")

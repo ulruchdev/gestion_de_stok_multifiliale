@@ -25,16 +25,20 @@
 
 | US | Description | Statut | Notes |
 |----|-------------|--------|-------|
-| US-006 | Inscription entreprise unique | ✅ | Fait |
-| US-007 | Inscription groupe | ✅ | Merge effectué (PR #6) — code + tests OK |
-| US-008 | Connexion JWT | ✅ | Fait |
+| US-006 | Inscription entreprise unique | ✅ | Fait + DTO aligné frontend (Juillet 2026) : `nomBoutique`→`nomEntreprise`, `prenom`/`nom`→`adminPrenom`/`adminNom`, ajout `nif`(opt.) + `telephone`(E.164), retrait `ville`/`quartier` |
+| US-007 | Inscription groupe | ✅ | Merge effectué (PR #6) — code + tests OK. Validation téléphone renforcée E.164 |
+| US-008 | Connexion JWT | ✅ | Fait. Rate limiting rendu configurable via properties (stockmaster.rate-limiting) |
 | US-009 | Refresh token | ✅ | Merge effectué |
-| US-010 | Déconnexion | ✅ | Merge effectué |
+| US-010 | Déconnexion | ✅ | Merge effectué. Blacklist JWT vérifiée — correcte (TTL Redis) |
 | US-011 | Mot de passe oublié | ✅ | Merge effectué |
 | US-012 | Réinitialisation mot de passe | ✅ | Merge effectué |
 | US-013 | Changement mot de passe | ✅ | Merge effectué |
 
-## EPIC 3 à 13 — (à compléter par `doc-writer.ts`)
+### Corrections de sécurité (Juillet 2026)
+- **JwtAuthenticationFilter bugfix** : Ne bloque plus les endpoints `.permitAll()` avec un token expiré/invalide (retournait 401 au lieu de continuer la chaîne)
+- **Rate limiting configurable** : `RateLimitProperties.java` avec deux niveaux (global 100 req/min + per-endpoint) — plus de constantes hardcodées
+
+## EPIC 3 à 13 — (non commencé)
 
 ---
 

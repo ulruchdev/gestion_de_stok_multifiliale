@@ -24,7 +24,7 @@ design/
 
 | Livrable | Emplacement |
 |---|---|
-| **15 composants UI** (code) | `frontend/src/shared/ui/` |
+| **16 composants UI** (code) | `frontend/src/shared/ui/` (dont Logo.tsx) |
 | **Tokens CSS** (palette, typo, espacement) | `frontend/src/index.css` |
 | **Configuration Tailwind** (classes utilitaires) | `frontend/tailwind.config.ts` |
 | **Guide des tokens** (documentation) | `document/01-architecture/DESIGN_TOKENS_REFERENCE.md` |
@@ -85,6 +85,7 @@ import { Button, Card, Input, DataTable, ToastContainer } from '@/shared/ui';
 
 | Version | Date | Changements |
 |---------|------|-------------|
+| 1.1.0 | Juillet 2026 | Ajout Logo.tsx — 4 variantes, 3 tailles, intégration dans 7 pages/layouts |
 | 1.0.0 | Juillet 2026 | Design system initial — 15 composants, tokens Stripe-inspired, EPIC-D00 terminé |
 
 ---

@@ -186,6 +186,37 @@ Bannière hors ligne avec 3 états (online/offline/reconnecting). Détection nav
 
 Fichiers mis à jour : HUMAN_CHANGELOG.md, progress-ledger.md, knowledge.md, DESIGN_TOKENS_REFERENCE.md.
 
+### C-028 : Logo.tsx — Composant logotype réutilisable
+
+**Fichier cible :** `frontend/src/shared/ui/Logo.tsx`
+
+**4 variantes contextuelles :**
+
+| Variante | Contexte | Comportement |
+|---|---|---|
+| `default` | Affichage statique (mobile header) | Non cliquable, juste l'icône |
+| `landing` | En-tête de l'accueil publique | Redirige vers `/` |
+| `sidebar` | Navigation latérale dashboard | Redirige vers `/dashboard` |
+| `auth` | Pages d'authentification (login, inscription, forgot/reset) | Redirige vers `/` |
+
+**3 tailles :** sm (icône 20px, boîte 28px), md (20px/32px), lg (24px/40px)
+
+**Propriété `showText` :** `false` pour n'afficher que le logomark (icône Warehouse) sans le logotype "StockMaster."
+
+**Intégration dans toutes les pages :**
+
+| Page/Layout | Variante | Taille | showText |
+|---|---|---|---|
+| `AuthLayout.tsx` — Header | `auth` | md | true |
+| `DashboardLayout.tsx` — Sidebar | `sidebar` | md | true |
+| `DashboardLayout.tsx` — Mobile header | `default` | sm | false |
+| `AccueilPage.tsx` — Header | `landing` | md | true |
+| `InscriptionChoixPage.tsx` — Hero | `auth` | lg | true |
+| `InscriptionEntrepriseUniquePage.tsx` — Titre | `auth` | md | true |
+| `InscriptionGroupePage.tsx` — Titre | `auth` | md | true |
+
+**Design tokens utilisés :** `--brand-primary` (fond du logomark), `--brand-ink` (texte), `--brand-ink` + opacity (sidebar)
+
 ---
 
 ## Progression
@@ -197,7 +228,7 @@ Fichiers mis à jour : HUMAN_CHANGELOG.md, progress-ledger.md, knowledge.md, DES
 | **Phase 3** — Composants UI | ✅ Terminé | C-009 → C-014 |
 | **Phase 4** — Layouts | ✅ Terminé | C-015 → C-016 |
 | **Phase 5** — Nouveaux composants | ✅ Terminé | C-017 → C-025 |
-| **Phase 6** — Validation | ✅ Terminé | C-026 → C-027 |
+| **Phase 6** — Validation | ✅ Terminé | C-026 → C-028 |
 
 > **Build vérifié :** ✅ `vite build` — 1910 modules, 0 erreurs
 > **Toutes les phases sont terminées.** Le design system StockMaster est intégré dans le frontend.
