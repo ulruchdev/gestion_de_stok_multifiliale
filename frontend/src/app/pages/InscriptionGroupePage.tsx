@@ -10,6 +10,7 @@ import {
   Check,
   Eye,
   EyeOff,
+  MapPin,
   Mail,
   Phone,
   User,
@@ -48,6 +49,10 @@ const inscriptionGroupeSchema = z.object({
     .string()
     .min(1, 'Le NIF est requis')
     .max(20, 'Maximum 20 caractères'),
+  villeSiege: z
+    .string()
+    .min(2, 'La ville du siège est requise')
+    .max(100, 'Maximum 100 caractères'),
   email: z
     .string()
     .min(1, "L'email est requis")
@@ -141,6 +146,7 @@ export function InscriptionGroupePage() {
       nomGroupe: '',
       nomEntreprise: '',
       nif: '',
+      villeSiege: '',
       email: '',
       telephone: '',
       adminNom: '',
@@ -155,7 +161,7 @@ export function InscriptionGroupePage() {
       step === 0
         ? ['nomGroupe']
         : step === 1
-          ? ['nomEntreprise', 'nif', 'email', 'telephone']
+          ? ['nomEntreprise', 'nif', 'email', 'telephone', 'villeSiege']
           : ['adminNom', 'adminPrenom', 'adminMotDePasse', 'confirmMotDePasse'];
 
     const isValid = await trigger(fieldsToValidate);
@@ -168,13 +174,14 @@ export function InscriptionGroupePage() {
     try {
       await apiClient.post('/auth/inscription/groupe', {
         nomGroupe: data.nomGroupe,
-        nomEntreprise: data.nomEntreprise,
+        villeSiege: data.villeSiege,
         nif: data.nif,
-        email: data.email,
         telephone: data.telephone,
-        adminNom: data.adminNom,
-        adminPrenom: data.adminPrenom,
-        adminMotDePasse: data.adminMotDePasse,
+        emailEntreprise: data.email,
+        prenom: data.adminPrenom,
+        nom: data.adminNom,
+        emailAdmin: data.email,
+        motDePasse: data.adminMotDePasse,
       });
 
       toast.success('Inscription réussie !', 'Votre groupe a été créé. Vous pouvez maintenant vous connecter.');
@@ -279,6 +286,14 @@ export function InscriptionGroupePage() {
                   disabled={isSubmitting}
                   {...register('nif')}
                 />
+                <Input
+                  label="Ville du siège"
+                  placeholder="Douala"
+                  icon={<MapPin className="h-4 w-4" />}
+                  error={errors.villeSiege?.message}
+                  disabled={isSubmitting}
+                  {...register('villeSiege')}
+                />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Input
                     label="Email professionnel"
@@ -381,6 +396,10 @@ export function InscriptionGroupePage() {
                   <div className="p-3 flex items-center justify-between text-sm">
                     <span className="text-[var(--brand-ink-muted)]">NIF</span>
                     <span className="font-medium text-[var(--brand-ink)]">{watch('nif')}</span>
+                  </div>
+                  <div className="p-3 flex items-center justify-between text-sm">
+                    <span className="text-[var(--brand-ink-muted)]">Siège</span>
+                    <span className="font-medium text-[var(--brand-ink)]">{watch('villeSiege')}</span>
                   </div>
                   <div className="p-3 flex items-center justify-between text-sm">
                     <span className="text-[var(--brand-ink-muted)]">Email</span>
