@@ -94,41 +94,45 @@ stockmaster:
     default-sort: dateCreation,desc
 
   # ========== Rate Limiting ==========
+  # Toutes les valeurs sont pilotées exclusivement par variables d'environnement
+  # (jamais de nombre en dur ici) — voir .env.example pour la liste complète.
+  # Les valeurs par défaut ci-dessous sont les seuils de sécurité réels, pas des
+  # valeurs de test/debug : ne jamais les remplacer par des nombres en dur.
   rate-limiting:
-    enabled: true
+    enabled: ${RATE_LIMIT_ENABLED:true}
     global:
-      enabled: true
-      max-requests: 100
-      window-seconds: 60
+      enabled: ${RATE_LIMIT_GLOBAL_ENABLED:true}
+      max-requests: ${RATE_LIMIT_GLOBAL_MAX_REQUESTS:100}
+      window-seconds: ${RATE_LIMIT_GLOBAL_WINDOW_SECONDS:60}
     endpoints:
       login:
         uri: /api/v1/auth/login
-        max-attempts: 5
-        window-seconds: 900
+        max-attempts: ${RATE_LIMIT_LOGIN_MAX_ATTEMPTS:5}
+        window-seconds: ${RATE_LIMIT_LOGIN_WINDOW_SECONDS:900}
       refresh:
         uri: /api/v1/auth/refresh
-        max-attempts: 5
-        window-seconds: 900
+        max-attempts: ${RATE_LIMIT_REFRESH_MAX_ATTEMPTS:5}
+        window-seconds: ${RATE_LIMIT_REFRESH_WINDOW_SECONDS:900}
       inscription-entreprise-unique:
         uri: /api/v1/auth/inscription/entreprise-unique
-        max-attempts: 3
-        window-seconds: 3600
+        max-attempts: ${RATE_LIMIT_INSCRIPTION_ENTREPRISE_MAX_ATTEMPTS:3}
+        window-seconds: ${RATE_LIMIT_INSCRIPTION_ENTREPRISE_WINDOW_SECONDS:3600}
       inscription-groupe:
         uri: /api/v1/auth/inscription/groupe
-        max-attempts: 3
-        window-seconds: 3600
+        max-attempts: ${RATE_LIMIT_INSCRIPTION_GROUPE_MAX_ATTEMPTS:3}
+        window-seconds: ${RATE_LIMIT_INSCRIPTION_GROUPE_WINDOW_SECONDS:3600}
       forgot-password:
         uri: /api/v1/auth/forgot-password
-        max-attempts: 3
-        window-seconds: 900
+        max-attempts: ${RATE_LIMIT_FORGOT_PASSWORD_MAX_ATTEMPTS:3}
+        window-seconds: ${RATE_LIMIT_FORGOT_PASSWORD_WINDOW_SECONDS:900}
       reset-password:
         uri: /api/v1/auth/reset-password
-        max-attempts: 3
-        window-seconds: 900
+        max-attempts: ${RATE_LIMIT_RESET_PASSWORD_MAX_ATTEMPTS:3}
+        window-seconds: ${RATE_LIMIT_RESET_PASSWORD_WINDOW_SECONDS:900}
       change-password:
         uri: /api/v1/auth/change-password
-        max-attempts: 5
-        window-seconds: 900
+        max-attempts: ${RATE_LIMIT_CHANGE_PASSWORD_MAX_ATTEMPTS:5}
+        window-seconds: ${RATE_LIMIT_CHANGE_PASSWORD_WINDOW_SECONDS:900}
 
 # ========== Logging ==========
 logging:
