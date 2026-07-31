@@ -180,13 +180,25 @@ jobs:
           name: jacoco-report
           path: .
 
+      - name: Détecter les modules avec du code réel
+        id: modules
+        run: |
+          MODULES=$(for d in */; do
+            m="${d%/}"
+            if [ -d "$m/src/main/java" ] && find "$m/src/main/java" -name "*.java" -print -quit | grep -q .; then
+              echo "$m"
+            fi
+          done | paste -sd,)
+          echo "Modules détectés avec du code : $MODULES"
+          echo "list=$MODULES" >> "$GITHUB_OUTPUT"
+
       - name: SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >
           mvn install -DskipTests sonar:sonar
-          -pl stockmaster-shared,stockmaster-auth,stockmaster-bootstrap -am
+          -pl ${{ steps.modules.outputs.list }} -am
           -Dsonar.organization=ulruchdev
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.projectKey=gestion_de_stok_multifiliale

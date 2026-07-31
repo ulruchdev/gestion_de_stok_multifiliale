@@ -71,8 +71,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Deploy to staging server
-        if: github.ref == 'refs/heads/main'
-        continue-on-error: true
+        # Gelé : environnement de staging non configuré (pas de STAGING_HOST/STAGING_USER/STAGING_SSH_KEY réels).
+        # Décision (juillet 2026) : se concentrer sur le code/la qualité avant le déploiement.
+        # Pour réactiver : retirer ce `if: false` une fois les secrets de staging réellement configurés.
+        if: false
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.STAGING_HOST }}

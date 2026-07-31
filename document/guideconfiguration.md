@@ -56,7 +56,7 @@ Ce guide liste **toutes les configurations** (internes et externes) nécessaires
 
 ## 1.1 Profils Spring (dev / test / prod)
 
-**Fichier :** `stockmaster-shared/src/main/resources/application.yml`
+**Fichier :** `stockmaster-bootstrap/src/main/resources/application.yml`
 **US :** US-001
 
 ### Profil `dev` (développement local)
@@ -94,7 +94,7 @@ Ce guide liste **toutes les configurations** (internes et externes) nécessaires
 
 ## 1.2 JWT — Propriétés
 
-**Fichier :** `stockmaster-shared/src/main/resources/application.yml`
+**Fichier :** `stockmaster-bootstrap/src/main/resources/application.yml`
 **Classe :** `com.stockmaster.shared.config.JwtProperties`
 **US :** US-001, US-008
 
@@ -109,7 +109,7 @@ Ce guide liste **toutes les configurations** (internes et externes) nécessaires
 
 ## 1.3 CORS
 
-**Fichier :** `stockmaster-shared/src/main/resources/application.yml`
+**Fichier :** `stockmaster-bootstrap/src/main/resources/application.yml`
 **Classe :** `com.stockmaster.shared.config.CorsProperties`
 **US :** US-001
 
@@ -124,7 +124,7 @@ Ce guide liste **toutes les configurations** (internes et externes) nécessaires
 
 ## 1.4 Pagination
 
-**Fichier :** `stockmaster-shared/src/main/resources/application.yml`
+**Fichier :** `stockmaster-bootstrap/src/main/resources/application.yml`
 **Classe :** `com.stockmaster.shared.config.PaginationProperties`
 
 | Propriété | Valeur |
@@ -168,7 +168,7 @@ Ce guide liste **toutes les configurations** (internes et externes) nécessaires
 
 ## 1.6 Flyway — Migrations
 
-**Fichier :** `stockmaster-shared/src/main/resources/application.yml`
+**Fichier :** `stockmaster-bootstrap/src/main/resources/application.yml`
 **Scripts :** `stockmaster-shared/src/main/resources/db/migration/`
 **US :** US-002
 

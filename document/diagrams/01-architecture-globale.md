@@ -1,5 +1,7 @@
 # 01 — Architecture Globale du Systeme
 
+> ⚠️ **Statut d'implémentation :** ce diagramme décrit l'architecture **cible**. Seuls `stockmaster-shared`, `stockmaster-auth` et `stockmaster-bootstrap` contiennent du code réel à ce jour — tous les autres modules référencés ici (`groupe`, `utilisateur`, `catalogue`, `tiers`, `achat`, `stock`, `vente`, `notification`, `reporting`) sont des stubs vides (arborescence de packages sans classes). Voir `knowledge.md` et `document/03-pilotage/progress-ledger.md` pour l'état réel.
+
 ```mermaid
 graph TB
     subgraph Frontend["Frontend React (Vite)"]

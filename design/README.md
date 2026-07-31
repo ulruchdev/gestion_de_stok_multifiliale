@@ -12,9 +12,7 @@ design/
 ├── README.md                          ← Vous êtes ici
 ├── sources/                           ← Design system source et inspirations
 │   └── Design-System-Inspired-by-*    ← Fichiers source du design system (références)
-├── references/                        ← Bibliothèques de référence
-│   ├── awesome-design-md.zip          ← 50+ design systems de référence
-│   └── awesome-design-md-1.zip        ← (copie)
+│       └── extracted-design-md/awesome-design-md/design-md/{marque}/DESIGN.md  ← 75 design systems de référence, en clair (lisibles par un agent)
 └── rules/                             ← Règles design (à venir)
 ```
 
@@ -31,7 +29,7 @@ design/
 | **Backlog design** (US-D001 à D007) | `document/02-backlogs/GS-DESIGN-BACKLOG-2026-01.md` |
 | **Suivi des corrections** | `document/02-backlogs/DESIGN_CORRECTIONS.md` |
 | **Design system source** (HTML/CSS de référence) | `design/sources/` |
-| **Bibliothèque awesome-design-md** | `design/references/awesome-design-md.zip` |
+| **Bibliothèque awesome-design-md** (75 marques, en clair) | `design/sources/Design-System-Inspired-by-Stripe-Design-System-final/extracted-design-md/awesome-design-md/design-md/` |
 | **Rapport d'analyse design** | Voir historique conversation Freebuff |
 
 ---

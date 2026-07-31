@@ -2,6 +2,8 @@
 ### Référence : GS-DESIGN-BACKLOG-2026-01 | Version : 1.0 | Date : Juillet 2026 | Statut : Proposé
 ### Documents parents : GS-CDA-2026-01 (analyse fonctionnelle), GS-IA-2026-01 (architecture de l'information), BACKLOG_StockMaster_CM.md (backend)
 
+> ⚠️ **Statut : gate Figma superseded.** Ce document décrivait un workflow Figma-first avec un gate bloquant (voir §1, §2, §5 ci-dessous) qui n'a en réalité jamais été suivi : faute de designer, la décision opérationnelle a été de coder le design system directement (« le code = le design », voir `design/README.md`). EPIC-D00 et EPIC-F01 sont d'ailleurs déjà ✅ terminés dans `progress-ledger.md` sans qu'aucune maquette Figma n'ait existé. Les mentions de blocage/gate Figma ci-dessous sont conservées pour traçabilité de la décision initiale, mais **ne s'appliquent plus** — aucun agent ne doit bloquer un développement frontend en attendant une maquette Figma.
+
 ---
 
 ## 1. Objet et portée
@@ -10,7 +12,7 @@ Ce backlog découpe la production des livrables UX/UI en user stories de design,
 
 **Ce backlog ne remplace pas GS-IA-2026-01** (l'arborescence) : il en est la suite opérationnelle — chaque écran listé ici correspond à un nœud de l'arborescence GS-IA-2026-01.
 
-**Outil de production recommandé :** Figma (composants réutilisables, gestion de tokens, prototypage cliquable, hand-off développeur via Dev Mode). Aucun outil n'est actuellement en place dans le projet — c'est le premier blocage à lever avant EPIC-D01.
+**Outil de production recommandé (obsolète, non suivi) :** Figma (composants réutilisables, gestion de tokens, prototypage cliquable, hand-off développeur via Dev Mode). ~~Aucun outil n'est actuellement en place dans le projet — c'est le premier blocage à lever avant EPIC-D01.~~ **En pratique :** aucun outil Figma n'a été mis en place, et ce n'est plus considéré comme un blocage — le design system est produit directement en code (`frontend/src/shared/ui/`, `frontend/src/index.css`).
 
 **Convention de nommage :** `US-D0XX` (D = Design) pour distinguer des `US-0XX` backend déjà utilisés dans `BACKLOG_StockMaster_CM.md`.
 
@@ -200,13 +202,13 @@ Ce backlog découpe la production des livrables UX/UI en user stories de design,
 | EPIC-D10 — Back-office Super Admin | 8 | P1 | Sprint 8+ |
 | **Total** | **160 SP** | | |
 
-**Règle de séquencement critique :** EPIC-D00 (Design System) doit être terminé et validé avant le démarrage de tout autre EPIC design — c'est un prérequis dur, pas une simple priorité haute. Un écran produit sans design system validé sera repris.
+**Règle de séquencement critique (obsolète, non suivie) :** EPIC-D00 (Design System) doit être terminé et validé avant le démarrage de tout autre EPIC design — c'est un prérequis dur, pas une simple priorité haute. Un écran produit sans design system validé sera repris. **En pratique :** EPIC-D00 a bien été fait en premier (✅ terminé, `progress-ledger.md`), mais directement en code — pas via une validation Figma formelle.
 
 ---
 
 ## 14. Lien avec le backlog frontend
 
-Chaque écran livré ici (Figma, avec spécifications de Dev Mode : espacements, couleurs en tokens, comportements d'interaction) est l'**entrée** de la user story frontend correspondante dans `GS-FRONTEND-BACKLOG-2026-01.md`. Aucun développement frontend d'un écran ne doit démarrer sans que la maquette correspondante soit au statut "Validée" — voir `GS-RACI-2026-01_matrice_livraison.md` pour le séquencement inter-équipes formel.
+**(Obsolète, non suivi)** Chaque écran livré ici (Figma, avec spécifications de Dev Mode : espacements, couleurs en tokens, comportements d'interaction) est l'**entrée** de la user story frontend correspondante dans `GS-FRONTEND-BACKLOG-2026-01.md`. ~~Aucun développement frontend d'un écran ne doit démarrer sans que la maquette correspondante soit au statut "Validée"~~ — **en pratique**, le développement frontend démarre directement contre le design system codé (`frontend/src/shared/ui/`), sans étape de validation Figma intermédiaire. Voir `GS-RACI-2026-01_matrice_livraison.md` pour le séquencement inter-équipes formel, à lire lui aussi avec cette réserve.
 
 ---
 

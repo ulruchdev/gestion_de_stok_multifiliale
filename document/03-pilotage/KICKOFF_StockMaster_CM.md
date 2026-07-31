@@ -80,7 +80,7 @@ gestion_de_stok_multifiliale/
 
 **Corrections appliquées dans la session de correction documentaire du 10/07/2026 :**
 - ✅ Supprimer/remplacer `document/analyse_fonctionnelle_stockmaster_cm (1).md` — fichier CBS en trop, déjà en staged.
-- ✅ ~~Renuméroter dans `BACKLOG_StockMaster_CM.md` les US sécurité `US-014-017` en `US-081-084`~~ — effectué dans la v1.1 du backlog.
+- ✅ ~~Renuméroter dans `BACKLOG_StockMaster_CM.md` les US sécurité `US-014-017` en `US-083-086`~~ — effectué (juillet 2026). **Correction :** cette ligne annonçait la renumérotation comme faite dès la v1.1, mais elle ne l'était pas — le backlog contenait toujours `US-014-017` en doublon avec l'EPIC 3 (Groupe). La cible initialement prévue (`US-081-084`) était elle-même devenue invalide entre-temps : `US-081`/`US-082` ont été réattribués à d'autres US réelles (branding, unicité entreprises — cette dernière déjà mergée, commit `c3dc635`). Renumérotation effective vers `US-083-086`, seule plage libre.
 - ✅ ~~Corriger `GS-SEQ-2026-01` §4 : `/api/v1/transferts` → `/api/v1/groupe/transferts`~~ — effectué.
 - ✅ ~~Corriger les endpoints dans `GS-FRONTEND-BACKLOG-2026-01.md` : `/auth/register/` → `/auth/inscription/`~~ — effectué (v1.1).
 - ✅ ~~Purger la contradiction dans `GS-RACI-2026-01.md` sur son propre statut~~ — effectué.
@@ -135,8 +135,8 @@ gestion_de_stok_multifiliale/
 | Sprint | Dates indicatives | Ulrich | Stephan | Siko |
 |---|---|---|---|---|
 | **Semaine 0** *(cette semaine, avant Sprint 1)* | Demain → +5j | Merge des 5 PR en attente + PR de réorganisation `document/` (§1) + corrige le fichier CBS mal placé + push la v1.1 du backlog | Onboarding sur le code existant (review des PR avec Ulrich) + `npm create vite@latest frontend -- --template react-ts` + config Tailwind/shadcn/ESLint/Prettier (US-F001) | **EPIC-D00 Design System (23 SP), seul** — bloquant, personne ne peut faire de maquette avant que ce soit validé |
-| **Sprint 1** | +2 sem | Sécurité P0 : US-081 (RTR) + US-083 (fail-closed) | EPIC-F00 suite : client Axios (US-F004), routing + garde de rôle (US-F005), state auth (US-F006) — contre l'API auth déjà réelle (US-006/008 mergées) | Fin D00, démarre **EPIC-D01 Onboarding public (16 SP)** |
-| **Sprint 2** | +2 sem | Sécurité P1 restante (US-082 Argon2id, US-084 logs) + démarre **EPIC 3 Groupe/Filiales** (US-014-017 canonique) | Layout par rôle (US-F007) avec Siko dès D01 validé, démarre intégration écrans onboarding contre mock | Finalise D01, démarre **EPIC-D08 Groupe/Filiales/Utilisateurs** (10 SP) |
+| **Sprint 1** | +2 sem | Sécurité P0 : US-083 (RTR) + US-085 (fail-closed) | EPIC-F00 suite : client Axios (US-F004), routing + garde de rôle (US-F005), state auth (US-F006) — contre l'API auth déjà réelle (US-006/008 mergées) | Fin D00, démarre **EPIC-D01 Onboarding public (16 SP)** |
+| **Sprint 2** | +2 sem | Sécurité P1 restante (US-084 Argon2id, US-086 logs) + démarre **EPIC 3 Groupe/Filiales** (US-014-017 canonique) | Layout par rôle (US-F007) avec Siko dès D01 validé, démarre intégration écrans onboarding contre mock | Finalise D01, démarre **EPIC-D08 Groupe/Filiales/Utilisateurs** (10 SP) |
 | **Sprint 3** | +2 sem | Fin EPIC 3 (US-018-020, dashboard consolidé) | Intègre onboarding contre API réelle (G4 rempli), démarre EPIC-F08 | **EPIC-D03 Catalogue** (14 SP) |
 | **Sprint 4** | +2 sem | **EPIC 4 Utilisateurs** (US-021-026) | EPIC-F08 (contre mock D08), renfort sur F00 restant | Fin D03, **EPIC-D04 Tiers** (9 SP) |
 | **Sprint 5** | +2 sem | **EPIC 5 Catalogue** (US-027-035) | EPIC-F03 Catalogue (mock D03 → réel), F04 Tiers | **EPIC-D02 Dashboards** (14 SP) |

@@ -425,13 +425,18 @@ CREATE TABLE ligne_commande_client (
 
 -- --------------------------------------------------------
 
+-- ⚠️ Schéma cible mis à jour suite à GS-CDA-2026-02 (décision validée, juillet 2026) :
+-- statut remplace annulee (booléen), client_id ajouté (nullable).
+-- Migration Flyway réelle (V5) PAS ENCORE créée — à faire au démarrage du module stockmaster-vente.
+-- La migration V1 actuellement appliquée en base contient encore l'ancien schéma (annulee BOOLEAN, sans client_id).
 CREATE TABLE vente (
     id                BIGSERIAL PRIMARY KEY,
     entreprise_id     BIGINT      NOT NULL REFERENCES entreprise(id) ON DELETE RESTRICT,
     utilisateur_id    BIGINT      NOT NULL REFERENCES utilisateur(id) ON DELETE RESTRICT,
+    client_id         BIGINT      REFERENCES client(id) ON DELETE RESTRICT,
     code              VARCHAR(30) NOT NULL,
     date_vente        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    annulee           BOOLEAN     NOT NULL DEFAULT FALSE,
+    statut            VARCHAR(20) NOT NULL DEFAULT 'VALIDEE' CHECK (statut IN ('VALIDEE','ANNULEE')),
     commentaire       TEXT,
     date_creation     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     date_modification TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -481,7 +486,7 @@ CREATE TABLE mouvement_stock (
     article_id        BIGINT      NOT NULL REFERENCES article(id) ON DELETE RESTRICT,
     type_mouvement    VARCHAR(30) NOT NULL CHECK (type_mouvement IN (
                           'ENTREE','SORTIE','CORRECTION_POS','CORRECTION_NEG',
-                          'TRANSFERT_ENTREE','TRANSFERT_SORTIE')),
+                          'TRANSFERT_ENTREE','TRANSFERT_SORTIE','ANNULATION_VENTE')),
     quantite          INTEGER     NOT NULL CHECK (quantite > 0),
     date_mouvement    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     utilisateur_id    BIGINT      NOT NULL REFERENCES utilisateur(id) ON DELETE RESTRICT,
@@ -775,7 +780,8 @@ erDiagram
         bigint id PK
         bigint entreprise_id FK
         bigint utilisateur_id FK
-        boolean annulee
+        bigint client_id FK
+        varchar statut
     }
 
     LIGNE_VENTE {

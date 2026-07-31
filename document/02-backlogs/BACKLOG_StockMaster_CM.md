@@ -413,7 +413,7 @@
 
 ---
 
-### US-014 — Rotation du Refresh Token avec détection de rejeu
+### US-083 — Rotation du Refresh Token avec détection de rejeu
 
 **Priorité :** P0 | **Sprint :** 3 | **Points :** 5
 
@@ -433,7 +433,7 @@
 
 ---
 
-### US-015 — Hachage des mots de passe en Argon2id
+### US-084 — Hachage des mots de passe en Argon2id
 
 **Priorité :** P1 | **Sprint :** 3 | **Points :** 3
 
@@ -451,7 +451,7 @@
 
 ---
 
-### US-016 — Comportement fail-closed en cas d'indisponibilité de Redis
+### US-085 — Comportement fail-closed en cas d'indisponibilité de Redis
 
 **Priorité :** P0 | **Sprint :** 3 | **Points :** 3
 
@@ -469,7 +469,7 @@
 
 ---
 
-### US-017 — Logs d'audit structurés pour les événements d'authentification
+### US-086 — Logs d'audit structurés pour les événements d'authentification
 
 **Priorité :** P1 | **Sprint :** 3 | **Points :** 3
 
@@ -478,7 +478,7 @@
 **afin de** pouvoir investiguer un incident de sécurité et, à terme, brancher un outil de supervision (ELK, Datadog ou équivalent) sans réécrire l'instrumentation.
 
 **Critères d'acceptation :**
-- [ ] Chaque connexion réussie/échouée, déconnexion, changement de mot de passe, reset de mot de passe, et détection de rejeu de refresh token (US-014) génère un log JSON structuré : `{ "event": "auth.login_success", "userId", "entrepriseId", "ip", "timestamp" }` (adapter le champ `event` selon le cas)
+- [ ] Chaque connexion réussie/échouée, déconnexion, changement de mot de passe, reset de mot de passe, et détection de rejeu de refresh token (US-083) génère un log JSON structuré : `{ "event": "auth.login_success", "userId", "entrepriseId", "ip", "timestamp" }` (adapter le champ `event` selon le cas)
 - [ ] **Jamais** de mot de passe, token complet, ou secret dans un log, à aucun niveau
 - [ ] Les logs d'échec de connexion incluent un compteur de tentatives consécutives (aide au diagnostic sans consulter Redis)
 - [ ] Format et champs documentés dans le CDCT (section Observabilité) pour préparer un branchement futur vers un SIEM externe
@@ -1953,7 +1953,7 @@
 | **Sprint 1** | 2 sem. | US-001 à US-005 | 19 | Fondations techniques, CI/CD, Docker |
 | **Sprint 2** | 2 sem. | US-006 à US-012 | 21 | Authentification complète P0 |
 | **Sprint 3** | 2 sem. | US-013 à US-021, US-074 | 22 | Groupe, Filiales, Utilisateurs, Email bienvenue |
-| **Sprint 3 (sécu)** | inclus | US-014 à US-017 *(nouveau — GS-CDA-2026-02)* | +14 | Rotation refresh token, Argon2id, fail-closed, audit logs |
+| **Sprint 3 (sécu)** | inclus | US-083 à US-086 *(nouveau — GS-CDA-2026-02)* | +14 | Rotation refresh token, Argon2id, fail-closed, audit logs |
 | **Sprint 4** | 2 sem. | US-019, US-022 à US-026, US-075 | 20 | Employés, Profil, Activation |
 | **Sprint 5** | 2 sem. | US-027 à US-043 | 24 | Catalogue complet, Clients, Fournisseurs |
 | **Sprint 6** | 2 sem. | US-044 à US-050 | 23 | Cycle d'achat complet avec mouvements ENTREE |
@@ -1969,7 +1969,7 @@
 **Total P2 :** 4 user stories — 12 points estimés
 **Total backlog :** **82 user stories** | **291 story points**
 
-> **Changelog GS-CDA-2026-02 (voir addendum dédié)** : +5 US, +18 points par rapport à la version 1.0 — US-014 à US-017 (durcissement sécurité auth) et US-064b (fidélité client sur vente directe) ajoutées ; US-064 et US-067 revues en profondeur (comportement non bloquant + mouvement `ANNULATION_VENTE` dédié).
+> **Changelog GS-CDA-2026-02 (voir addendum dédié)** : +5 US, +18 points par rapport à la version 1.0 — US-083 à US-086 (durcissement sécurité auth) et US-064b (fidélité client sur vente directe) ajoutées ; US-064 et US-067 revues en profondeur (comportement non bloquant + mouvement `ANNULATION_VENTE` dédié).
 
 ---
 

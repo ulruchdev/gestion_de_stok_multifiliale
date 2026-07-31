@@ -3,6 +3,8 @@
 > **Référence :** GS-ARCH-2026-01 | **Version :** 1.0 | **Date :** Juillet 2026  
 > **Conformité :** Backlog 13 EPICs, CDCT sections 21-30, décisions GS-CDA-2026-02
 
+> ⚠️ **Statut d'implémentation :** ce document décrit l'architecture **cible**. Seuls `stockmaster-shared`, `stockmaster-auth` et `stockmaster-bootstrap` contiennent du code réel à ce jour — tous les autres modules référencés ici (`groupe`, `utilisateur`, `catalogue`, `tiers`, `achat`, `stock`, `vente`, `notification`, `reporting`) sont des stubs vides (arborescence de packages sans classes). Voir `knowledge.md` et `document/03-pilotage/progress-ledger.md` pour l'état réel.
+
 ---
 
 ## 1. Vue d'ensemble — Monolithe Modulaire (11 + 2 modules)

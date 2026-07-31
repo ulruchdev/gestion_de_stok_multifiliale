@@ -83,7 +83,7 @@ graph TD
     style Verify fill:#FF9800,color:white
 ```
 
-## Flux Refresh Token avec Rotation (US-014)
+## Flux Refresh Token avec Rotation (US-083)
 
 ```mermaid
 graph TD

@@ -81,7 +81,7 @@ erDiagram
         string nom
         string prenom
         string email
-        string mot_de_passe "BCrypt puis Argon2id (US-015)"
+        string mot_de_passe "BCrypt puis Argon2id (US-084)"
         string photo
         boolean actif
         date date_naissance

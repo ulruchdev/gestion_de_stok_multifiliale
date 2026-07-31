@@ -44,17 +44,17 @@ Ce document reprend le programme en 5 phases que tu as fourni et l'applique conc
 
 ### Sécurité & conformité — application concrète à StockMaster CM
 
-Le document de bonnes pratiques que tu as fourni (OAuth2/OIDC via IdP externe, Vault, Kong, Datadog/SIEM) décrit l'architecture d'une grande entreprise avec une équipe SRE dédiée. StockMaster CM est un backend Spring Boot monolithe modulaire pour une PME SaaS — appliquer ces pratiques **telles quelles** serait disproportionné (Keycloak/Vault/Kong ajouteraient une charge opérationnelle que le projet n'a pas les moyens d'absorber aujourd'hui). Voici la traduction **pragmatique** de chaque principe, déjà intégrée au backlog (EPIC 2, US-014 à US-017 — GS-CDA-2026-02) :
+Le document de bonnes pratiques que tu as fourni (OAuth2/OIDC via IdP externe, Vault, Kong, Datadog/SIEM) décrit l'architecture d'une grande entreprise avec une équipe SRE dédiée. StockMaster CM est un backend Spring Boot monolithe modulaire pour une PME SaaS — appliquer ces pratiques **telles quelles** serait disproportionné (Keycloak/Vault/Kong ajouteraient une charge opérationnelle que le projet n'a pas les moyens d'absorber aujourd'hui). Voici la traduction **pragmatique** de chaque principe, déjà intégrée au backlog (EPIC 2, US-083 à US-086 — GS-CDA-2026-02) :
 
 | Principe (doc fourni) | Équivalent StockMaster CM | Statut |
 |---|---|---|
 | IdP externe (Keycloak/Okta) + JWKS | JWT interne signé HS256 (`jjwt`), suffisant tant qu'il n'y a pas de besoin de SSO multi-produits | ✅ décision assumée, pas un gap |
-| Argon2id pour le hachage | US-015 — migration BCrypt → Argon2id avec `DelegatingPasswordEncoder` | ⚠️ à développer |
-| Rotation des Refresh Tokens (RTR) + détection de rejeu | US-014 | ⚠️ à développer (c'était le vrai trou identifié) |
+| Argon2id pour le hachage | US-084 — migration BCrypt → Argon2id avec `DelegatingPasswordEncoder` | ⚠️ à développer |
+| Rotation des Refresh Tokens (RTR) + détection de rejeu | US-083 | ⚠️ à développer (c'était le vrai trou identifié) |
 | Vault / Secrets Manager externe | Variables d'environnement `.env` (déjà en place) — un vrai secret manager (Doppler, Infisical, ou AWS Secrets Manager si migration cloud) est une amélioration V2, pas un blocage MVP | ⚠️ acceptable pour le MVP, à revisiter à la croissance |
-| API Gateway + WAF (Kong/Cloudflare) | Rate limiting applicatif Redis déjà en place (login) — étendre aux autres endpoints publics (US-016 pose les bases fail-closed). Un WAF gratuit (Cloudflare, si le domaine y est proxifié) est un ajout peu coûteux en défense en profondeur, recommandé mais non bloquant | ⚠️ recommandé, non bloquant |
-| SIEM (Splunk/Datadog/ELK) | US-017 — logs structurés JSON, sans données sensibles, prêts à être branchés sur un ELK/Datadog plus tard sans réinstrumentation | ⚠️ à développer (préparation seulement, pas de SIEM complet nécessaire au MVP) |
-| Fail-closed sur les composants de sécurité | US-016 | ⚠️ à développer |
+| API Gateway + WAF (Kong/Cloudflare) | Rate limiting applicatif Redis déjà en place (login) — étendre aux autres endpoints publics (US-085 pose les bases fail-closed). Un WAF gratuit (Cloudflare, si le domaine y est proxifié) est un ajout peu coûteux en défense en profondeur, recommandé mais non bloquant | ⚠️ recommandé, non bloquant |
+| SIEM (Splunk/Datadog/ELK) | US-086 — logs structurés JSON, sans données sensibles, prêts à être branchés sur un ELK/Datadog plus tard sans réinstrumentation | ⚠️ à développer (préparation seulement, pas de SIEM complet nécessaire au MVP) |
+| Fail-closed sur les composants de sécurité | US-085 | ⚠️ à développer |
 | Zéro Trust / moindre privilège | Déjà appliqué via `@PreAuthorize` par rôle sur chaque endpoint (backlog) + isolation multi-tenant stricte (§8.6 GS-CDA-2026-01) | ✅ |
 
 **RGPD / protection des données — à formaliser (nouveau, non couvert actuellement) :**
@@ -95,12 +95,12 @@ Le document de bonnes pratiques que tu as fourni (OAuth2/OIDC via IdP externe, V
 | Correctif | Détail |
 |---|---|
 | **Postman** | 16 occurrences de `pm.environment.*` remplacées par `pm.collectionVariables.*` dans `postman_collection.json` — les variables (`current_email`, `access_token`, `refresh_token`, etc.) sont déclarées au niveau collection, pas dans un environnement Postman séparé. Chaîne de tests automatisée désormais fonctionnelle. |
-| **Backlog** | US-064, US-064b (nouveau), US-067 mis à jour ; US-014 à US-017 (sécurité) ajoutées à l'EPIC 2 — voir `GS-BACKLOG-2026-01` v1.1 |
+| **Backlog** | US-064, US-064b (nouveau), US-067 mis à jour ; US-083 à US-086 (sécurité) ajoutées à l'EPIC 2 — voir `GS-BACKLOG-2026-01` v1.1 |
 | **Décisions métier** | Formalisées dans `GS-CDA-2026-02_addendum_decisions_validees.md` |
 
 ## Prochaines étapes suggérées
 
 1. Valider ou ajuster les KPI proposés en Phase 1 (le seul point qui demande vraiment ton arbitrage métier, le reste est actionnable directement).
-2. Développer US-014 à US-017 (sécurité auth) — priorité P0/P1, à placer en Sprint 3 comme indiqué dans le backlog révisé.
+2. Développer US-083 à US-086 (sécurité auth) — priorité P0/P1, à placer en Sprint 3 comme indiqué dans le backlog révisé.
 3. Développer US-064, US-064b, US-067 revus.
 4. Trancher les points 3 et 4 encore ouverts de notre revue précédente (RBAC Commercial sur Vente Directe, commande fournisseur centralisée groupe) — je peux les traiter avec le même format dès que tu es prêt.

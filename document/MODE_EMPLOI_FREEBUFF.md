@@ -15,7 +15,8 @@ Tous les fichiers Freebuff sont en place :
 
 ```
 gestion_de_stok_multifiliale/
-├── knowledge.md                              ← Mis à jour avec tableau des 6 agents
+├── knowledge.md                              ← Source de vérité unique (Freebuff ET Claude Code via CLAUDE.md → @knowledge.md)
+├── CLAUDE.md                                 ← Auto-chargé par Claude Code, importe knowledge.md (ne pas dupliquer son contenu)
 ├── .agents/
 │   ├── types/agent-definition.ts             ← Type AgentDefinition créé
 │   ├── session-bootstrap.ts                  ← Ancrage anti-hallucination
@@ -26,13 +27,14 @@ gestion_de_stok_multifiliale/
 │   └── git-committer.ts                      ← Commiteur conventionnel (jamais push auto)
 ├── document/
 │   ├── HUMAN_CHANGELOG.md                    ← Journal métier créé
-│   ├── knowledge.md                          ← Règles + agents + workflow
 │   ├── MODE_EMPLOI_FREEBUFF.md               ← Ce fichier
 │   └── 03-pilotage/progress-ledger.md        ← Suivi d'avancement créé
 └── .gitignore                                ← S'assurer que .env y est
 ```
 
 `TECHNICAL_CHANGELOG.md` existe déjà sous `document/implementation.md` — `doc-writer.ts` écrit dedans.
+
+> **Historique :** `document/knowledge.md` a existé un temps en parallèle du `knowledge.md` racine (contenu divergent, risque de dérive). Il a été fusionné dans le fichier racine et supprimé — `knowledge.md` (racine) est désormais la seule copie, lue automatiquement par Freebuff (convention Codebuff) et par Claude Code (via `CLAUDE.md`).
 
 ### Pourquoi `session-bootstrap` et pas juste `knowledge.md`
 
