@@ -171,7 +171,7 @@ export function InscriptionEntrepriseUniquePage() {
         telephone: data.telephone,
         adminNom: data.adminNom,
         adminPrenom: data.adminPrenom,
-        adminMotDePasse: data.adminMotDePasse,
+        motDePasse: data.adminMotDePasse,
       });
 
       toast.success('Inscription réussie !', 'Votre compte a été créé. Vous pouvez maintenant vous connecter.');

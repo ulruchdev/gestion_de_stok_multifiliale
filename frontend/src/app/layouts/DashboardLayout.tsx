@@ -2,7 +2,6 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth';
 import { RoleUtilisateur } from '@/shared/types';
 import { Logo } from '@/shared/ui/Logo';
-import { ToastContainer } from '@/shared/ui/Toast';
 import {
   LayoutDashboard,
   Building2,
@@ -188,8 +187,6 @@ export function DashboardLayout() {
         </main>
       </div>
 
-      {/* Toast notifications */}
-      <ToastContainer />
     </div>
   );
 }
