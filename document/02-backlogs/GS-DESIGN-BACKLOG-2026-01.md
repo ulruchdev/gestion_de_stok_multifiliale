@@ -149,8 +149,10 @@ Ce backlog découpe la production des livrables UX/UI en user stories de design,
 | US-D081 | Wireframe + UI : liste et création d'utilisateur (avec sélection de rôle métier) | 3 | **P0** | Sélecteur de rôle avec description courte de chaque rôle (aide à la décision pour l'admin) |
 | US-D082 | Wireframe + UI : paramètres groupe (logo, devise, infos fiscales) | 2 | P1 | — |
 | US-D083 | Wireframe + UI : profil utilisateur (édition infos personnelles, mot de passe) | 2 | P1 | — |
+| US-D110 | Wireframe + UI : paramètres entreprise — branding personnalisable (logo uploadé + titre) | 2 | P1 | Upload avec prévisualisation, fallback logo StockMaster si absent, respect des variantes Logo (US-D008) — alimente US-F110/US-F111 |
+| US-D111 | UI : états d'erreur d'unicité à l'inscription (NIF/téléphone/email/nom déjà utilisés) | 2 | **P0** | Message d'erreur inline par champ (couleur destructive) + toast global (US-D007) — pattern documenté pour tous les futurs formulaires avec unicité (code article, code filiale...) |
 
-**Sous-total EPIC-D08 : 10 SP**
+**Sous-total EPIC-D08 : 14 SP**
 
 ---
 
@@ -193,10 +195,10 @@ Ce backlog découpe la production des livrables UX/UI en user stories de design,
 | EPIC-D05 — Commandes fournisseur | 13 | P0 | Sprint 4 |
 | EPIC-D06 — Commandes client & Caisse | 20 | P0 | Sprint 4-5 |
 | EPIC-D07 — Stock | 18 | P0/P1 | Sprint 5-6 |
-| EPIC-D08 — Groupe/Filiales/Utilisateurs | 10 | P0/P1 | Sprint 1-2 |
+| EPIC-D08 — Groupe/Filiales/Utilisateurs | 14 | P0/P1 | Sprint 1-2 |
 | EPIC-D09 — Statistiques | 9 | P1/P2 | Sprint 7+ |
 | EPIC-D10 — Back-office Super Admin | 8 | P1 | Sprint 8+ |
-| **Total** | **156 SP** | | |
+| **Total** | **160 SP** | | |
 
 **Règle de séquencement critique :** EPIC-D00 (Design System) doit être terminé et validé avant le démarrage de tout autre EPIC design — c'est un prérequis dur, pas une simple priorité haute. Un écran produit sans design system validé sera repris.
 

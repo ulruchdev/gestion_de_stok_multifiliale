@@ -218,6 +218,70 @@ class AuthServiceImplTest {
             verify(entrepriseRepository, never()).save(any());
             verify(utilisateurRepository, never()).save(any());
         }
+
+        @Test
+        @DisplayName("❌ Lève BusinessException GRP_DUPLICATE_NOM_GROUPE quand le nom d'entreprise existe déjà")
+        void shouldThrowWhenNomGroupeAlreadyExists() {
+            // Arrange
+            when(tenantGroupRepository.existsByNomGroupe(inscriptionUniqueRequest.getNomEntreprise())).thenReturn(true);
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.inscrireEntrepriseUnique(inscriptionUniqueRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GRP_DUPLICATE_NOM_GROUPE);
+
+            verify(tenantGroupRepository, never()).save(any());
+            verify(entrepriseRepository, never()).save(any());
+            verify(utilisateurRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("❌ Lève BusinessException RES_DUPLICATE_NIF quand le NIF existe déjà")
+        void shouldThrowWhenNifAlreadyExists() {
+            // Arrange
+            when(entrepriseRepository.existsByNifAndSupprimeFalse(inscriptionUniqueRequest.getNif())).thenReturn(true);
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.inscrireEntrepriseUnique(inscriptionUniqueRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_DUPLICATE_NIF);
+
+            verify(tenantGroupRepository, never()).save(any());
+            verify(entrepriseRepository, never()).save(any());
+            verify(utilisateurRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("❌ Lève BusinessException RES_DUPLICATE_TELEPHONE quand le téléphone existe déjà")
+        void shouldThrowWhenTelephoneAlreadyExists() {
+            // Arrange
+            when(entrepriseRepository.existsByTelephoneAndSupprimeFalse(inscriptionUniqueRequest.getTelephone())).thenReturn(true);
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.inscrireEntrepriseUnique(inscriptionUniqueRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_DUPLICATE_TELEPHONE);
+
+            verify(tenantGroupRepository, never()).save(any());
+            verify(entrepriseRepository, never()).save(any());
+            verify(utilisateurRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("❌ Lève BusinessException RES_DUPLICATE_EMAIL quand l'email entreprise existe déjà (flux unique)")
+        void shouldThrowWhenEmailEntrepriseAlreadyExists() {
+            // Arrange
+            when(entrepriseRepository.existsByEmailAndSupprimeFalse(inscriptionUniqueRequest.getEmail())).thenReturn(true);
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.inscrireEntrepriseUnique(inscriptionUniqueRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_DUPLICATE_EMAIL);
+
+            verify(tenantGroupRepository, never()).save(any());
+            verify(entrepriseRepository, never()).save(any());
+            verify(utilisateurRepository, never()).save(any());
+        }
     }
 
     // ========================================================================
@@ -322,6 +386,70 @@ class AuthServiceImplTest {
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_EMAIL_ALREADY_EXISTS)
                     .hasMessageContaining("déjà utilisé");
+
+            verify(tenantGroupRepository, never()).save(any());
+            verify(entrepriseRepository, never()).save(any());
+            verify(utilisateurRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("❌ Lève BusinessException GRP_DUPLICATE_NOM_GROUPE quand le nom du groupe existe déjà")
+        void shouldThrowWhenNomGroupeAlreadyExists() {
+            // Arrange
+            when(tenantGroupRepository.existsByNomGroupe(inscriptionGroupeRequest.getNomGroupe())).thenReturn(true);
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.inscrireGroupe(inscriptionGroupeRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GRP_DUPLICATE_NOM_GROUPE);
+
+            verify(tenantGroupRepository, never()).save(any());
+            verify(entrepriseRepository, never()).save(any());
+            verify(utilisateurRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("❌ Lève BusinessException RES_DUPLICATE_NIF quand le NIF existe déjà (groupe)")
+        void shouldThrowWhenNifAlreadyExists() {
+            // Arrange
+            when(entrepriseRepository.existsByNifAndSupprimeFalse(inscriptionGroupeRequest.getNif())).thenReturn(true);
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.inscrireGroupe(inscriptionGroupeRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_DUPLICATE_NIF);
+
+            verify(tenantGroupRepository, never()).save(any());
+            verify(entrepriseRepository, never()).save(any());
+            verify(utilisateurRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("❌ Lève BusinessException RES_DUPLICATE_TELEPHONE quand le téléphone existe déjà (groupe)")
+        void shouldThrowWhenTelephoneAlreadyExists() {
+            // Arrange
+            when(entrepriseRepository.existsByTelephoneAndSupprimeFalse(inscriptionGroupeRequest.getTelephone())).thenReturn(true);
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.inscrireGroupe(inscriptionGroupeRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_DUPLICATE_TELEPHONE);
+
+            verify(tenantGroupRepository, never()).save(any());
+            verify(entrepriseRepository, never()).save(any());
+            verify(utilisateurRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("❌ Lève BusinessException RES_DUPLICATE_EMAIL quand l'email entreprise existe déjà")
+        void shouldThrowWhenEmailEntrepriseAlreadyExists() {
+            // Arrange
+            when(entrepriseRepository.existsByEmailAndSupprimeFalse(inscriptionGroupeRequest.getEmailEntreprise())).thenReturn(true);
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.inscrireGroupe(inscriptionGroupeRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_DUPLICATE_EMAIL);
 
             verify(tenantGroupRepository, never()).save(any());
             verify(entrepriseRepository, never()).save(any());

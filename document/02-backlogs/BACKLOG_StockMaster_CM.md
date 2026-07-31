@@ -243,6 +243,30 @@
 
 ---
 
+### US-082 — Unicité stricte des entreprises à l'inscription (NIF, téléphone, email entreprise, nom groupe)
+
+**Priorité :** P0 | **Sprint :** 11 (add.) | **Points :** 3
+
+> **Ajout post-planification (juillet 2026)** — audité et priorisé P0 lors de l'audit d'unicité.
+
+**En tant que** gérant ou dirigeant d'entreprise,
+**je veux** que deux entreprises ne puissent pas être inscrites avec les mêmes informations clés d'identification,
+**afin de** garantir qu'aucune structure ne soit dupliquée dans la plateforme (fraude, erreur de saisie, double enregistrement).
+
+> **Contexte (audit juillet 2026) :** Seule l'unicité de l'email admin est aujourd'hui vérifiée (`existsByEmail` + contrainte `uq_utilisateur_email`). Le NIF (clé légale au Cameroun), le téléphone et l'email de l'entreprise n'ont **aucun** contrôle — une même entreprise peut être inscrite deux fois. Le `existsByNomGroupe` de `TenantGroupRepository` existe mais n'est **jamais appelé** dans le service : un doublon de nom lèverait une `DataIntegrityViolationException` → 500 au lieu d'un 409 propre.
+
+**Critères d'acceptation :**
+- [ ] `EntrepriseRepository` : ajout de `existsByNif`, `existsByTelephone`, `existsByEmailEntreprise`
+- [ ] `AuthServiceImpl.inscrireEntrepriseUnique` et `inscrireGroupe` : vérifier AVANT insertion → 409 `RES_DUPLICATE_*` avec message par champ : NIF déjà utilisé, téléphone déjà utilisé, email entreprise déjà utilisé, nom de groupe déjà utilisé (`tenantGroupRepository.existsByNomGroupe`)
+- [ ] Contrainte DB (V4 migration) : index UNIQUE partiel `uq_entreprise_nif_actif` sur `nif` WHERE `supprime = false`, idem téléphone et email — compatible soft-delete
+- [ ] `Utilisateur.email` reste unique au niveau plateforme (déjà en place)
+- [ ] Le frontend affiche l'erreur 409 par champ (toast + inline) — cf. US-F112
+- [ ] Tests unitaires + contrôleur : chaque doublon → 409, pas de 500
+
+**Endpoints :** `POST /api/v1/auth/inscription/entreprise-unique`, `POST /api/v1/auth/inscription/groupe` (durcissement)
+
+---
+
 ### US-008 — Connexion JWT
 
 **Priorité :** P0 | **Sprint :** 2 | **Points :** 3
@@ -520,6 +544,37 @@
   "region": "Littoral",
   "pays": "Cameroun"
 }
+```
+
+---
+
+### US-081 — Personnaliser le branding de l'entreprise (logo & titre)
+
+**Priorité :** P1 | **Sprint :** 11 (add.) | **Points :** 3
+
+> **Ajout post-planification (juillet 2026)** — audité et priorisé P1 lors de l'audit branding.
+
+**En tant qu'** Admin Groupe ou Admin Filiale,
+**je veux** personnaliser le logo et le titre affichés dans l'interface de mon entreprise,
+**afin que** mes utilisateurs voient l'identité visuelle de mon entreprise (et non le branding générique StockMaster) partout dans l'application.
+
+> **Contexte (audit juillet 2026) :** Le schéma DB est prêt (colonne `logo` VARCHAR(500) sur `entreprise`), mais : (1) aucun endpoint ne permet de le mettre à jour, (2) `AuthMapper` ignore le champ `logo` à la création (`@Mapping(target = "logo", ignore = true)`), (3) le composant frontend `Logo.tsx` est statique (icône `Warehouse` + texte "StockMaster" en dur).
+>
+> **Relation avec US-014 :** US-014 (EPIC 3) couvre le logo au **niveau groupe** (`PUT /api/v1/groupe`). Cette US-081 traite le branding **au niveau entreprise/filiale** (`PATCH /entreprises/{id}/branding`) — les deux se complètent : le logo du groupe sert de fallback, le logo de l'entreprise (ou de la filiale) le surcharge. Ne pas dupliquer la logique d'upload (réutiliser le service MinIO commun).
+
+**Critères d'acceptation :**
+- [ ] Endpoint `PATCH /api/v1/entreprises/{id}/branding` — corps : `{ "logo": "<URL MinIO>", "titre": "Ma Boutique" }`, `@PreAuthorize` admin de l'entreprise concernée + isolation multi-tenant (l'admin ne modifie que SON entreprise)
+- [ ] `AuthMapper` : retirer `ignore = true` sur `logo` pour mapper le champ à la création (US-006/US-007) — valeur par défaut `null` si absent
+- [ ] Upload du fichier logo vers MinIO (bucket dédié `branding`), URL persistante stockée en base — validation type (PNG/JPG/SVG) et taille (max 2 Mo)
+- [ ] GET `entreprise/profil` retourne `logo` et `titre` (fallback : `nom` de l'entreprise)
+- [ ] Frontend : composant `Logo` dynamique (cf. US-F110) + page Paramètres (cf. US-F111)
+- [ ] Tests : controller + service branding, upload fichier, isolation tenant
+
+**Endpoint :** `PATCH /api/v1/entreprises/{id}/branding`
+
+**Corps de la requête :**
+```json
+{ "logo": "https://minio/branding/12/logo.png", "titre": "Épicerie Centrale" }
 ```
 
 ---
@@ -1907,11 +1962,12 @@
 | **Sprint 9** | 2 sem. | US-063, US-067 *(revu, 3→5 pts)*, US-072 à US-073, US-075 | 16 | Facture PDF, Annulation vente (mouvement compensatoire dédié), Centre alertes |
 | **Sprint 10** | 2 sem. | US-076 à US-079 | 14 | Reporting et statistiques P1 |
 | **Sprint 11** | 2 sem. | US-080 | 3 | Export CSV P2 |
+| **Sprint 11 (add.)** | inclus | US-081, US-082 *(nouveau — GS-UNICITE-2026-07)* | 6 | Branding entreprise, Unicité stricte |
 
-**Total P0 :** 51 user stories — 183 points estimés
-**Total P1 :** 25 user stories — 90 points estimés
+**Total P0 :** 52 user stories — 186 points estimés
+**Total P1 :** 26 user stories — 93 points estimés
 **Total P2 :** 4 user stories — 12 points estimés
-**Total backlog :** **80 user stories** | **285 story points**
+**Total backlog :** **82 user stories** | **291 story points**
 
 > **Changelog GS-CDA-2026-02 (voir addendum dédié)** : +5 US, +18 points par rapport à la version 1.0 — US-014 à US-017 (durcissement sécurité auth) et US-064b (fidélité client sur vente directe) ajoutées ; US-064 et US-067 revues en profondeur (comportement non bloquant + mouvement `ANNULATION_VENTE` dédié).
 

@@ -6,6 +6,17 @@
 
 ## Juillet 2026
 
+### Sprint 3 — Unicité stricte des entreprises (US-082)
+
+- **Une entreprise ne peut plus être enregistrée deux fois avec les mêmes informations** :
+  - Le **NIF** (numéro fiscal camerounais) est désormais contrôlé — un NIF déjà utilisé est refusé
+  - Le **téléphone** est désormais contrôlé — un numéro déjà utilisé est refusé
+  - L'**email de l'entreprise** est désormais contrôlé
+  - Le **nom de l'entreprise/groupe** est désormais contrôlé (il l'était déjà en base, mais l'erreur renvoyée était confuse : 500 au lieu de 409)
+- **Messages d'erreur clairs** : chaque cas renvoie une erreur 409 « déjà utilisé » avec un code dédié, que le frontend pourra afficher sous le bon champ
+- **Garde-fou en base de données** : des index UNIQUE partiels garantissent l'unicité même si le logiciel échouait — et restent compatibles avec la suppression douce (soft-delete)
+- **Base de test nettoyée** : les anciennes données de test en double ont été purgées
+
 ### Sprint 2 — Corrections sécurité & alignement DTO (Semaine 3)
 
 - **Rate limiting rendu configurable** : Plus de valeurs hardcodées. Deux niveaux de protection :

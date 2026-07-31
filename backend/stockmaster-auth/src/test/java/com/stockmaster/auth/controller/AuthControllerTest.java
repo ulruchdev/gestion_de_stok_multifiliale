@@ -169,6 +169,34 @@ class AuthControllerTest {
         }
 
         @Test
+        @DisplayName("409 CONFLICT — nom d'entreprise déjà existant (nom groupe)")
+        void shouldReturn409WhenNomGroupeAlreadyExists() throws Exception {
+            when(authService.inscrireEntrepriseUnique(any(InscriptionEntrepriseUniqueRequest.class)))
+                    .thenThrow(new BusinessException(ErrorCode.GRP_DUPLICATE_NOM_GROUPE));
+
+            mockMvc.perform(post("/api/v1/auth/inscription/entreprise-unique")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(inscriptionUniqueRequest))
+                            .with(csrf()))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.errorCode").value("GRP_004"));
+        }
+
+        @Test
+        @DisplayName("409 CONFLICT — NIF déjà existant")
+        void shouldReturn409WhenNifAlreadyExists() throws Exception {
+            when(authService.inscrireEntrepriseUnique(any(InscriptionEntrepriseUniqueRequest.class)))
+                    .thenThrow(new BusinessException(ErrorCode.RES_DUPLICATE_NIF));
+
+            mockMvc.perform(post("/api/v1/auth/inscription/entreprise-unique")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(inscriptionUniqueRequest))
+                            .with(csrf()))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.errorCode").value("RES_006"));
+        }
+
+        @Test
         @DisplayName("400 BAD REQUEST — corps vide")
         void shouldReturn400WhenEmptyBody() throws Exception {
             mockMvc.perform(post("/api/v1/auth/inscription/entreprise-unique")
@@ -258,6 +286,34 @@ class AuthControllerTest {
                             .with(csrf()))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.errorCode").value("AUTH_008"));
+        }
+
+        @Test
+        @DisplayName("409 CONFLICT — nom de groupe déjà existant")
+        void shouldReturn409WhenNomGroupeAlreadyExists() throws Exception {
+            when(authService.inscrireGroupe(any(InscriptionGroupeRequest.class)))
+                    .thenThrow(new BusinessException(ErrorCode.GRP_DUPLICATE_NOM_GROUPE));
+
+            mockMvc.perform(post("/api/v1/auth/inscription/groupe")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(inscriptionGroupeRequest))
+                            .with(csrf()))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.errorCode").value("GRP_004"));
+        }
+
+        @Test
+        @DisplayName("409 CONFLICT — email entreprise déjà existant")
+        void shouldReturn409WhenEmailEntrepriseAlreadyExists() throws Exception {
+            when(authService.inscrireGroupe(any(InscriptionGroupeRequest.class)))
+                    .thenThrow(new BusinessException(ErrorCode.RES_DUPLICATE_EMAIL));
+
+            mockMvc.perform(post("/api/v1/auth/inscription/groupe")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(inscriptionGroupeRequest))
+                            .with(csrf()))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.errorCode").value("RES_003"));
         }
 
         @Test

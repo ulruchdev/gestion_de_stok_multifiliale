@@ -86,6 +86,8 @@ ehthumbs_vista.db
 *.stackdump
 Desktop.ini
 $RECYCLE.BIN/
+# Artefact Windows (redirection > nul dans PowerShell)
+nul
 
 # =======================================
 # Environnement & secrets

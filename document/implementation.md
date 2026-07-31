@@ -72,8 +72,9 @@ main ─────────────────────────
 | 22 | `df5759f` | `ci(GS-002): remove OWASP Dependency Check from CI (401 Sonatype API)` | 1 modifié | ✅ |
 | 23 | `ca031de` | `ci(GS-002): remove OWASP Dependency Check from CI (401 Sonatype API)` | 1 modifié | ✅ |
 | 24 | `02b441c` | `fix(GS-004): exclude SQL migrations from SonarCloud analysis` | 1 modifié | ✅ |
+| 25 | `67c795b` | `feat(GS-082): unicité stricte des entreprises à l'inscription (NIF, téléphone, email, nom groupe)` | 13 fichiers | ✅ |
 
-**Total :** 24 commits (22 uniques), + ~8 500 lignes, ~85 fichiers
+**Total :** 25 commits, + ~8 900 lignes, ~97 fichiers
 
 ⚠️ **Modifications locales non commitées :** Suppression Testcontainers, activation JaCoCo
 
@@ -508,6 +509,46 @@ main ─────────────────────────
 
 ---
 
+## US-082 — Unicité stricte des entreprises à l'inscription ✅
+
+> **Statut :** TERMINÉ — Commit `67c795b`
+> **Priorité :** P0 | **Sprint :** 11 (add.) | **Points :** 3
+> **Ajout post-planification :** juillet 2026 (audit d'unicité)
+> **Endpoints :** `POST /api/v1/auth/inscription/entreprise-unique` + `POST /api/v1/auth/inscription/groupe`
+
+### Contexte
+
+L'audit d'unicité a révélé que seul l'email admin était contrôlé. Le **NIF**, le **téléphone** et l'**email entreprise** n'avaient aucun contrôle (→ doublons possibles), et `existsByNomGroupe` existait dans le repository mais n'était **jamais appelé** → une inscription avec un nom de groupe en double provoquait un `DataIntegrityViolation` → **500** au lieu d'un 409 propre.
+
+### Changements
+
+| Fichier | Changement |
+|---|---|
+| `ErrorCode.java` | + `RES_DUPLICATE_NIF` (RES_006), `RES_DUPLICATE_TELEPHONE` (RES_007), `GRP_DUPLICATE_NOM_GROUPE` (GRP_004) — tous HTTP 409 |
+| `EntrepriseRepository.java` | + `existsByNifAndSupprimeFalse` / `existsByTelephoneAndSupprimeFalse` / `existsByEmailAndSupprimeFalse` |
+| `AuthServiceImpl.java` | Contrôles d'unicité dans les 2 flux : **nomGroupe → NIF → téléphone → email entreprise → email admin** + normalisation NIF `blank→null` avant persistance |
+| `V4__add_entreprise_unique_indexes.sql` | 3 index UNIQUE partiels `WHERE supprime = FALSE AND col IS NOT NULL` (nif, telephone, email) |
+| `V4_rollback_unique_indexes.sql` | Rollback (3 DROP INDEX) |
+| `AuthServiceImplTest.java` | + 8 tests d'unicité (nomGroupe/NIF/téléphone/email entreprise dans les 2 flux) |
+| `AuthControllerTest.java` | + 3 tests 409 (GRP_004, RES_006, RES_003) |
+
+### Logique métier
+
+1. Ordre des contrôles dans `inscrireEntrepriseUnique` et `inscrireGroupe` : nom du groupe → NIF → téléphone → email entreprise → email admin
+2. Unicité **globale** par design métier (NIF national, téléphone, email entreprise = uniques à l'échelle du pays)
+3. Index partiels compatibles soft-delete : les lignes `supprime = TRUE` ou `NULL` ne sont pas contraintes
+4. Normalisation NIF : chaîne vide `""` → `NULL` (évite un 500 sur la 2ᵉ inscription avec `nif=""`)
+5. `existsByNomGroupe` enfin appelé → 409 `GRP_DUPLICATE_NOM_GROUPE` au lieu du 500 précédent
+
+### Validation
+
+- `mvn test -pl stockmaster-auth -am` → **BUILD SUCCESS, 71 tests, 0 échec**
+- Migration V4 appliquée sur la DB de dev (PostgreSQL 16) : `flyway_schema_history` v4, `success=t`
+- Enforcement testé en transaction rollback : `unique_violation` confirmé sur `uq_entreprise_nif_actif` et `uq_entreprise_email_actif`
+- DB de dev purgée des données de test en doublon (13 entreprises / 13 utilisateurs / 13 groupes)
+
+---
+
 # EPIC 3 à 13 — Modules métier
 
 | Module | Fichiers Java | Statut |
@@ -522,7 +563,7 @@ main ─────────────────────────
 | `stockmaster-notification` | 0 | 🔜 Non commencé |
 | `stockmaster-reporting` | 0 | 🔜 Non commencé |
 
-**US concernées :** US-014 à US-080 (67 user stories)
+**US concernées :** US-014 à US-082 (69 user stories, dont US-081/082 ajoutées post-planification)
 
 ---
 
@@ -545,13 +586,14 @@ main ─────────────────────────
 | **US-011** | Mot de passe oublié | 🚧 Implémenté | feature/GS-011-forgot-password | `0008438` | ✅ | 6 | +130 |
 | **US-012** | Réinitialisation mot de passe | ✅ Terminé | feature/GS-012-reset-password | `dd5e823` | ✅ | 7 | +150 |
 | **US-013** | Changement mot de passe | 🚧 Implémenté | feature/GS-013-change-password | — | — | 6 | +180 |
+| **US-082** | Unicité stricte des entreprises (NIF/téléphone/email/nom groupe) | ✅ Terminé | main | `67c795b` | ✅ | 13 | +409 |
 | **US-014 à 080** | EPIC 3 à 13 (67 US) | 🔜 Non commencé | — | — | — | — | — |
 
 ### Par branche — Statut de merge
 
 | Branche | Commit HEAD | Mergée dans `main` |
 |---|---|---|
-| `main` | `dd5e823` | ✅ Branche de référence (US-012 mergée) |
+| `main` | `67c795b` | ✅ Branche de référence (US-082 incluse) |
 | `feature/GS-001-initialize-spring-boot-project` | `0357763` | ✅ Mergée |
 | `feature/GS-002-flyway-migrations` | `df5759f` | ✅ Mergée (PR #3) |
 | `feature/GS-003-centralized-error-handling` | `c03bff2` | ✅ Mergée (PR #1) |
@@ -568,13 +610,13 @@ main ─────────────────────────
 
 | Métrique | Valeur |
 |---|---|
-| US terminées | 9 sur 75 (US-001 à US-012) |
+| US terminées | 10 sur 82 (US-001 à US-012, US-082) |
 | US en attente de PR | 4 (US-009, US-010, US-011, US-013) |
 | US non commencées | 62 |
 | Total commits (sur main) | 24 |
 | Total fichiers créés/modifiés | ~95 |
 | Total lignes de code | ~10 000 |
-| Tests unitaires auth | **59** (23 service tests + 36 contrôleur tests) |
+| Tests unitaires auth | **71** (service tests + contrôleur tests) |
 | Tests unitaires shared | 18 |
 | Branches créées | 12 (8 mergées + 4 actives: GS-009, GS-010, GS-011, GS-013) |
 | Modules avec code + tests | 2 sur 11 (shared + auth) |
@@ -593,7 +635,7 @@ main ─────────────────────────
 
 > **Règle de gestion du journal :** Ce fichier doit être mis à jour à chaque nouveau commit mergé dans `main`.
 > La section de la US modifiée doit refléter le hash du commit et le statut de merge.
-> **Prochaine mise à jour prévue :** Après implémentation de US-013 (Change Password — Sprint 3, P1, 2pts).
+> **Prochaine mise à jour prévue :** Après implémentation de US-081 (Branding entreprise — Sprint 11 add.).
 
 ---
 

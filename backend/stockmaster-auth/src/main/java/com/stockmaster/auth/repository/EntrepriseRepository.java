@@ -4,4 +4,10 @@ import com.stockmaster.auth.domain.entity.Entreprise;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface EntrepriseRepository extends JpaRepository<Entreprise, Long> {
+
+    boolean existsByNifAndSupprimeFalse(String nif);
+
+    boolean existsByTelephoneAndSupprimeFalse(String telephone);
+
+    boolean existsByEmailAndSupprimeFalse(String email);
 }

@@ -31,6 +31,8 @@ public enum ErrorCode {
     RES_ENTITY_NOT_FOUND("RES_001", "Ressource non trouvée", 404),
     RES_DUPLICATE_CODE("RES_002", "Ce code existe déjà", 409),
     RES_DUPLICATE_EMAIL("RES_003", "Cet email existe déjà", 409),
+    RES_DUPLICATE_NIF("RES_006", "Ce NIF est déjà utilisé", 409),
+    RES_DUPLICATE_TELEPHONE("RES_007", "Ce numéro de téléphone est déjà utilisé", 409),
     RES_DUPLICATE_FILIALE_CODE("RES_004", "Ce code filiale existe déjà dans le groupe", 409),
     RES_ENTITY_HAS_DEPENDENCIES("RES_005", "Cette ressource a des dépendances et ne peut pas être supprimée", 409),
 
@@ -43,6 +45,7 @@ public enum ErrorCode {
     GRP_FILIALE_LIMIT_REACHED("GRP_001", "Limite de filiales atteinte pour votre plan d'abonnement", 403),
     GRP_CROSS_GROUP_FORBIDDEN("GRP_002", "Opération interdite entre des groupes différents", 403),
     GRP_SAME_SOURCE_AND_TARGET("GRP_003", "La filiale source et la filiale cible doivent être différentes", 400),
+    GRP_DUPLICATE_NOM_GROUPE("GRP_004", "Ce nom de groupe est déjà utilisé", 409),
 
     // ========== STK — Stock ==========
     STK_INSUFFICIENT_STOCK("STK_001", "Stock insuffisant pour réaliser cette opération", 409),

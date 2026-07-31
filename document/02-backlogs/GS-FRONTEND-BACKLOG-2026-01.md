@@ -174,8 +174,11 @@
 | US-F081 | Liste et création d'utilisateur avec sélection de rôle | 5 | **P0** | Le sélecteur de rôle n'affiche que les rôles que l'utilisateur connecté a le droit d'attribuer (Admin Groupe ne crée pas d'Admin Filiale d'une autre filiale, etc.) |
 | US-F082 | Paramètres groupe (logo, devise, infos fiscales) | 3 | P1 | — |
 | US-F083 | Profil utilisateur (édition infos, mot de passe) | 3 | P1 | — |
+| US-F110 | Composant `Logo` dynamique personnalisable par entreprise | 3 | P1 | Le composant `Logo.tsx` (aujourd'hui statique : icône Warehouse + texte "StockMaster") lit le branding depuis le store/contexte entreprise (`logo` + `titre`) et affiche le logo uploadé s'il existe, sinon le fallback StockMaster — appliqué partout (AuthLayout, DashboardLayout, pages auth, sidebar) |
+| US-F111 | Page Paramètres entreprise (branding : logo + titre) + intégration `PATCH /api/v1/entreprises/{id}/branding` | 3 | P1 | Formulaire avec upload logo (prévisualisation, validation type PNG/JPG/SVG, max 2 Mo) + champ titre ; toast succès/erreur (US-F003) ; correspond à US-D110 et US-081 |
+| US-F112 | Gestion des erreurs 409 d'unicité par champ dans les formulaires d'inscription | 3 | **P0** | L'erreur 409 (NIF/téléphone/email/nom déjà utilisé) s'affiche en toast global (App.tsx) ET inline sur le champ concerné via `getFieldErrors` — complète US-F012/US-F013 qui ne géraient que l'email |
 
-**Sous-total EPIC-F08 : 16 SP**
+**Sous-total EPIC-F08 : 25 SP**
 
 ---
 
@@ -221,10 +224,10 @@
 | EPIC-F05 — Commandes fournisseur | 17 | P0 | EPIC-D05 |
 | EPIC-F06 — Commandes client & Caisse | 30 | P0 | EPIC-D06 |
 | EPIC-F07 — Stock | 23 | P0/P1 | EPIC-D07 |
-| EPIC-F08 — Groupe/Filiales/Utilisateurs | 16 | P0/P1 | EPIC-D08 |
+| EPIC-F08 — Groupe/Filiales/Utilisateurs | 25 | P0/P1 | EPIC-D08 |
 | EPIC-F09 — Statistiques | 13 | P1/P2 | EPIC-D09 |
 | EPIC-F10 — Back-office Super Admin | 15 | P1 | EPIC-D10 |
-| **Total** | **237 SP** | | |
+| **Total** | **246 SP** | | |
 
 ---
 

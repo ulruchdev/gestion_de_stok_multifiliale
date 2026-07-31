@@ -70,7 +70,34 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(rollbackFor = Exception.class)
     public InscriptionResponse inscrireEntrepriseUnique(InscriptionEntrepriseUniqueRequest request) {
 
-        // Vérifier unicité email
+        // Vérifier unicité du nom d'entreprise (utilisé comme nom de groupe)
+        if (tenantGroupRepository.existsByNomGroupe(request.getNomEntreprise())) {
+            log.warn("Tentative d'inscription avec un nom d'entreprise existant: {}", request.getNomEntreprise());
+            throw new BusinessException(ErrorCode.GRP_DUPLICATE_NOM_GROUPE);
+        }
+
+        // Vérifier unicité du NIF (si renseigné)
+        if (request.getNif() != null && !request.getNif().isBlank()
+                && entrepriseRepository.existsByNifAndSupprimeFalse(request.getNif())) {
+            log.warn("Tentative d'inscription avec un NIF existant: {}", request.getNif());
+            throw new BusinessException(ErrorCode.RES_DUPLICATE_NIF);
+        }
+
+        // Vérifier unicité du téléphone
+        if (request.getTelephone() != null && !request.getTelephone().isBlank()
+                && entrepriseRepository.existsByTelephoneAndSupprimeFalse(request.getTelephone())) {
+            log.warn("Tentative d'inscription avec un téléphone existant: {}", request.getTelephone());
+            throw new BusinessException(ErrorCode.RES_DUPLICATE_TELEPHONE);
+        }
+
+        // Vérifier unicité de l'email de l'entreprise (dans ce flux, l'email admin
+        // est aussi utilisé comme email de l'entreprise — cf. AuthMapper.toEntreprise)
+        if (entrepriseRepository.existsByEmailAndSupprimeFalse(request.getEmail())) {
+            log.warn("Tentative d'inscription avec un email entreprise existant: {}", request.getEmail());
+            throw new BusinessException(ErrorCode.RES_DUPLICATE_EMAIL);
+        }
+
+        // Vérifier unicité email admin
         if (utilisateurRepository.existsByEmail(request.getEmail())) {
             log.warn("Tentative d'inscription avec un email existant: {}", request.getEmail());
             throw new BusinessException(ErrorCode.AUTH_EMAIL_ALREADY_EXISTS,
@@ -88,6 +115,11 @@ public class AuthServiceImpl implements AuthService {
         log.debug("TenantGroup créé: id={}", groupe.getId());
 
         Entreprise entreprise = authMapper.toEntreprise(request);
+        // Normaliser le NIF optionnel : blank → null (sinon l'index UNIQUE partiel
+        // rejetterait une 2e inscription avec nif="" par une violation → 500)
+        if (entreprise.getNif() != null && entreprise.getNif().isBlank()) {
+            entreprise.setNif(null);
+        }
         entreprise.setGroupe(groupe);
         entreprise.setTypeEntreprise(TypeEntreprise.MERE);
         entreprise = entrepriseRepository.save(entreprise);
@@ -133,6 +165,33 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(rollbackFor = Exception.class)
     public InscriptionResponse inscrireGroupe(InscriptionGroupeRequest request) {
 
+        // Vérifier unicité du nom de groupe
+        if (tenantGroupRepository.existsByNomGroupe(request.getNomGroupe())) {
+            log.warn("Tentative d'inscription groupe avec un nom de groupe existant: {}", request.getNomGroupe());
+            throw new BusinessException(ErrorCode.GRP_DUPLICATE_NOM_GROUPE);
+        }
+
+        // Vérifier unicité du NIF (si renseigné)
+        if (request.getNif() != null && !request.getNif().isBlank()
+                && entrepriseRepository.existsByNifAndSupprimeFalse(request.getNif())) {
+            log.warn("Tentative d'inscription groupe avec un NIF existant: {}", request.getNif());
+            throw new BusinessException(ErrorCode.RES_DUPLICATE_NIF);
+        }
+
+        // Vérifier unicité du téléphone
+        if (request.getTelephone() != null && !request.getTelephone().isBlank()
+                && entrepriseRepository.existsByTelephoneAndSupprimeFalse(request.getTelephone())) {
+            log.warn("Tentative d'inscription groupe avec un téléphone existant: {}", request.getTelephone());
+            throw new BusinessException(ErrorCode.RES_DUPLICATE_TELEPHONE);
+        }
+
+        // Vérifier unicité de l'email de l'entreprise
+        if (request.getEmailEntreprise() != null && !request.getEmailEntreprise().isBlank()
+                && entrepriseRepository.existsByEmailAndSupprimeFalse(request.getEmailEntreprise())) {
+            log.warn("Tentative d'inscription groupe avec un email entreprise existant: {}", request.getEmailEntreprise());
+            throw new BusinessException(ErrorCode.RES_DUPLICATE_EMAIL);
+        }
+
         // Vérifier unicité email admin
         if (utilisateurRepository.existsByEmail(request.getEmailAdmin())) {
             log.warn("Tentative d'inscription groupe avec un email admin existant: {}", request.getEmailAdmin());
@@ -151,6 +210,10 @@ public class AuthServiceImpl implements AuthService {
         log.debug("TenantGroup créé pour groupe multi-sites: id={}", groupe.getId());
 
         Entreprise entreprise = authMapper.toEntrepriseFromGroupe(request);
+        // Normaliser le NIF optionnel : blank → null (cohérence avec l'index UNIQUE partiel)
+        if (entreprise.getNif() != null && entreprise.getNif().isBlank()) {
+            entreprise.setNif(null);
+        }
         entreprise.setGroupe(groupe);
         entreprise = entrepriseRepository.save(entreprise);
         log.debug("Entreprise (siège) créée: id={}", entreprise.getId());
