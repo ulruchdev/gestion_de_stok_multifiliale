@@ -33,10 +33,24 @@
 | US-011 | Mot de passe oublié | ✅ | Merge effectué |
 | US-012 | Réinitialisation mot de passe | ✅ | Merge effectué |
 | US-013 | Changement mot de passe | ✅ | Merge effectué |
+| US-082 | Unicité stricte des entreprises (NIF, téléphone, email, nom groupe) | ✅ | Terminé — commit `c3dc635` (Sprint 11 add.). Index UNIQUE partiels (V4), 71 tests auth au total |
 
 ### Corrections de sécurité (Juillet 2026)
 - **JwtAuthenticationFilter bugfix** : Ne bloque plus les endpoints `.permitAll()` avec un token expiré/invalide (retournait 401 au lieu de continuer la chaîne)
 - **Rate limiting configurable** : `RateLimitProperties.java` avec deux niveaux (global 100 req/min + per-endpoint) — plus de constantes hardcodées
+- **Rate limiting externalisé en variables d'environnement** (commit `395400f`) : plus aucune valeur numérique en dur dans `application.yml`, défauts de sécurité d'origine préservés via `${RATE_LIMIT_*:defaut}`
+- **Regex mot de passe élargie** (commit `cea66de`) : jeu de caractères spéciaux étendu dans les 4 DTOs concernés
+
+### Durcissement sécurité (EPIC 2, renuméroté GS-CDA-2026-02 : US-014-017 → US-083-086)
+
+| US | Description | Priorité | Statut | Notes |
+|----|-------------|----------|--------|-------|
+| US-083 | Rotation du Refresh Token avec détection de rejeu | P0 | ❌ | Non commencé — vérifié : aucune logique `family_id`/rotation dans `AuthServiceImpl` |
+| US-084 | Hachage des mots de passe en Argon2id | P1 | ❌ | Non commencé — vérifié : `SecurityConfig` utilise encore uniquement `BCryptPasswordEncoder` |
+| US-085 | Comportement fail-closed en cas d'indisponibilité de Redis | P0 | ❌ | Non commencé — vérifié : aucune gestion explicite dans `RateLimitFilter` |
+| US-086 | Logs d'audit structurés pour les événements d'authentification | P1 | ❌ | Non commencé — vérifié : aucun log JSON structuré (MDC/logstash) |
+
+> ⚠️ Tant que US-083/085 (P0) ne sont pas faites, EPIC 2 n'est pas complet au sens du backlog (`BACKLOG_StockMaster_CM.md` : dépendance EPIC 3 = « EPIC 2 complété »).
 
 ## EPIC 3 à 13 — (non commencé)
 
@@ -60,7 +74,7 @@
 
 | US | Description | SP | Statut | Notes |
 |----|-------------|----|--------|-------|
-| US-F010 | Page d'accueil publique | 2 | ❌ | Placeholder — pas encore implémentée |
+| US-F010 | Page d'accueil publique | 2 | ✅ | AccueilPage.tsx (461 lignes, sections features/stats), routée sur `/` — corrigé après vérification code réel (était marquée ❌ par erreur) |
 | US-F011 | Écran de choix du type d'inscription | 2 | ✅ | InscriptionChoixPage — 2 cartes avec features |
 | US-F012 | Formulaire Entreprise Unique | 5 | ✅ | Stepper 3 étapes + validation Zod + API |
 | US-F013 | Formulaire Groupe multi-sites | 5 | ✅ | Stepper 4 étapes + validation Zod + API |
@@ -92,4 +106,4 @@ Les fichiers `DESIGN_CORRECTIONS.md` (25 corrections) et `DESIGN_TOKENS_REFERENC
 
 ---
 
-*Dernière mise à jour : Juillet 2026*
+*Dernière mise à jour : 31 juillet 2026 — corrections après vérification directe du code (session-bootstrap manuel)*
