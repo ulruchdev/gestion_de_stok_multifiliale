@@ -72,7 +72,7 @@ main ─────────────────────────
 | 22 | `df5759f` | `ci(GS-002): remove OWASP Dependency Check from CI (401 Sonatype API)` | 1 modifié | ✅ |
 | 23 | `ca031de` | `ci(GS-002): remove OWASP Dependency Check from CI (401 Sonatype API)` | 1 modifié | ✅ |
 | 24 | `02b441c` | `fix(GS-004): exclude SQL migrations from SonarCloud analysis` | 1 modifié | ✅ |
-| 25 | `67c795b` | `feat(GS-082): unicité stricte des entreprises à l'inscription (NIF, téléphone, email, nom groupe)` | 13 fichiers | ✅ |
+| 25 | `c3dc635` | `feat(GS-082): unicité stricte des entreprises à l'inscription (NIF, téléphone, email, nom groupe)` | 13 fichiers | ✅ |
 
 **Total :** 25 commits, + ~8 900 lignes, ~97 fichiers
 
@@ -511,7 +511,7 @@ main ─────────────────────────
 
 ## US-082 — Unicité stricte des entreprises à l'inscription ✅
 
-> **Statut :** TERMINÉ — Commit `67c795b`
+> **Statut :** TERMINÉ — Commit `c3dc635`
 > **Priorité :** P0 | **Sprint :** 11 (add.) | **Points :** 3
 > **Ajout post-planification :** juillet 2026 (audit d'unicité)
 > **Endpoints :** `POST /api/v1/auth/inscription/entreprise-unique` + `POST /api/v1/auth/inscription/groupe`
@@ -586,14 +586,14 @@ L'audit d'unicité a révélé que seul l'email admin était contrôlé. Le **NI
 | **US-011** | Mot de passe oublié | 🚧 Implémenté | feature/GS-011-forgot-password | `0008438` | ✅ | 6 | +130 |
 | **US-012** | Réinitialisation mot de passe | ✅ Terminé | feature/GS-012-reset-password | `dd5e823` | ✅ | 7 | +150 |
 | **US-013** | Changement mot de passe | 🚧 Implémenté | feature/GS-013-change-password | — | — | 6 | +180 |
-| **US-082** | Unicité stricte des entreprises (NIF/téléphone/email/nom groupe) | ✅ Terminé | main | `67c795b` | ✅ | 13 | +409 |
+| **US-082** | Unicité stricte des entreprises (NIF/téléphone/email/nom groupe) | ✅ Terminé | main | `c3dc635` | ✅ | 13 | +409 |
 | **US-014 à 080** | EPIC 3 à 13 (67 US) | 🔜 Non commencé | — | — | — | — | — |
 
 ### Par branche — Statut de merge
 
 | Branche | Commit HEAD | Mergée dans `main` |
 |---|---|---|
-| `main` | `67c795b` | ✅ Branche de référence (US-082 incluse) |
+| `main` | `c3dc635` | ✅ Branche de référence (US-082 incluse) |
 | `feature/GS-001-initialize-spring-boot-project` | `0357763` | ✅ Mergée |
 | `feature/GS-002-flyway-migrations` | `df5759f` | ✅ Mergée (PR #3) |
 | `feature/GS-003-centralized-error-handling` | `c03bff2` | ✅ Mergée (PR #1) |
