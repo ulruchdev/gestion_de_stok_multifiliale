@@ -305,7 +305,7 @@ public class AuthServiceImpl implements AuthService {
         String jti = UUID.randomUUID().toString();
         String refreshToken = jwtTokenProvider.generateRefreshToken(userId, familyId, jti);
 
-        // Stocker "familyId:jti" dans Redis avec clé refresh:{userId}
+        // Persiste la paire familyId + jti en Redis, sous la clé de refresh préfixée par l'ID utilisateur
         String redisKey = REFRESH_KEY_PREFIX + userId;
         redisTemplate.opsForValue().set(redisKey, familyId + ":" + jti,
                 jwtProperties.getRefreshTokenExpiration(), TimeUnit.SECONDS);
