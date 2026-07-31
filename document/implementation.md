@@ -549,6 +549,41 @@ L'audit d'unicité a révélé que seul l'email admin était contrôlé. Le **NI
 
 ---
 
+## US-083 — Rotation du Refresh Token avec détection de rejeu ✅
+
+> **Statut :** TERMINÉ — Branche `feature/GS-083-rotation-refresh-token`
+> **Priorité :** P0 | **Sprint :** 3 (sécu) | **Points :** 5
+> **Endpoint :** modification de `POST /api/v1/auth/refresh` (US-009) — pas de nouvel endpoint
+
+### Contexte
+
+`US-009` ne faisait que vérifier l'existence du refresh token en Redis — aucune rotation, aucune détection de rejeu. Un refresh token volé restait utilisable indéfiniment jusqu'à expiration (7 jours). Identifié comme le principal écart de sécurité du module auth (`GS-PLAN-2026-01`).
+
+### Détail des fichiers
+
+| Fichier | Changement |
+|---|---|
+| `JwtTokenProvider.java` | `generateRefreshToken(userId)` → `generateRefreshToken(userId, familyId, jti)` ; ajoute le claim `familyId` au refresh token |
+| `AuthServiceImpl.java` | `login()` : génère un `familyId` (UUID) par session, stocke `refresh:{userId}` = `"{familyId}:{jti}"`. `refreshAccessToken()` : parse les claims une seule fois (`validateToken`), compare le `jti` présenté au `jti` stocké → succès = rotation (nouveau jti, même familyId, nouveau refreshToken retourné) ; mismatch = révocation totale de la famille (`redisTemplate.delete`) + log `WARN event=auth.refresh_reuse_detected userId=... ip=...` + publication de l'événement + `401 AUTH_REFRESH_TOKEN_INVALID` (AUTH_006, code existant jusque-là inutilisé) |
+| `RefreshTokenResponse.java` | 🆕 champ `refreshToken` |
+| `event/RefreshTokenReuseDetectedEvent.java` | 🆕 événement Spring (userId, ip) — aucun listener (module `stockmaster-notification` pas encore implémenté), même statut que `InscriptionSuccessEvent` |
+| `AuthServiceImplTest.java` | Réécriture du nested `RefreshToken` : rotation réussie, rejeu détecté (+ vérif révocation Redis + événement publié), + 3 tests existants adaptés |
+| `AuthControllerTest.java` | 🆕 test 401 rejeu (`AUTH_006`) + test 200 étendu au champ `refreshToken` |
+
+### Logique métier
+
+1. Login : `familyId` généré une fois par session, chaîné à chaque rotation ultérieure
+2. Refresh réussi : ancien `jti` invalidé immédiatement, nouveau `jti` + nouveau refresh token émis (usage unique)
+3. Refresh avec un `jti` déjà remplacé (rejeu) : toute la famille est révoquée → déconnexion forcée de tous les appareils, le token légitimement tourné entre-temps est lui aussi invalidé
+4. Aucune fuite d'information à l'attaquant : même code d'erreur (401 AUTH_006) que pour un refresh simplement invalide
+
+### Validation
+
+- `mvn test -pl stockmaster-shared,stockmaster-auth` → **BUILD SUCCESS, 90 tests, 0 échec**
+- Test d'intégration réel effectué (JAR packagé, app démarrée, Postgres/Redis réels) : login → refresh (200, rotation) → rejeu de l'ancien token (401 AUTH_006, confirmé) → le token issu de la rotation échoue aussi ensuite (famille entière révoquée, confirmé) → log réel observé : `event=auth.refresh_reuse_detected userId=1 ip=0:0:0:0:0:0:0:1`
+
+---
+
 # EPIC 3 à 13 — Modules métier
 
 | Module | Fichiers Java | Statut |
@@ -563,7 +598,7 @@ L'audit d'unicité a révélé que seul l'email admin était contrôlé. Le **NI
 | `stockmaster-notification` | 0 | 🔜 Non commencé |
 | `stockmaster-reporting` | 0 | 🔜 Non commencé |
 
-**US concernées :** US-014 à US-082 (69 user stories, dont US-081/082 ajoutées post-planification)
+**US concernées :** US-014 à US-080 (67 user stories, EPIC 3 à 13) — US-081/082 (Sprint 11 add.) et US-083 à US-086 (durcissement sécurité EPIC 2, renumérotées depuis US-014-017, voir GS-CDA-2026-02) sont hors de cette plage
 
 ---
 
@@ -587,6 +622,8 @@ L'audit d'unicité a révélé que seul l'email admin était contrôlé. Le **NI
 | **US-012** | Réinitialisation mot de passe | ✅ Terminé | feature/GS-012-reset-password | `dd5e823` | ✅ | 7 | +150 |
 | **US-013** | Changement mot de passe | 🚧 Implémenté | feature/GS-013-change-password | — | — | 6 | +180 |
 | **US-082** | Unicité stricte des entreprises (NIF/téléphone/email/nom groupe) | ✅ Terminé | main | `c3dc635` | ✅ | 13 | +409 |
+| **US-083** | Rotation Refresh Token avec détection de rejeu | ✅ Terminé | feature/GS-083-rotation-refresh-token | — | — | 6 | +155 |
+| **US-084 à 086** | Argon2id, fail-closed Redis, logs structurés | 🔜 Non commencé | — | — | — | — | — |
 | **US-014 à 080** | EPIC 3 à 13 (67 US) | 🔜 Non commencé | — | — | — | — | — |
 
 ### Par branche — Statut de merge
@@ -605,20 +642,21 @@ L'audit d'unicité a révélé que seul l'email admin était contrôlé. Le **NI
 | `feature/GS-011-forgot-password` | `0008438` | 🚧 PR en attente |
 | `feature/GS-012-reset-password` | `dd5e823` | ✅ Mergée dans main (PR #11) |
 | `feature/GS-013-change-password` | — | 🚧 En cours (non pushée) |
+| `feature/GS-083-rotation-refresh-token` | — | 🚧 En cours (non pushée) |
 
 ### Bilan global
 
 | Métrique | Valeur |
 |---|---|
-| US terminées | 10 sur 82 (US-001 à US-012, US-082) |
+| US terminées | 11 sur 86 (US-001 à US-012, US-082, US-083) |
 | US en attente de PR | 4 (US-009, US-010, US-011, US-013) |
-| US non commencées | 62 |
-| Total commits (sur main) | 24 |
-| Total fichiers créés/modifiés | ~95 |
-| Total lignes de code | ~10 000 |
-| Tests unitaires auth | **71** (service tests + contrôleur tests) |
+| US non commencées | 63 (dont US-084 à US-086 — durcissement sécurité restant) |
+| Total commits (sur main) | 28 |
+| Total fichiers créés/modifiés | ~101 |
+| Total lignes de code | ~10 155 |
+| Tests unitaires auth | **72** (32 service + 40 contrôleur) |
 | Tests unitaires shared | 18 |
-| Branches créées | 12 (8 mergées + 4 actives: GS-009, GS-010, GS-011, GS-013) |
+| Branches créées | 13 (8 mergées + 5 actives: GS-009, GS-010, GS-011, GS-013, GS-083) |
 | Modules avec code + tests | 2 sur 11 (shared + auth) |
 | Modules vides | 9 sur 11 |
 

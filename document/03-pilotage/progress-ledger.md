@@ -45,7 +45,7 @@
 
 | US | Description | Priorité | Statut | Notes |
 |----|-------------|----------|--------|-------|
-| US-083 | Rotation du Refresh Token avec détection de rejeu | P0 | ❌ | Non commencé — vérifié : aucune logique `family_id`/rotation dans `AuthServiceImpl` |
+| US-083 | Rotation du Refresh Token avec détection de rejeu | P0 | ✅ | Terminé (branche `feature/GS-083-rotation-refresh-token`) — familyId+jti chaînés, rotation à chaque refresh, révocation totale + événement sur rejeu détecté. 90 tests shared+auth verts, vérifié en conditions réelles (login→refresh→rejeu→401 AUTH_006) |
 | US-084 | Hachage des mots de passe en Argon2id | P1 | ❌ | Non commencé — vérifié : `SecurityConfig` utilise encore uniquement `BCryptPasswordEncoder` |
 | US-085 | Comportement fail-closed en cas d'indisponibilité de Redis | P0 | ❌ | Non commencé — vérifié : aucune gestion explicite dans `RateLimitFilter` |
 | US-086 | Logs d'audit structurés pour les événements d'authentification | P1 | ❌ | Non commencé — vérifié : aucun log JSON structuré (MDC/logstash) |

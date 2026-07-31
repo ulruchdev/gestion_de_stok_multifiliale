@@ -46,14 +46,23 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String generateRefreshToken(Long userId) {
+    /**
+     * Génère un refresh token portant un {@code familyId} (chaîne de rotation, US-083) et un
+     * {@code jti} propre à ce token précis — permet de détecter le rejeu d'un token déjà tourné.
+     *
+     * @param familyId identifiant de la famille de tokens (constant sur toute la durée de la session,
+     *                  généré une seule fois au login)
+     * @param jti       identifiant unique de ce token précis (change à chaque rotation)
+     */
+    public String generateRefreshToken(Long userId, String familyId, String jti) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + jwtProperties.getRefreshTokenExpiration() * 1000);
 
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim(CLAIM_USER_ID, userId)
-                .claim("jti", UUID.randomUUID().toString())
+                .claim("familyId", familyId)
+                .claim("jti", jti)
                 .issuer(jwtProperties.getIssuer())
                 .issuedAt(now)
                 .expiration(expiry)

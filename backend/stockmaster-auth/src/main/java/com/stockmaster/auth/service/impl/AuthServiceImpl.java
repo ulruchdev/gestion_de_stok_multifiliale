@@ -20,6 +20,7 @@ import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
 import com.stockmaster.auth.dto.response.RefreshTokenResponse;
 import com.stockmaster.auth.event.InscriptionSuccessEvent;
+import com.stockmaster.auth.event.RefreshTokenReuseDetectedEvent;
 import com.stockmaster.auth.mapper.AuthMapper;
 import com.stockmaster.auth.repository.EntrepriseRepository;
 import com.stockmaster.auth.repository.TenantGroupRepository;
@@ -28,8 +29,10 @@ import com.stockmaster.auth.service.AuthService;
 import com.stockmaster.shared.config.JwtProperties;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -38,6 +41,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.Date;
 import java.util.UUID;
@@ -293,11 +298,16 @@ public class AuthServiceImpl implements AuthService {
 
         String accessToken = jwtTokenProvider.generateAccessToken(
                 userId, entrepriseId, groupId, role, scope);
-        String refreshToken = jwtTokenProvider.generateRefreshToken(userId);
 
-        // Stocker le refresh token dans Redis avec clé refresh:{userId}
+        // Nouvelle famille de rotation (US-083) : familyId constant sur la session,
+        // jti propre à ce token précis — chaîné à chaque refresh ultérieur
+        String familyId = UUID.randomUUID().toString();
+        String jti = UUID.randomUUID().toString();
+        String refreshToken = jwtTokenProvider.generateRefreshToken(userId, familyId, jti);
+
+        // Stocker "familyId:jti" dans Redis avec clé refresh:{userId}
         String redisKey = REFRESH_KEY_PREFIX + userId;
-        redisTemplate.opsForValue().set(redisKey, refreshToken,
+        redisTemplate.opsForValue().set(redisKey, familyId + ":" + jti,
                 jwtProperties.getRefreshTokenExpiration(), TimeUnit.SECONDS);
 
         log.info("Connexion réussie — userId={}, role={}", userId, role);
@@ -464,16 +474,16 @@ public class AuthServiceImpl implements AuthService {
     }
 
     // ========================================================================
-    // US-009 — Refresh token
+    // US-009 / US-083 — Refresh token avec rotation et détection de rejeu
     // ========================================================================
 
     @Override
     @Transactional(readOnly = true)
     public RefreshTokenResponse refreshAccessToken(RefreshTokenRequest request) {
 
-        Long userId;
+        Claims claims;
         try {
-            userId = jwtTokenProvider.getUserIdFromToken(request.getRefreshToken());
+            claims = jwtTokenProvider.validateToken(request.getRefreshToken());
         } catch (ExpiredJwtException e) {
             log.warn("Refresh token expiré");
             throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
@@ -482,18 +492,29 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
         }
 
-        // Vérifier que le refresh token existe dans Redis et correspond
-        String redisKey = REFRESH_KEY_PREFIX + userId;
-        String storedRefreshToken = redisTemplate.opsForValue().get(redisKey);
+        Long userId = claims.get("userId", Long.class);
+        String familyId = claims.get("familyId", String.class);
+        String jti = claims.get("jti", String.class);
 
-        if (storedRefreshToken == null) {
+        // Vérifier l'état de la famille de tokens dans Redis
+        String redisKey = REFRESH_KEY_PREFIX + userId;
+        String stored = redisTemplate.opsForValue().get(redisKey);
+
+        if (stored == null) {
             log.warn("Refresh token non trouvé dans Redis pour userId={}", userId);
             throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
         }
 
-        if (!storedRefreshToken.equals(request.getRefreshToken())) {
-            log.warn("Refresh token ne correspond pas pour userId={}", userId);
-            throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+        String storedJti = stored.contains(":") ? stored.substring(stored.indexOf(':') + 1) : stored;
+
+        // US-083 — Détection de rejeu : le jti présenté ne correspond pas au jti actuellement
+        // valide (token déjà remplacé par une rotation précédente) → révocation totale de la famille
+        if (!storedJti.equals(jti)) {
+            redisTemplate.delete(redisKey);
+            String ip = extractClientIp();
+            log.warn("event=auth.refresh_reuse_detected userId={} ip={}", userId, ip);
+            eventPublisher.publishEvent(new RefreshTokenReuseDetectedEvent(this, userId, ip));
+            throw new BusinessException(ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
         }
 
         // Charger l'utilisateur
@@ -524,11 +545,33 @@ public class AuthServiceImpl implements AuthService {
         String newAccessToken = jwtTokenProvider.generateAccessToken(
                 userId, entrepriseId, groupId, role, scope);
 
-        log.info("Refresh token accepté — nouveau accessToken émis pour userId={}", userId);
+        // Rotation : nouveau jti, même familyId (chaînage) — usage unique du refresh token présenté
+        String newJti = UUID.randomUUID().toString();
+        String newRefreshToken = jwtTokenProvider.generateRefreshToken(userId, familyId, newJti);
+        redisTemplate.opsForValue().set(redisKey, familyId + ":" + newJti,
+                jwtProperties.getRefreshTokenExpiration(), TimeUnit.SECONDS);
+
+        log.info("Refresh token accepté — rotation effectuée pour userId={}", userId);
 
         return RefreshTokenResponse.builder()
                 .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
                 .expiresIn(jwtProperties.getAccessTokenExpiration())
                 .build();
+    }
+
+    /**
+     * Récupère l'IP du client courant pour les logs de sécurité (best-effort).
+     * Retourne "unknown" hors contexte de requête HTTP (ex: appel direct en test).
+     */
+    private String extractClientIp() {
+        try {
+            var attributes = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+            HttpServletRequest req = attributes.getRequest();
+            String xff = req.getHeader("X-Forwarded-For");
+            return (xff != null) ? xff.split(",")[0].trim() : req.getRemoteAddr();
+        } catch (IllegalStateException e) {
+            return "unknown";
+        }
     }
 }
