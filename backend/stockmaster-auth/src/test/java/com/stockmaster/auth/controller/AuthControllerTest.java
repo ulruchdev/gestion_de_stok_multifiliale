@@ -443,10 +443,11 @@ class AuthControllerTest {
         }
 
         @Test
-        @DisplayName("200 OK — refresh token valide")
+        @DisplayName("200 OK — refresh token valide, rotation : nouveau accessToken ET nouveau refreshToken")
         void shouldReturn200WhenRefreshTokenValid() throws Exception {
             RefreshTokenResponse response = RefreshTokenResponse.builder()
                     .accessToken("new-access-token")
+                    .refreshToken("new-refresh-token")
                     .expiresIn(900)
                     .build();
 
@@ -460,7 +461,22 @@ class AuthControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.accessToken").value("new-access-token"))
+                    .andExpect(jsonPath("$.data.refreshToken").value("new-refresh-token"))
                     .andExpect(jsonPath("$.data.expiresIn").value(900));
+        }
+
+        @Test
+        @DisplayName("401 UNAUTHORIZED — rejeu de refresh token détecté (US-083)")
+        void shouldReturn401WhenRefreshTokenReused() throws Exception {
+            when(authService.refreshAccessToken(any(RefreshTokenRequest.class)))
+                    .thenThrow(new BusinessException(ErrorCode.AUTH_REFRESH_TOKEN_INVALID));
+
+            mockMvc.perform(post("/api/v1/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(refreshTokenRequest))
+                            .with(csrf()))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.errorCode").value("AUTH_006"));
         }
 
         @Test

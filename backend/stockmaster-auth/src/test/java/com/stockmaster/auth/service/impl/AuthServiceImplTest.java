@@ -19,6 +19,7 @@ import com.stockmaster.auth.dto.response.InscriptionResponse;
 import com.stockmaster.auth.dto.response.LoginResponse;
 import com.stockmaster.auth.dto.response.RefreshTokenResponse;
 import com.stockmaster.auth.event.InscriptionSuccessEvent;
+import com.stockmaster.auth.event.RefreshTokenReuseDetectedEvent;
 import com.stockmaster.auth.mapper.AuthMapper;
 import com.stockmaster.auth.repository.EntrepriseRepository;
 import com.stockmaster.auth.repository.TenantGroupRepository;
@@ -473,7 +474,7 @@ class AuthServiceImplTest {
             when(passwordEncoder.matches(loginRequest.getMotDePasse(), savedUtilisateur.getMotDePasse())).thenReturn(true);
             when(jwtTokenProvider.generateAccessToken(1L, 1L, 1L, "ADMIN_GROUPE", "GROUPE"))
                     .thenReturn("access-token");
-            when(jwtTokenProvider.generateRefreshToken(1L)).thenReturn("refresh-token");
+            when(jwtTokenProvider.generateRefreshToken(eq(1L), anyString(), anyString())).thenReturn("refresh-token");
             when(jwtProperties.getRefreshTokenExpiration()).thenReturn(604800L);
             when(jwtProperties.getAccessTokenExpiration()).thenReturn(900L);
             when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -549,24 +550,36 @@ class AuthServiceImplTest {
     // ========================================================================
 
     @Nested
-    @DisplayName("Refresh token (US-009)")
+    @DisplayName("Refresh token avec rotation (US-009 / US-083)")
     class RefreshToken {
 
         @BeforeEach
         void setUp() {
             lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
             lenient().when(jwtProperties.getAccessTokenExpiration()).thenReturn(900L);
+            lenient().when(jwtProperties.getRefreshTokenExpiration()).thenReturn(604800L);
+        }
+
+        private Claims mockClaims(Long userId, String familyId, String jti) {
+            Claims claims = mock(Claims.class);
+            lenient().when(claims.get("userId", Long.class)).thenReturn(userId);
+            lenient().when(claims.get("familyId", String.class)).thenReturn(familyId);
+            lenient().when(claims.get("jti", String.class)).thenReturn(jti);
+            return claims;
         }
 
         @Test
-        @DisplayName("✅ Retourne RefreshTokenResponse avec nouveau accessToken quand refresh token valide")
-        void shouldReturnNewAccessTokenWhenRefreshTokenValid() {
+        @DisplayName("✅ jti valide → rotation : nouveau accessToken ET nouveau refreshToken, Redis mis à jour avec le même familyId")
+        void shouldRotateRefreshTokenWhenJtiValid() {
             // Arrange
-            when(jwtTokenProvider.getUserIdFromToken("valid-refresh-token")).thenReturn(1L);
-            when(valueOperations.get("refresh:1")).thenReturn("valid-refresh-token");
+            Claims claims = mockClaims(1L, "family-abc", "jti-current");
+            when(jwtTokenProvider.validateToken("valid-refresh-token")).thenReturn(claims);
+            when(valueOperations.get("refresh:1")).thenReturn("family-abc:jti-current");
             when(utilisateurRepository.findById(1L)).thenReturn(Optional.of(savedUtilisateur));
             when(jwtTokenProvider.generateAccessToken(1L, 1L, 1L, "ADMIN_GROUPE", "GROUPE"))
                     .thenReturn("new-access-token");
+            when(jwtTokenProvider.generateRefreshToken(eq(1L), eq("family-abc"), anyString()))
+                    .thenReturn("new-refresh-token");
 
             // Act
             RefreshTokenResponse response = authService.refreshAccessToken(refreshTokenRequest);
@@ -574,43 +587,55 @@ class AuthServiceImplTest {
             // Assert
             assertThat(response).isNotNull();
             assertThat(response.getAccessToken()).isEqualTo("new-access-token");
+            assertThat(response.getRefreshToken()).isEqualTo("new-refresh-token");
             assertThat(response.getExpiresIn()).isEqualTo(900);
 
-            verify(redisTemplate.opsForValue()).get("refresh:1");
+            ArgumentCaptor<String> valueCaptor = ArgumentCaptor.forClass(String.class);
+            verify(valueOperations).set(eq("refresh:1"), valueCaptor.capture(), eq(604800L), eq(TimeUnit.SECONDS));
+            assertThat(valueCaptor.getValue()).startsWith("family-abc:").doesNotContain("jti-current");
+        }
+
+        @Test
+        @DisplayName("❌ Rejeu détecté : jti présenté ≠ jti stocké → révoque toute la famille, publie l'événement, lève AUTH_REFRESH_TOKEN_INVALID")
+        void shouldRevokeFamilyWhenRefreshTokenReused() {
+            // Arrange — le jti présenté est un ancien jti déjà remplacé par une rotation précédente
+            Claims claims = mockClaims(1L, "family-abc", "jti-old");
+            when(jwtTokenProvider.validateToken("valid-refresh-token")).thenReturn(claims);
+            when(valueOperations.get("refresh:1")).thenReturn("family-abc:jti-current");
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.refreshAccessToken(refreshTokenRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_REFRESH_TOKEN_INVALID);
+
+            verify(redisTemplate).delete("refresh:1");
+            verify(eventPublisher).publishEvent(any(RefreshTokenReuseDetectedEvent.class));
+            verify(jwtTokenProvider, never()).generateAccessToken(any(), any(), any(), any(), any());
         }
 
         @Test
         @DisplayName("❌ Lève AUTH_INVALID_CREDENTIALS quand le refresh token n'est pas dans Redis")
         void shouldThrowWhenRefreshTokenNotFoundInRedis() {
             // Arrange
-            when(jwtTokenProvider.getUserIdFromToken("valid-refresh-token")).thenReturn(1L);
+            Claims claims = mockClaims(1L, "family-abc", "jti-current");
+            when(jwtTokenProvider.validateToken("valid-refresh-token")).thenReturn(claims);
             when(valueOperations.get("refresh:1")).thenReturn(null);
 
             // Act & Assert
             assertThatThrownBy(() -> authService.refreshAccessToken(refreshTokenRequest))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_INVALID_CREDENTIALS);
-        }
 
-        @Test
-        @DisplayName("❌ Lève AUTH_INVALID_CREDENTIALS quand le refresh token en Redis ne correspond pas")
-        void shouldThrowWhenRefreshTokenMismatch() {
-            // Arrange
-            when(jwtTokenProvider.getUserIdFromToken("valid-refresh-token")).thenReturn(1L);
-            when(valueOperations.get("refresh:1")).thenReturn("different-refresh-token");
-
-            // Act & Assert
-            assertThatThrownBy(() -> authService.refreshAccessToken(refreshTokenRequest))
-                    .isInstanceOf(BusinessException.class)
-                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_INVALID_CREDENTIALS);
+            verify(eventPublisher, never()).publishEvent(any(RefreshTokenReuseDetectedEvent.class));
         }
 
         @Test
         @DisplayName("❌ Lève AUTH_INVALID_CREDENTIALS quand l'utilisateur n'existe pas (userId du token)")
         void shouldThrowWhenUserNotFound() {
             // Arrange
-            when(jwtTokenProvider.getUserIdFromToken("valid-refresh-token")).thenReturn(999L);
-            when(valueOperations.get("refresh:999")).thenReturn("valid-refresh-token");
+            Claims claims = mockClaims(999L, "family-abc", "jti-current");
+            when(jwtTokenProvider.validateToken("valid-refresh-token")).thenReturn(claims);
+            when(valueOperations.get("refresh:999")).thenReturn("family-abc:jti-current");
             when(utilisateurRepository.findById(999L)).thenReturn(Optional.empty());
 
             // Act & Assert
@@ -623,7 +648,7 @@ class AuthServiceImplTest {
         @DisplayName("❌ Lève AUTH_INVALID_CREDENTIALS quand le token JWT est expiré")
         void shouldThrowWhenRefreshTokenExpired() {
             // Arrange
-            when(jwtTokenProvider.getUserIdFromToken("valid-refresh-token"))
+            when(jwtTokenProvider.validateToken("valid-refresh-token"))
                     .thenThrow(new io.jsonwebtoken.ExpiredJwtException(null, null, "Token expiré"));
 
             // Act & Assert

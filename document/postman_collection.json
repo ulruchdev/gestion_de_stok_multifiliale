@@ -257,7 +257,8 @@
                   "if (pm.response.code === 200) {",
                   "    const json = pm.response.json();",
                   "    pm.collectionVariables.set('access_token', json.data.accessToken);",
-                  "    console.log('[StockMaster] 🔄 Token rafraîchi avec succès');",
+                  "    pm.collectionVariables.set('refresh_token', json.data.refreshToken);",
+                  "    console.log('[StockMaster] 🔄 Token rafraîchi avec succès (rotation US-083)');",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -482,7 +483,8 @@
                   "if (pm.response.code === 200) {",
                   "    const json = pm.response.json();",
                   "    pm.collectionVariables.set('access_token', json.data.accessToken);",
-                  "    console.log('[StockMaster] 🔄 Token groupe rafraîchi');",
+                  "    pm.collectionVariables.set('refresh_token', json.data.refreshToken);",
+                  "    console.log('[StockMaster] 🔄 Token groupe rafraîchi (rotation US-083)');",
                   "}"
                 ],
                 "type": "text/javascript"

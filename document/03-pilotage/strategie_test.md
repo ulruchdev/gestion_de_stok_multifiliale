@@ -175,7 +175,7 @@ mvn compile -q
 mvn verify
 ```
 
-**Résultat attendu :** `BUILD SUCCESS` + `77 tests (18 shared + 59 auth)` + `Coverage ≥ 80%`
+**Résultat attendu :** `BUILD SUCCESS` + `90 tests (18 shared + 72 auth)` + `Coverage ≥ 80%`
 
 ### ✅ Étape 3 — Build JAR
 
@@ -188,8 +188,8 @@ mvn package -DskipTests -q
 ### ✅ Étape 4 (optionnelle locale, automatique dans le CI) — Vérifier que l'application démarre
 
 ```bash
-# Lancer le JAR et vérifier le healthcheck
-java -jar stockmaster-shared/target/*.jar --spring.profiles.active=test &
+# Lancer le JAR et vérifier le healthcheck (stockmaster-bootstrap porte le main())
+java -jar stockmaster-bootstrap/target/*.jar --spring.profiles.active=test &
 sleep 45
 curl http://localhost:8080/actuator/health
 # → {"status":"UP"}
@@ -211,7 +211,7 @@ git push origin ma-branche
 
 **Résultat attendu :** Le pipeline CI sur GitHub Actions doit passer :
 - ✅ Compilation (12/12 modules)
-- ✅ Tests unitaires (18 shared + 59 auth = 77 tests)
+- ✅ Tests unitaires (18 shared + 72 auth = 90 tests)
 - ✅ JaCoCo coverage ≥ 80%
 - ✅ SonarCloud analysis
 - ✅ Build JAR
@@ -221,7 +221,7 @@ git push origin ma-branche
 ```
 Avant push :
   1. mvn compile -q                     → SUCCESS (12 modules)
-  2. mvn verify                          → SUCCESS (77 tests : 18 shared + 59 auth + ≥80% coverage)
+  2. mvn verify                          → SUCCESS (90 tests : 18 shared + 72 auth + ≥80% coverage)
   3. mvn package -DskipTests             → SUCCESS (JAR généré)
   4. java -jar .../target/*.jar          → Vérifier /actuator/health = UP (optionnel)
   5. git push                             → CI pipeline vert

@@ -272,13 +272,15 @@ Content-Type: application/json
 
 ---
 
-### 1.4 POST — Refresh token
+### 1.4 POST — Refresh token (avec rotation, US-083)
 
-> **US :** US-009
+> **US :** US-009, US-083
 > **Statut :** ✅ Implémenté
-> **Branche :** `feature/GS-009-refresh-token` (PR en attente)
+> **Branche :** `feature/GS-083-rotation-refresh-token`
 > **Endpoint :** `POST /api/v1/auth/refresh`
 > **Authentification :** ❌ Non
+
+> ⚠️ **Rotation à usage unique (US-083) :** chaque appel réussi invalide immédiatement le refresh token présenté et en émet un nouveau. Le client **doit** remplacer sa copie du refresh token par celui reçu dans la réponse à chaque appel — réutiliser un ancien refresh token (même valide auparavant) déclenche la révocation de **toute** la session (tous les appareils déconnectés).
 
 #### Requête
 
@@ -291,13 +293,14 @@ Content-Type: application/json
 }
 ```
 
-#### Réponse — Succès (200 OK)
+#### Réponse — Succès, rotation effectuée (200 OK)
 
 ```json
 {
     "success": true,
     "data": {
         "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+        "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
         "expiresIn": 900
     }
 }
@@ -313,6 +316,21 @@ Content-Type: application/json
     "detail": "Email ou mot de passe incorrect",
     "instance": "/api/v1/auth/refresh",
     "errorCode": "AUTH_001"
+}
+```
+
+#### Réponse — Rejeu détecté (401 Unauthorized, US-083)
+
+Le refresh token présenté a déjà été utilisé pour une rotation précédente — toute la session est révoquée.
+
+```json
+{
+    "type": "/errors/auth-006",
+    "title": "Refresh token invalide ou expiré",
+    "status": 401,
+    "detail": "Refresh token invalide ou expiré",
+    "instance": "/api/v1/auth/refresh",
+    "errorCode": "AUTH_006"
 }
 ```
 
