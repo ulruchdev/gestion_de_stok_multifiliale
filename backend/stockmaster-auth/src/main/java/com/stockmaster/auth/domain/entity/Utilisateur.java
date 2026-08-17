@@ -9,7 +9,11 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "utilisateur")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Utilisateur {
 
     @Id

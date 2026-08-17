@@ -55,6 +55,7 @@ public enum ErrorCode {
     SEC_ACCESS_DENIED("SEC_001", "Accès refusé", 403),
     SEC_INVALID_PASSWORD("SEC_002", "Ancien mot de passe incorrect", 400),
     SEC_PASSWORD_WEAK("SEC_003", "Le mot de passe ne respecte pas les critères de robustesse", 400),
+    SEC_STORE_UNAVAILABLE("SEC_004", "Service de sécurité temporairement indisponible", 503),
 
     // ========== SYS — Système / Générique ==========
     SYS_INTERNAL_ERROR("SYS_001", "Erreur interne du serveur", 500),

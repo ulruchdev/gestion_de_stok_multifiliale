@@ -986,6 +986,16 @@ sequenceDiagram
 | **Justification** | jjwt 0.9.x utilise des APIs dépréciées depuis 2020, vulnérabilités CVE connues sur le parsing de tokens malformés. L'API 0.12.x est fluide, sécurisée et supportée activement. |
 | **Conséquences** | API différente de 0.9.x — ne pas copier des tutoriels anciens. Voir la section 10 pour l'implémentation correcte. |
 
+### ADR-005 — Fail-closed ciblé (pas global) en cas d'indisponibilité de Redis (US-085)
+
+| Champ | Valeur |
+|---|---|
+| **Date** | Juillet 2026 |
+| **Statut** | Accepté |
+| **Décision** | Fail-closed (503 `SEC_STORE_UNAVAILABLE`) uniquement sur `POST /auth/refresh` et le rate-limiting par endpoint sensible. `login`/`logout`/`forgot-password` restent tolérants à une panne Redis (best-effort). Le rate-limiting global (anti-bot) et la vérification du blacklist JWT (`JwtAuthenticationFilter`, sur toute requête authentifiée) restent fail-open. |
+| **Justification** | La spécification initiale demandait un fail-closed strict sur 5 endpoints. Revu après constat que Redis tourne en instance unique sans HA dans cette architecture (`docker-compose.yml`) — un redémarrage de conteneur est un incident opérationnel courant, pas un scénario d'attaque. Un fail-closed strict sur `login` aurait transformé chaque redémarrage Redis en panne totale d'authentification pour toute l'entreprise cliente, pour un risque de sécurité à fenêtre d'exploitation étroite. Le fail-closed est réservé aux deux endroits où l'absence de Redis crée un trou de sécurité concret et nouveau : la vérification de rotation/rejeu du refresh token (US-083, sans laquelle un token déjà invalidé serait accepté), et le rate-limiting par endpoint (la protection anti-bruteforce elle-même). |
+| **Conséquences** | Une alerte technique "Super Admin SaaS" en cas de panne Redis prolongée (>60s) a été réduite à un simple log `ERROR` distinctif (`RedisHealthTracker`) — aucun canal d'alerte réel (Sentry, module notification) n'existe aujourd'hui. Si une panne Redis prolongée devient un incident réel en production, ce log est le point d'ancrage pour brancher un outil de monitoring, sans réinstrumentation. |
+
 ---
 
 ## 28. Sécurité avancée — Checklist OWASP
