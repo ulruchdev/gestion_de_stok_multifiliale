@@ -451,21 +451,26 @@
 
 ---
 
-### US-085 — Comportement fail-closed en cas d'indisponibilité de Redis
+### US-085 — Comportement fail-closed ciblé en cas d'indisponibilité de Redis
 
 **Priorité :** P0 | **Sprint :** 3 | **Points :** 3
 
 **En tant que** responsable sécurité du produit,
-**je veux** que les endpoints sensibles rejettent les requêtes plutôt que de les laisser passer si Redis est indisponible,
-**afin de** ne jamais transformer une panne d'infrastructure en faille de sécurité (contournement du rate limiting, de la blacklist de tokens, ou de la validation du refresh token).
+**je veux** que les opérations où l'absence de Redis créerait un trou de sécurité concret rejettent la requête, sans pour autant bloquer l'authentification globale de l'entreprise sur un simple incident d'infrastructure,
+**afin de** ne jamais transformer une panne Redis en faille de sécurité **ni** en panne totale d'authentification.
+
+> **Révision (juillet 2026, ingénierie) :** la version initiale demandait un fail-closed strict sur les 5 endpoints (`login`, `refresh`, `logout`, `forgot-password`, `reset-password`). Revu après constat que **Redis tourne en instance unique sans HA dans cette architecture** (`docker-compose.yml` : un seul conteneur, pas de Sentinel/cluster) — un redémarrage banal du conteneur (déploiement, OOM, reboot) est un incident opérationnel courant, pas un scénario d'attaque exotique. Un fail-closed strict sur `login` aurait transformé chaque redémarrage Redis en panne totale d'authentification pour toute l'entreprise cliente — un coût disproportionné par rapport au risque réellement couvert (fenêtre d'exploitation étroite : il faut savoir que Redis est en panne ET bruteforcer à cet instant précis). Le fail-closed est donc restreint aux deux endroits où l'absence de Redis crée réellement un nouveau trou de sécurité.
 
 **Critères d'acceptation :**
-- [ ] Si Redis est injoignable : `login`, `refresh`, `logout`, `forgot-password`, `reset-password` retournent `503 SERVICE_UNAVAILABLE` avec `ErrorCode.SECURITY_STORE_UNAVAILABLE` — jamais un contournement silencieux du rate limit ou de la blacklist
-- [ ] Les endpoints métier déjà authentifiés (lecture d'un access token déjà émis, non blacklisté) continuent de fonctionner tant que le JWT est valide en local (vérification de signature ne dépend pas de Redis) — seule la blacklist explicite dépend de Redis
-- [ ] Alerte technique envoyée au Super Admin SaaS (canal interne, pas au client) si Redis reste injoignable plus de 60 secondes
-- [ ] Documenté explicitement dans le CDCT comme décision d'architecture (ADR) : fail-closed sur les opérations de sécurité, jamais fail-open
+- [ ] `POST /api/v1/auth/refresh` : si Redis est injoignable, retourne `503 SERVICE_UNAVAILABLE` (`ErrorCode.SEC_STORE_UNAVAILABLE`) — sans Redis, impossible de vérifier la rotation/le rejeu (US-083), accepter un refresh ici annulerait la protection
+- [ ] Rate limiting **par endpoint** (les endpoints sensibles configurés, y compris les 5 listés ci-dessus) : si Redis est injoignable, retourne `503 SERVICE_UNAVAILABLE` (`ErrorCode.SEC_STORE_UNAVAILABLE`) — jamais un contournement silencieux du rate limit sur un endpoint sensible
+- [ ] `login`, `logout`, `forgot-password` : **tolérants** à une panne Redis (best-effort) — n'échouent pas sur l'utilisateur ; la vérification du mot de passe ne dépend pas de Redis, et bloquer le logout serait contre-productif pour la sécurité. Log `ERROR` en cas d'échec de l'écriture/lecture Redis associée, mais la requête aboutit
+- [ ] `reset-password` : comportement inchangé — échoue déjà naturellement si le token Redis est illisible, aucune règle supplémentaire nécessaire
+- [ ] Rate limiting **global** (anti-bot, toutes requêtes confondues) et vérification du **blacklist JWT** (`JwtAuthenticationFilter`, sur toute requête authentifiée) : **fail-open** + log `WARN` si Redis est injoignable — un fail-closed ici bloquerait toute l'application (tous modules confondus), pas seulement l'auth
+- [ ] Log `ERROR` distinctif si Redis reste injoignable plus de 60 secondes en continu (pas de canal d'alerte réel disponible aujourd'hui — pas de Sentry/module notification — donc pas d'alerte "Super Admin SaaS" fabriquée artificiellement ; le log est le point d'ancrage pour un futur outil de monitoring)
+- [ ] Documenté dans le CDCT comme décision d'architecture (ADR) : fail-closed ciblé (refresh + rate-limit par endpoint), fail-open assumé ailleurs, avec la justification ci-dessus
 
-**Endpoint :** aucun (comportement transverse des filtres de sécurité)
+**Endpoint :** aucun (comportement transverse des filtres de sécurité et d'`AuthServiceImpl`)
 
 ---
 
