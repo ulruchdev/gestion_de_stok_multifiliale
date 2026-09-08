@@ -4,6 +4,28 @@
 
 ---
 
+> ⚠️ **Ce backlog est INCOMPLET par rapport au périmètre décidé.**
+>
+> Ses 82 US / 291 SP (≈ 11 sprints) datent d'avant le Lot 5 de décisions. Le référentiel
+> chiffre le périmètre réellement acté à **≈ 24,5 sprints** (`REF §13.3`) : environ **la
+> moitié du travail décidé n'a pas encore d'US ici**. Ne pas lire ce fichier comme le
+> périmètre de V1.
+>
+> **Décisions actées sans US correspondante — à rédiger :**
+>
+> | Décision | Objet | Coût annoncé |
+> |---|---|---|
+> | `DEC-009` | session de caisse, paiements multiples, clôture | +1 sprint |
+> | `DEC-036` | campagnes d'inventaire | +1,5 sprint |
+> | `DEC-038` | import CSV de mise en service (catalogue, stock, tiers) | +1 sprint |
+> | `DEC-027` | clés d'idempotence sur les écritures de stock | +0,3 sprint |
+> | `DEC-011` | règlement B2B : indicateur + échéance | +0,3 sprint |
+> | `DEC-012` / `DEC-013` | schéma lot-ready, conditionnement | +1 sprint |
+> | `DEC-015` | limite d'**utilisateurs** par plan (10 / 50 / négocié) — US-016 ne contrôle que les filiales | — |
+> | `DEC-002` / `DEC-007` | catalogue groupe, transfert multi-lignes à états | +2,5 sprints |
+>
+> L'autorité sur le périmètre est `REF §13` + `GS-PLAN` + `progress-ledger`, jamais ce total.
+
 > **Convention de lecture**
 >
 > - **US** = User Story — format : `En tant que [acteur], je veux [action] afin de [bénéfice]`
@@ -1975,7 +1997,9 @@
 **Total P0 :** 52 user stories — 186 points estimés
 **Total P1 :** 26 user stories — 93 points estimés
 **Total P2 :** 4 user stories — 12 points estimés
-**Total backlog :** **82 user stories** | **291 story points**
+**Total backlog :** **82 user stories** | **291 story points** (≈ 11 sprints)
+
+> ⚠️ Ce total **ne couvre pas le périmètre décidé** : `REF §13.3` chiffre l'acté à **≈ 24,5 sprints**. Voir le tableau des décisions sans US en tête de fichier.
 
 > **Changelog GS-CDA-2026-02 (voir addendum dédié)** : +5 US, +18 points par rapport à la version 1.0 — US-083 à US-086 (durcissement sécurité auth) et US-064b (association d'un client existant à une vente directe) ajoutées ; US-064 et US-067 revues en profondeur (comportement bloquant en `409` — `DEC-023`/`DEC-017` — + mouvement `ANNULATION_VENTE` dédié).
 
