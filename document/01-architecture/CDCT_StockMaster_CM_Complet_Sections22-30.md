@@ -210,11 +210,25 @@ Règles :
 - Pour corriger un script exécuté : créer un nouveau script Vn__fix_...
 ```
 
-### 23.3 Scripts de migration complets
+### 23.3 Schéma de référence (cible)
+
+> ⚠️ **Ce listing n'est PAS une copie d'un fichier de migration.** C'est le **schéma cible**
+> consolidé, tenu à jour contre le référentiel `GS-REF-2026-01 §6.2`.
+>
+> | | Où | État |
+> |---|---|---|
+> | **Schéma appliqué** | `backend/stockmaster-shared/src/main/resources/db/migration/V1→V4` | seule vérité pour la base réelle |
+> | **Schéma cible (ci-dessous)** | ce document | intègre les décisions non encore migrées |
+> | **Écart** | migration `V5` **non écrite** | à produire au démarrage des modules concernés |
+>
+> Les divergences connues avec le V1 appliqué sont annotées en commentaire dans le SQL
+> (`vente.statut` vs `annulee`, `notification_alerte` refondue, types de mouvement
+> compensatoires). **Ne jamais copier ce bloc dans un fichier Flyway sans le confronter à
+> `REF §6.2`** — le rejouer tel quel sur une base V1 échouerait.
 
 ```sql
--- V1__init_schema.sql
--- Schéma initial complet — Tables principales
+-- Schéma de référence consolidé (cible V5) — voir l'encadré ci-dessus.
+-- Ne correspond plus au fichier V1__init_schema.sql réellement appliqué.
 
 CREATE TABLE tenant_group (
     id                    BIGSERIAL PRIMARY KEY,
@@ -484,16 +498,20 @@ CREATE TABLE mouvement_stock (
     id                BIGSERIAL PRIMARY KEY,
     entreprise_id     BIGINT      NOT NULL REFERENCES entreprise(id) ON DELETE RESTRICT,
     article_id        BIGINT      NOT NULL REFERENCES article(id) ON DELETE RESTRICT,
+    -- Cible V5 (REF §6.2) : ANNULATION_VENTE et REMBOURSEMENT sont des entrees
+    -- compensatoires (signe +). La V1 appliquee n'a que les 6 premiers types.
     type_mouvement    VARCHAR(30) NOT NULL CHECK (type_mouvement IN (
                           'ENTREE','SORTIE','CORRECTION_POS','CORRECTION_NEG',
-                          'TRANSFERT_ENTREE','TRANSFERT_SORTIE','ANNULATION_VENTE')),
+                          'TRANSFERT_ENTREE','TRANSFERT_SORTIE',
+                          'ANNULATION_VENTE','REMBOURSEMENT')),
     quantite          INTEGER     NOT NULL CHECK (quantite > 0),
     date_mouvement    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     utilisateur_id    BIGINT      NOT NULL REFERENCES utilisateur(id) ON DELETE RESTRICT,
     origine_id        BIGINT,
     origine_type      VARCHAR(30) CHECK (origine_type IN (
                           'COMMANDE_FOURNISSEUR','COMMANDE_CLIENT',
-                          'VENTE','CORRECTION','TRANSFERT')),
+                          'VENTE','CORRECTION','TRANSFERT',
+                          'ANNULATION_VENTE','REMBOURSEMENT')),  -- cible V5, REF §6.2
     transfert_id      BIGINT      REFERENCES transfert_stock(id) ON DELETE RESTRICT,
     motif             TEXT,
     date_creation     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -506,14 +524,21 @@ COMMENT ON TABLE mouvement_stock IS
 
 -- --------------------------------------------------------
 
+-- Cible V5 (REF §6.2, DEC-004) : table refondue. La V1 appliquee n'a que
+-- entreprise_id / article_id NOT NULL / type_alerte a 2 valeurs figees / lue BOOLEAN.
+-- 'type_alerte' est volontairement SANS CHECK : le type est extensible (DEC-004),
+-- la liste des valeurs est portee par l'enum applicatif, pas par le schema.
+-- Ne pas y ajouter ECART_STOCK_DETECTE : ce type est supprime du produit (DEC-037).
 CREATE TABLE notification_alerte (
     id                BIGSERIAL PRIMARY KEY,
     entreprise_id     BIGINT      NOT NULL REFERENCES entreprise(id) ON DELETE RESTRICT,
-    article_id        BIGINT      REFERENCES article(id) ON DELETE RESTRICT,
-    type_alerte       VARCHAR(30) NOT NULL CHECK (type_alerte IN ('STOCK_BAS','RUPTURE')),
+    destinataire_utilisateur_id BIGINT NOT NULL REFERENCES utilisateur(id) ON DELETE RESTRICT,
+    article_id        BIGINT      REFERENCES article(id) ON DELETE RESTRICT,  -- nullable
+    type_alerte       VARCHAR(30) NOT NULL,
     stock_actuel      INTEGER,
     seuil_alerte      INTEGER,
-    lue               BOOLEAN     NOT NULL DEFAULT FALSE,
+    etat              VARCHAR(20) NOT NULL DEFAULT 'NON_LU'
+                          CHECK (etat IN ('NON_LU','LU','RESOLU')),
     date_creation     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     date_modification TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     supprime          BOOLEAN     NOT NULL DEFAULT FALSE
@@ -561,7 +586,7 @@ CREATE INDEX idx_utilisateur_token_reset
 
 -- Alertes non lues par entreprise
 CREATE INDEX idx_alerte_entreprise_non_lue
-    ON notification_alerte(entreprise_id) WHERE lue = FALSE AND supprime = FALSE;
+    ON notification_alerte(entreprise_id) WHERE etat = 'NON_LU' AND supprime = FALSE;
 
 -- Transferts par filiale
 CREATE INDEX idx_transfert_source
@@ -608,25 +633,11 @@ BEGIN
 END;
 $$;
 
--- Vue matérialisée : stock réel par article (optionnel, P2 — pour reporting lourd)
--- En V1, le stock est calculé à la volée depuis mouvement_stock
--- Cette vue est préparée pour la V2 si les performances nécessitent une pré-agrégation
-CREATE MATERIALIZED VIEW IF NOT EXISTS vue_stock_reel AS
-SELECT
-    ms.article_id,
-    ms.entreprise_id,
-    SUM(CASE WHEN ms.type_mouvement IN ('ENTREE','CORRECTION_POS','TRANSFERT_ENTREE')
-             THEN ms.quantite ELSE 0 END)
-  - SUM(CASE WHEN ms.type_mouvement IN ('SORTIE','CORRECTION_NEG','TRANSFERT_SORTIE')
-             THEN ms.quantite ELSE 0 END) AS stock_reel,
-    MAX(ms.date_mouvement) AS dernier_mouvement
-FROM mouvement_stock ms
-WHERE ms.supprime = FALSE
-GROUP BY ms.article_id, ms.entreprise_id
-WITH NO DATA;  -- Populée manuellement ou par REFRESH périodique
-
-COMMENT ON MATERIALIZED VIEW vue_stock_reel IS
-    'V2 uniquement. En V1, utiliser la requête directe sur mouvement_stock.';
+-- vue_stock_reel : SUPPRIMEE (REF §6.2, point C-12 — objet mort).
+-- Elle n'a jamais ete peuplee (WITH NO DATA), sa formule ignorait les entrees
+-- compensatoires (ANNULATION_VENTE, REMBOURSEMENT) et le stock reel se calcule
+-- a la volee sur mouvement_stock (REF §4.2). Ne pas la recreer : une pre-agregation
+-- eventuelle passera par le partitionnement de mouvement_stock (DEC-033).
 ```
 
 ### 23.4 Configuration Flyway par profil

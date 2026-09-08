@@ -12,7 +12,9 @@
 ## 4.2 Stock (DEC-023, DEC-027, ADR-003)
 
 - **Journal immuable** : `mouvement_stock` en deltas ; aucun UPDATE/DELETE, jamais. Le trigger `update_date_modification` est **exclu** de cette table.
-- **Stock réel** = Σ ENTREE − Σ SORTIE, calculé à la volée.
+- **Stock réel** = Σ(entrées) − Σ(sorties), calculé à la volée, jamais dénormalisé.
+  - Entrées (signe +) : `ENTREE`, `CORRECTION_POS`, `TRANSFERT_ENTREE`, `ANNULATION_VENTE`, `REMBOURSEMENT`.
+  - Sorties (signe −) : `SORTIE`, `CORRECTION_NEG`, `TRANSFERT_SORTIE`.
 - **Le stock ne peut jamais devenir négatif** (`DEC-023`). Une vente/correction qui le ferait passer sous zéro est **refusée (409)**.
 - **Idempotence** : toute écriture créant un mouvement de stock exige un en-tête `Idempotency-Key` (`DEC-027`) — vente, réception, transfert, correction.
 - **Types de mouvement** : `ENTREE`, `SORTIE`, `CORRECTION_POS`, `CORRECTION_NEG`, `TRANSFERT_ENTREE`, `TRANSFERT_SORTIE`, `ANNULATION_VENTE`, `REMBOURSEMENT` (compensatoires = entrées).
@@ -64,7 +66,7 @@
 
 ## 4.9 Notifications (DEC-004, DEC-014)
 
-- Table `notification_alerte` refondue : `destinataire_id`, type extensible, `etat` (non lu/lu/résolu), `article_id` nullable.
+- Table `notification_alerte` refondue : `destinataire_utilisateur_id`, type extensible, `etat` (`NON_LU`/`LU`/`RESOLU`), `article_id` nullable.
 - Canaux V1 : **in-app + e-mail** (interface `CanalNotification`). SMS en V1.5.
 - Alerte levée automatiquement au réapprovisionnement.
 

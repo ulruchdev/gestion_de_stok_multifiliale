@@ -40,7 +40,8 @@ sequenceDiagram
 ```mermaid
 graph TD
     subgraph Alertes["Alertes Automatiques"]
-        A1[STOCK_BAS<br/>Stock <= seuil alerte<br/>Declenche par StockUpdatedEvent]
+        A1[STOCK_BAS<br/>Stock positif et inferieur ou egal au seuil<br/>Declenche par StockUpdatedEvent]
+        A3[RUPTURE<br/>Stock inferieur ou egal a 0<br/>independant du seuil<br/>Declenche par StockUpdatedEvent]
         A2[SECURITY_ALERT<br/>Rejeu refresh token<br/>Declenche par AuthService]
     end
 

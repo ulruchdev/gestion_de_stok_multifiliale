@@ -13,12 +13,15 @@ graph TD
     Calcul --> CorrectionsNeg[- CORRECTION_NEG<br/>Casse / Perte / Vol]
     Calcul --> TransfertsOut[- TRANSFERT_SORTIE<br/>Envoye a une autre filiale]
     Calcul --> Annulations[+ ANNULATION_VENTE<br/>Vente annulee (compensatoire)]
+    Calcul --> Remboursements[+ REMBOURSEMENT<br/>Retour en caisse (compensatoire)]
 
     StockReel --> Alerte{Comparer avec<br/>seuil_alerte}
-    Alerte -->|Stock inferieur ou egal a 0| Rupture[RUPTURE]
+    Alerte -->|Stock strictement negatif| Anomalie[ANOMALIE<br/>erreur de donnee]
+    Alerte -->|Stock egal a 0| Rupture[RUPTURE]
     Alerte -->|Stock inferieur ou egal au seuil| Bas[BAS]
     Alerte -->|Stock superieur au seuil| Normal[NORMAL]
 
+    style Anomalie fill:#7b1fa2,color:white
     style Rupture fill:#f44336,color:white
     style Bas fill:#FF9800,color:white
     style Normal fill:#4CAF50,color:white

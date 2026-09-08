@@ -192,7 +192,7 @@ erDiagram
         long id PK
         long entreprise_id FK
         long article_id FK
-        enum type_mouvement "ENTREE SORTIE CORRECTION_POS CORRECTION_NEG TRANSFERT_ENTREE TRANSFERT_SORTIE ANNULATION_VENTE"
+        enum type_mouvement "ENTREE SORTIE CORRECTION_POS CORRECTION_NEG TRANSFERT_ENTREE TRANSFERT_SORTIE ANNULATION_VENTE REMBOURSEMENT"
         decimal quantite "toujours positive"
         instant date_mouvement
         long utilisateur_id FK
@@ -218,7 +218,7 @@ erDiagram
         long article_id FK
         enum type_alerte "STOCK_BAS ou RUPTURE (DEC-004 : type extensible en V5)"
         instant date_creation
-        boolean lue
+        enum etat "NON_LU ou LU ou RESOLU — DEC-004"
     }
 ```
 

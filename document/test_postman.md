@@ -626,7 +626,7 @@ pm.test("Message de succès", () => {
 > **Statut :** 🔜 Non implémenté (EPIC 12, US-071 à US-075, Sprint 8-9)
 
 ### 10.1 GET — Consulter les alertes (futur)
-### 10.2 PATCH — Marquer une alerte comme lue (futur)
+### 10.2 PATCH — Changer l'état d'une alerte : `NON_LU`/`LU`/`RESOLU` (futur)
 
 ---
 

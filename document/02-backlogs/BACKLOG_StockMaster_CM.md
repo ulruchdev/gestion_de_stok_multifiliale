@@ -81,7 +81,7 @@
 
 **Critères d'acceptation :**
 - [ ] Flyway activé et configuré pour tous les profils
-- [ ] `V1__init_schema.sql` crée toutes les tables avec contraintes CHECK, FK et UNIQUE (conforme CDCT section 23.3)
+- [ ] `V1__init_schema.sql` crée toutes les tables avec contraintes CHECK, FK et UNIQUE — **état de départ** ; le schéma cible (CDCT §23.3, REF §6.2) s'en écarte et sera appliqué par la migration `V5`
 - [ ] `V2__create_indexes.sql` crée tous les index de performance critiques
 - [ ] `V3__functions_and_triggers.sql` crée le trigger `update_date_modification`
 - [ ] `clean-disabled: true` en profil `prod`
@@ -993,7 +993,7 @@
 **afin de** voir son stock actuel, ses prix, son taux de TVA et son statut d'alerte.
 
 **Critères d'acceptation :**
-- [ ] Retourne : tous les champs article + `stockActuel` + `margeBrutePct` + `statutAlerte` (NORMAL / BAS / RUPTURE)
+- [ ] Retourne : tous les champs article + `stockActuel` + `margeBrutePct` + `statutAlerte` (NORMAL / BAS / RUPTURE / ANOMALIE — REF §4.2)
 - [ ] Article appartenant à une autre entreprise → `404` (ne pas révéler l'existence)
 
 **Endpoint :** `GET /api/v1/articles/{id}`
@@ -1313,9 +1313,9 @@
 **afin de** connaître les disponibilités à tout moment.
 
 **Critères d'acceptation :**
-- [ ] Stock calculé en temps réel : `Σ(ENTREE + CORRECTION_POS + TRANSFERT_ENTREE) - Σ(SORTIE + CORRECTION_NEG + TRANSFERT_SORTIE)`
+- [ ] Stock calculé en temps réel : `Σ(ENTREE + CORRECTION_POS + TRANSFERT_ENTREE + ANNULATION_VENTE + REMBOURSEMENT) - Σ(SORTIE + CORRECTION_NEG + TRANSFERT_SORTIE)` (`DEC-010`, REF §4.2)
 - [ ] Double filtre obligatoire : `article_id` ET `entreprise_id`
-- [ ] Retourne : `stockActuel`, `seuilAlerte`, `statutAlerte` (NORMAL / BAS / RUPTURE)
+- [ ] Retourne : `stockActuel`, `seuilAlerte`, `statutAlerte` (NORMAL / BAS / RUPTURE / ANOMALIE — REF §4.2)
 - [ ] Pagination + filtre `statutAlerte`
 
 **Endpoint :** `GET /api/v1/stock?statutAlerte=BAS&page=0&size=20`
@@ -1785,8 +1785,9 @@
 
 **Critères d'acceptation :**
 - [ ] Déclenchement asynchrone via `@EventListener` sur `StockUpdatedEvent`
-- [ ] Condition : `stock_réel ≤ seuil_alerte` ET `seuil_alerte > 0`
-- [ ] `NotificationAlerte` créée en base (type `STOCK_BAS` ou `RUPTURE` si stock = 0)
+- [ ] Conditions (REF §4.2) : `RUPTURE` si `stock_réel ≤ 0` — **indépendant du seuil**, donc déclenchée même si `seuil_alerte = 0` ; `STOCK_BAS` si `0 < stock_réel ≤ seuil_alerte` ET `seuil_alerte > 0`
+- [ ] `seuil_alerte = 0` désactive la seule alerte `STOCK_BAS`, jamais `RUPTURE`
+- [ ] `NotificationAlerte` créée en base avec le type correspondant (`STOCK_BAS` ou `RUPTURE`)
 - [ ] Email envoyé au Gestionnaire de Stock et à l'Admin Filiale concernés
 - [ ] Anti-spam : pas de doublon d'email si alerte déjà envoyée < 24h pour le même article
 - [ ] Exécuté dans une transaction indépendante (`REQUIRES_NEW`) — échec n'annule pas le mouvement
@@ -1804,22 +1805,22 @@
 **afin de** traiter les ruptures et réapprovisionnements urgents.
 
 **Critères d'acceptation :**
-- [ ] Retourne alertes non lues (`lue = false`) de l'entreprise connectée
+- [ ] Retourne les alertes de l'entreprise connectée filtrées par `etat` (`NON_LU` par défaut — `DEC-004`)
 - [ ] Tri par date DESC
 
-**Endpoint :** `GET /api/v1/alertes?lue=false&page=0&size=20`
+**Endpoint :** `GET /api/v1/alertes?etat=NON_LU&page=0&size=20`
 
 ---
 
-### US-073 — Marquer une alerte comme lue
+### US-073 — Changer l'état d'une alerte
 
 **Priorité :** P1 | **Sprint :** 9 | **Points :** 1
 
 **En tant que** Gestionnaire de stock,
-**je veux** marquer une alerte comme traitée,
-**afin de** nettoyer mon tableau de bord des alertes résolues.
+**je veux** faire passer une alerte à `LU` puis à `RESOLU`,
+**afin de** nettoyer mon tableau de bord des alertes traitées.
 
-**Endpoint :** `PATCH /api/v1/alertes/{id}/lire`
+**Endpoint :** `PATCH /api/v1/alertes/{id}/etat` (corps : `{"etat":"LU"|"RESOLU"}` — `DEC-004`)
 
 ---
 

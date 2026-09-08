@@ -71,7 +71,7 @@ graph TD
     end
 
     subgraph Notif["Notifications"]
-        NA[notification_alerte<br/>PK id<br/>FK entreprise_id + article_id<br/>type_alerte, lue]
+        NA[notification_alerte<br/>PK id<br/>FK entreprise_id + article_id<br/>type_alerte, etat]
     end
 
     TG --> E
