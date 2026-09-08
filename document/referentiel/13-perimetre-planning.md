@@ -18,8 +18,12 @@
 
 ## 13.3 Compteur de périmètre
 
-- Référence backlog : 291 SP ≈ 11 sprints.
-- Après toutes les décisions (Lot 5) : **≈ 24,5 sprints** (voir journal §Compteur).
+- Référence backlog **v1.2 (8 sept. 2026)** : **354 SP / 108 US** — le backlog couvre désormais
+  l'intégralité des décisions (20 US ajoutées, `US-087` à `US-106`). À ~22 SP par sprint, **≈ 16 sprints**.
+- L'écart avec les **≈ 24,5 sprints** du journal (§Compteur) est le coût **non exprimé en US** :
+  migration `V5`, refonte de schéma, stabilisation `DEC-031`, dette de test.
+- *(Les totaux « 291 SP ≈ 11 sprints » cités jusqu'ici étaient erronés : le fichier comptait
+  réellement 88 US / 250 SP avant les ajouts.)*
 - **Alerte de pilotage** : à 3 personnes, cela représente ~15-16 mois. La ventilation V1 / V1.5 et l'ordre mono-d'abord visent à livrer un produit **utilisable** plus tôt que la totalité.
 
 ---

@@ -43,6 +43,8 @@ tenant_group (le client SaaS, plan, limites)
 
 - 3 plans : **GRATUIT** (essai 90 j : 4 filiales, 10 utilisateurs, historique 30 j), **PRO** (15 filiales, 50 utilisateurs, historique illimité), **PERSONNALISE** (négocié).
 - `limite_filiales` compte les **sites opérationnels** ; maison mère comptée si elle détient du stock.
+- `limite_utilisateurs` compte les utilisateurs **actifs et non supprimés** du groupe, toutes filiales confondues ; contrôlée par `US-101`, jamais codée en dur.
+- Un plan **expiré** (`date_expiration_plan` dépassée) retombe sur les limites de `GRATUIT` pour les deux compteurs.
 - Fin d'essai → **lecture seule + export** (jamais de purge) ; expiration plan payant → 7 j de grâce puis lecture seule.
 - Un seul essai par **NIF**.
 - Changement de plan : **SUPER_ADMIN uniquement**, tracé.

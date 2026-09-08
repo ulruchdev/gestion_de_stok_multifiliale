@@ -1,30 +1,32 @@
 # Backlog Produit — StockMaster CM
-### Référence : GS-BACKLOG-2026-01 | Version : 1.1 | Date : Juillet 2026 | Statut : Validé
+### Référence : GS-BACKLOG-2026-01 | Version : 1.2 | Date : 8 septembre 2026 | Statut : Validé
+### Changements v1.2 (8 sept. 2026) : rédaction des 20 US manquantes (`US-087` à `US-106`) pour les décisions `DEC-002/007/009/010/011/012/013/015/027/036/038` — 4 EPICs nouveaux (caisse, inventaire, import, idempotence) ; totaux recalculés (108 US / 354 SP)
 ### Changements v1.1 : intégration des décisions GS-CDA-2026-02 (mouvement `ANNULATION_VENTE`, `client_id` nullable, durcissement sécurité auth) — **révisé le 8 sept. 2026** par le référentiel `GS-REF-2026-01` : la vente directe **bloque** en 409 sur stock insuffisant (`DEC-023`), l'état de la vente est `PAYEE`/`ANNULEE`/`REMBOURSEE` (`DEC-006/010/018`), le point de fidélité est abandonné (`DEC-034`)
 
 ---
 
-> ⚠️ **Ce backlog est INCOMPLET par rapport au périmètre décidé.**
+> ✅ **Périmètre décidé — couverture complète depuis le 8 septembre 2026.**
 >
-> Ses 82 US / 291 SP (≈ 11 sprints) datent d'avant le Lot 5 de décisions. Le référentiel
-> chiffre le périmètre réellement acté à **≈ 24,5 sprints** (`REF §13.3`) : environ **la
-> moitié du travail décidé n'a pas encore d'US ici**. Ne pas lire ce fichier comme le
-> périmètre de V1.
+> Ce backlog couvrait 88 US / 250 SP et laissait **10 décisions actées sans aucune US**.
+> Ces 20 US manquantes ont été rédigées (`US-087` à `US-106`) : le fichier décrit désormais
+> l'intégralité du périmètre acté au journal des décisions.
 >
-> **Décisions actées sans US correspondante — à rédiger :**
->
-> | Décision | Objet | Coût annoncé |
+> | Décision | Objet | US |
 > |---|---|---|
-> | `DEC-009` | session de caisse, paiements multiples, clôture | +1 sprint |
-> | `DEC-036` | campagnes d'inventaire | +1,5 sprint |
-> | `DEC-038` | import CSV de mise en service (catalogue, stock, tiers) | +1 sprint |
-> | `DEC-027` | clés d'idempotence sur les écritures de stock | +0,3 sprint |
-> | `DEC-011` | règlement B2B : indicateur + échéance | +0,3 sprint |
-> | `DEC-012` / `DEC-013` | schéma lot-ready, conditionnement | +1 sprint |
-> | `DEC-015` | limite d'**utilisateurs** par plan (10 / 50 / négocié) — US-016 ne contrôle que les filiales | — |
-> | `DEC-002` / `DEC-007` | catalogue groupe, transfert multi-lignes à états | +2,5 sprints |
+> | `DEC-009` / `DEC-010` | sessions de caisse, paiement mixte, clôture, remboursement | EPIC 14 — `US-087` à `US-091` |
+> | `DEC-036` | campagnes d'inventaire (sans gel) | EPIC 15 — `US-092` à `US-095` |
+> | `DEC-038` | import CSV de mise en service | EPIC 16 — `US-096` à `US-099` |
+> | `DEC-027` | clés d'idempotence sur les écritures de stock | EPIC 17 — `US-100` |
+> | `DEC-015` | limite d'**utilisateurs** par plan | `US-101` (EPIC 4) |
+> | `DEC-002` | catalogue au niveau groupe | `US-102` (EPIC 5) |
+> | `DEC-013` | unité d'achat / gestion + facteur | `US-103` (EPIC 5) |
+> | `DEC-012` | lot et date de péremption (schéma lot-ready) | `US-104` (EPIC 5) |
+> | `DEC-011` | règlement et échéance B2B | `US-105` (EPIC 9) |
+> | `DEC-007` | transfert multi-lignes à états | `US-106` (EPIC 11) |
 >
-> L'autorité sur le périmètre est `REF §13` + `GS-PLAN` + `progress-ledger`, jamais ce total.
+> **Le périmètre est couvert, le planning ne l'est pas** : la colonne « Sprint » est
+> sur-souscrite (voir le récapitulatif en fin de fichier). L'autorité sur l'ordre et la
+> charge reste `REF §13` + `GS-PLAN` + `progress-ledger`.
 
 > **Convention de lecture**
 >
@@ -60,6 +62,10 @@
 - [EPIC 11 — Transferts Inter-Filiales](#epic-11--transferts-inter-filiales)
 - [EPIC 12 — Notifications & Alertes](#epic-12--notifications--alertes)
 - [EPIC 13 — Statistiques & Reporting](#epic-13--statistiques--reporting)
+- [EPIC 14 — Caisse : sessions, paiements et remboursement](#epic-14--caisse--sessions-paiements-et-remboursement)
+- [EPIC 15 — Campagnes d'inventaire](#epic-15--campagnes-dinventaire)
+- [EPIC 16 — Import de mise en service (CSV)](#epic-16--import-de-mise-en-service-csv)
+- [EPIC 17 — Robustesse des écritures de stock](#epic-17--robustesse-des-écritures-de-stock)
 - [Récapitulatif par Sprint](#récapitulatif-par-sprint)
 - [Matrice de dépendances](#matrice-de-dépendances)
 
@@ -633,6 +639,7 @@
 **Critères d'acceptation :**
 - [ ] `@PreAuthorize("hasRole('ADMIN_GROUPE')")`
 - [ ] Vérification limite filiales selon plan d'abonnement → `403` avec `ErrorCode.FILIALE_LIMIT_REACHED` si dépassée
+- [ ] Limite lue depuis `tenant_group.limite_filiales` (`DEC-015`), **jamais codée en dur** ; la limite d'utilisateurs, symétrique, est portée par US-101
 - [ ] `code_filiale` unique dans le groupe → `409` avec `ErrorCode.DUPLICATE_FILIALE_CODE`
 - [ ] Filiale créée avec `parent_id` pointant vers la maison mère du groupe
 - [ ] Filiale vide à la création (pas d'articles, pas d'utilisateurs)
@@ -866,6 +873,27 @@
 
 ---
 
+### US-101 — Contrôler la limite d'utilisateurs du plan
+
+**Priorité :** P0 | **Sprint :** 3 | **Points :** 3
+
+**En tant qu'** Admin Groupe,
+**je veux** être bloqué quand j'atteins le nombre d'utilisateurs de mon plan,
+**afin que** la grille commerciale soit réellement appliquée et non purement déclarative.
+
+**Critères d'acceptation :**
+- [ ] Contrôle appliqué à **toute création d'utilisateur** (US-019, US-022) et à toute réactivation d'un compte désactivé
+- [ ] Limites issues de `DEC-015` : `GRATUIT` = 10, `PRO` = 50, `PERSONNALISE` = valeur négociée stockée en base
+- [ ] La limite est lue depuis `tenant_group.limite_utilisateurs`, **jamais codée en dur** — c'est la faute que `DEC-015` reproche à l'existant (`AuthServiceImpl` avait 5 en dur)
+- [ ] Dépassement → `403` avec `ErrorCode.USER_LIMIT_REACHED`, message indiquant le plan courant et sa limite
+- [ ] Le décompte porte sur les utilisateurs **actifs et non supprimés** du groupe, toutes filiales confondues
+- [ ] Symétrique de `limite_filiales` (US-016) : mêmes règles, même famille d'erreur
+- [ ] Un plan expiré (`date_expiration_plan` dépassée) est traité comme `GRATUIT` pour le calcul de la limite
+
+**Endpoint :** transverse (contrôle appliqué sur `POST /api/v1/utilisateurs` et la réactivation)
+
+---
+
 ## EPIC 5 — Catalogue (Catégories & Articles)
 
 > **Objectif :** Permettre la création et la gestion du catalogue produits qui sert de référentiel à toutes les opérations de stock, d'achat et de vente.
@@ -1053,6 +1081,67 @@
 - [ ] Article avec stock > 0 → peut être archivé (`actif = false`) mais pas supprimé
 
 **Endpoint :** `DELETE /api/v1/articles/{id}`
+
+---
+
+### US-102 — Rattacher le catalogue au groupe ⭐
+
+**Priorité :** P1 | **Sprint :** 5 | **Points :** 8
+
+**En tant qu'** Admin Groupe,
+**je veux** définir mes articles une seule fois pour tout le groupe,
+**afin de** ne pas ressaisir le même produit dans chaque filiale et de rendre les transferts possibles.
+
+**Critères d'acceptation :**
+- [ ] `article` et `categorie` portent `group_id` et non plus `entreprise_id` (`DEC-002`) — **exception documentée** à la règle générale d'isolation par `entreprise_id`
+- [ ] Unicité du code article au niveau **groupe** : index `(group_id, code_article)`
+- [ ] **Le prix, le seuil d'alerte et le stock restent par filiale** — seule la définition de l'article est partagée
+- [ ] Toute lecture reste filtrée : `group_id` du JWT, jamais du corps de requête
+- [ ] Un utilisateur de filiale voit le catalogue du groupe mais ne modifie que ce que son rôle autorise
+- [ ] Prérequis explicite du transfert inter-filiales (US-106) : sans article commun, un transfert n'a pas de sens
+- [ ] GRP-08 passe de P2 à **P1** et précède le transfert (`DEC-002`)
+
+**Endpoint :** impacte `GET|POST|PUT /api/v1/articles` et `/api/v1/categories`
+
+---
+
+### US-103 — Unité de gestion, unité d'achat et facteur de conversion
+
+**Priorité :** P1 | **Sprint :** 5 | **Points :** 5
+
+**En tant que** Gestionnaire de stock,
+**je veux** acheter en carton et vendre à l'unité,
+**afin de** ne pas convertir mentalement à chaque réception.
+
+**Critères d'acceptation :**
+- [ ] Trois champs sur l'article : `unite_gestion` (unité de stock et de vente), `unite_achat`, `facteur_conversion` (`DEC-013`)
+- [ ] `facteur_conversion` en `DECIMAL(12,3)` strictement > 0 ; vaut 1 si les deux unités sont identiques
+- [ ] **Conversion appliquée à la réception** : une réception de N unités d'achat crée un mouvement `ENTREE` de `N × facteur` en unité de gestion
+- [ ] Le stock, les seuils et les ventes s'expriment **toujours** en unité de gestion — jamais de stock exprimé en deux unités
+- [ ] Le mouvement conserve la quantité en unité de gestion ; l'unité d'achat n'apparaît que sur la ligne de commande
+- [ ] Le **code-barres est hors périmètre V1** — reporté au jalon V1.5 (`DEC-013`)
+
+**Endpoint :** impacte `POST|PUT /api/v1/articles` et `POST /api/v1/commandes-fournisseur/{id}/livrer`
+
+---
+
+### US-104 — Lot et date de péremption (schéma lot-ready)
+
+**Priorité :** P1 | **Sprint :** 6 | **Points :** 5
+
+**En tant que** Gestionnaire de stock,
+**je veux** enregistrer le lot et la date de péremption à la réception,
+**afin de** pouvoir tracer un rappel produit et préparer la sortie FEFO.
+
+**Critères d'acceptation :**
+- [ ] `lot` et `date_peremption` portés par le mouvement de stock dès la migration V5 (`DEC-012`)
+- [ ] Le stock est calculé par **article, lot et filiale** dès l'origine — le découpage n'est pas rétro-ajouté plus tard
+- [ ] Champs **optionnels** : un article non périssable les laisse vides, sans friction de saisie
+- [ ] Saisie proposée à la réception (US-049) et à la correction positive (US-053)
+- [ ] **Hors périmètre V1, livré au jalon V1.5** (`DEC-012`) : la sortie FEFO automatique, l'alerte de péremption et le choix de lot en caisse
+- [ ] En V1, la sortie ne choisit pas de lot : le champ est renseigné mais n'arbitre rien
+
+**Endpoint :** impacte `POST /api/v1/commandes-fournisseur/{id}/livrer` et `POST /api/v1/stock/corrections`
 
 ---
 
@@ -1592,6 +1681,33 @@
 
 ---
 
+### US-105 — Règlement et échéance d'une commande client
+
+**Priorité :** P1 | **Sprint :** 7 | **Points :** 3
+
+**En tant que** Commercial,
+**je veux** savoir quelles factures B2B sont réglées et lesquelles sont en retard,
+**afin de** relancer les clients qui me doivent de l'argent.
+
+**Critères d'acceptation :**
+- [ ] Deux champs sur la commande client : `etat_reglement` (`NON_REGLEE` | `REGLEE`) et `date_echeance` (`DEC-011`)
+- [ ] `date_reglement` renseignée automatiquement au passage à `REGLEE`
+- [ ] Une commande livrée mais non réglée reste `NON_REGLEE` — **livraison et règlement sont deux axes indépendants**
+- [ ] Filtre « en retard » : `etat_reglement = NON_REGLEE` ET `date_echeance < aujourd'hui` en `Africa/Douala` (`DEC-021`)
+- [ ] Le CA n'est **pas** recalculé au règlement : `DEC-020` retient le CA facturé, jamais rétroactif
+- [ ] Aucun encaissement partiel en V1 : l'état est binaire, assumé comme tel
+
+**Endpoint :** `PATCH /api/v1/commandes-client/{id}/reglement`
+
+**Corps :**
+```json
+{
+  "etatReglement": "REGLEE"
+}
+```
+
+---
+
 ## EPIC 10 — Vente Directe (Caisse)
 
 > **Objectif :** Permettre au Caissier d'enregistrer des ventes comptoir sans client identifié, avec mise à jour immédiate du stock.
@@ -1791,6 +1907,42 @@
 
 ---
 
+### US-106 — Transfert multi-lignes à états ⭐
+
+**Priorité :** P1 | **Sprint :** 8 | **Points :** 8
+
+**En tant qu'** Admin Groupe,
+**je veux** envoyer plusieurs articles dans un même bon de transfert et suivre sa réception,
+**afin de** refléter la réalité d'un camion qui part avec dix références et en arrive neuf.
+
+**Critères d'acceptation :**
+- [ ] **Remplace le transfert mono-article d'US-068** : en-tête (`group_id`, source, cible, statut, dates) + **N lignes** (`DEC-007`)
+- [ ] Chaque ligne porte trois quantités : **demandée, expédiée, reçue** — en `DECIMAL(12,3)` (`DEC-003`)
+- [ ] Machine à états `DEMANDE → VALIDE → EN_TRANSIT → RECU | ECART` (`DEC-002`)
+- [ ] `TRANSFERT_SORTIE` créé au passage `EN_TRANSIT` (sur la quantité **expédiée**), `TRANSFERT_ENTREE` au passage `RECU` (sur la quantité **reçue**)
+- [ ] **L'écart de réception est la différence expédié / reçu** (`DEC-007`) ; un écart non nul fait passer le bon à `ECART`, jamais à `RECU`
+- [ ] Un bon en `ECART` reste ouvert jusqu'à arbitrage : il ne se clôture pas tout seul
+- [ ] Stock source suffisant au passage `EN_TRANSIT` → sinon `409 INSUFFICIENT_STOCK` (`DEC-017`)
+- [ ] Source ≠ cible et **même groupe** → sinon `400 SAME_SOURCE_AND_TARGET` / `403 CROSS_GROUP_FORBIDDEN`
+- [ ] Prérequis : catalogue au niveau groupe (US-102)
+- [ ] En-tête `Idempotency-Key` obligatoire sur les transitions créant un mouvement (`DEC-027`)
+
+**Endpoint :** `POST /api/v1/groupe/transferts` puis `POST /api/v1/groupe/transferts/{id}/{transition}`
+
+**Corps :**
+```json
+{
+  "filialeSourceId": 3,
+  "filialeCibleId": 5,
+  "lignes": [
+    { "articleId": 10, "quantiteDemandee": 20.000 },
+    { "articleId": 14, "quantiteDemandee": 5.500 }
+  ]
+}
+```
+
+---
+
 ## EPIC 12 — Notifications & Alertes
 
 > **Objectif :** Informer automatiquement les utilisateurs des événements critiques (rupture de stock, seuil minimum atteint) pour permettre une réaction proactive.
@@ -1976,6 +2128,374 @@
 
 ---
 
+## EPIC 14 — Caisse : sessions, paiements et remboursement
+
+> **Objectif :** rendre la caisse exploitable et contrôlable. Une vente ne flotte plus : elle tombe dans la session de quelqu'un, on sait comment elle a été payée, et la clôture est le seul contrôle anti-perte du produit.
+>
+> Périmètre issu de `DEC-009` (tables `session_caisse` et `paiement`), `DEC-010` (remboursement) et `DEC-018` (le contrôle porte sur la session, pas sur le rôle).
+
+### US-087 — Ouvrir une session de caisse ⭐
+
+**Priorité :** P0 | **Sprint :** 8 | **Points :** 5
+
+**En tant que** Caissier,
+**je veux** ouvrir ma session de caisse en déclarant mon fond de caisse,
+**afin de** pouvoir encaisser et répondre de mon tiroir à la clôture.
+
+**Critères d'acceptation :**
+- [ ] `@PreAuthorize("hasAnyRole('CAISSIER','COMMERCIAL','ADMIN_FILIALE','ADMIN_GROUPE')")`
+- [ ] La session est rattachée à l'utilisateur courant **et** à sa filiale (`entreprise_id` du JWT, jamais du corps)
+- [ ] Un utilisateur ne peut avoir **qu'une seule session ouverte à la fois** → sinon `409` avec `ErrorCode.CAISSE_SESSION_DEJA_OUVERTE`
+- [ ] `fond_caisse` obligatoire, entier XAF ≥ 0 (`DEC-003`)
+- [ ] Horodatage d'ouverture en `TIMESTAMPTZ` UTC ; la journée comptable s'entend en `Africa/Douala` (`DEC-021`)
+- [ ] Règle citable (`DEC-018`) : *« Quiconque encaisse ouvre une session de caisse à son nom, et en répond à la clôture. »*
+
+**Endpoint :** `POST /api/v1/caisse/sessions`
+
+**Corps :**
+```json
+{
+  "fondCaisse": 50000
+}
+```
+
+---
+
+### US-088 — Encaisser une vente en paiement mixte ⭐
+
+**Priorité :** P0 | **Sprint :** 8 | **Points :** 8
+
+**En tant que** Caissier,
+**je veux** encaisser une vente en combinant plusieurs moyens de paiement,
+**afin de** traiter le cas courant « une partie en espèces, le reste en Mobile Money ».
+
+**Critères d'acceptation :**
+- [ ] La vente est rattachée à la **session ouverte de l'utilisateur courant** → sinon `409` avec `ErrorCode.CAISSE_AUCUNE_SESSION_OUVERTE`
+- [ ] N lignes de paiement autorisées sur une même vente (table `paiement`)
+- [ ] Modes acceptés : `ESPECES`, `MOBILE_MONEY`, `CARTE` (`DEC-009`) — aucun autre
+- [ ] `reference_transaction` obligatoire pour `MOBILE_MONEY` et `CARTE`, interdite pour `ESPECES`
+- [ ] **Σ des paiements = total TTC de la vente** → sinon `422` avec `ErrorCode.PAIEMENT_MONTANT_INCOHERENT`
+- [ ] Montants en `INTEGER` XAF (`DEC-003`) ; la monnaie rendue est un calcul d'affichage, jamais une ligne de paiement
+- [ ] Écriture transactionnelle : `@Transactional(rollbackFor = Exception.class)` — la vente, ses lignes, ses paiements et le mouvement `SORTIE` tombent ensemble ou pas du tout
+- [ ] En-tête `Idempotency-Key` obligatoire (`DEC-027`, voir US-100)
+
+**Endpoint :** `POST /api/v1/caisse/ventes/{venteId}/paiements`
+
+**Corps :**
+```json
+{
+  "paiements": [
+    { "mode": "ESPECES", "montant": 20000 },
+    { "mode": "MOBILE_MONEY", "montant": 43200, "referenceTransaction": "MTN-8842119" }
+  ]
+}
+```
+
+---
+
+### US-089 — Clôturer une session de caisse ⭐
+
+**Priorité :** P0 | **Sprint :** 8 | **Points :** 5
+
+**En tant que** Caissier,
+**je veux** clôturer ma session en déclarant le montant réellement compté dans le tiroir,
+**afin que** l'écart de caisse soit constaté et imputable.
+
+**Critères d'acceptation :**
+- [ ] Seul le **titulaire de la session** ou un `ADMIN_FILIALE` peut clôturer
+- [ ] `montant_compte` (espèces réellement en tiroir) obligatoire
+- [ ] **Théorique espèces** = `fond_caisse` + Σ paiements `ESPECES` de la session − Σ remboursements `ESPECES`
+- [ ] `ecart = montant_compte − theorique_especes` — **figé** sur la session, jamais recalculé après coup
+- [ ] Un écart non nul n'empêche pas la clôture : il est **constaté**, pas bloquant (c'est la trace qui a de la valeur)
+- [ ] Une session clôturée est **immuable** ; toute nouvelle vente exige une nouvelle session
+- [ ] Clôturer une session déjà clôturée → `409` avec `ErrorCode.CAISSE_SESSION_DEJA_CLOTUREE`
+- [ ] Les paiements `MOBILE_MONEY` et `CARTE` sont totalisés séparément (rapprochement opérateur), hors écart espèces
+
+**Endpoint :** `POST /api/v1/caisse/sessions/{id}/cloturer`
+
+**Corps :**
+```json
+{
+  "montantCompte": 112400
+}
+```
+
+---
+
+### US-090 — Consulter l'historique des sessions de caisse
+
+**Priorité :** P1 | **Sprint :** 9 | **Points :** 2
+
+**En tant qu'** Admin Filiale,
+**je veux** consulter les sessions de caisse passées avec leurs écarts,
+**afin de** suivre les pertes et identifier les postes à problème.
+
+**Critères d'acceptation :**
+- [ ] `@PreAuthorize("hasAnyRole('ADMIN_FILIALE','ADMIN_GROUPE')")`
+- [ ] Filtres : `utilisateurId`, `dateDebut`, `dateFin`, `avecEcart` (booléen)
+- [ ] Retourne : titulaire, ouverture, clôture, fond, théorique, compté, écart, totaux par mode de paiement
+- [ ] Filtrage `entreprise_id` obligatoire ; l'Admin Groupe voit ses filiales via `group_id`
+- [ ] Pagination obligatoire
+
+**Endpoint :** `GET /api/v1/caisse/sessions?avecEcart=true&dateDebut=2026-09-01&page=0&size=20`
+
+---
+
+### US-091 — Rembourser une vente en caisse
+
+**Priorité :** P1 | **Sprint :** 9 | **Points :** 5
+
+**En tant que** Caissier,
+**je veux** rembourser un article rapporté par un client,
+**afin de** traiter un retour sans annuler toute la vente.
+
+**Critères d'acceptation :**
+- [ ] `@PreAuthorize("hasAnyRole('CAISSIER','COMMERCIAL','ADMIN_FILIALE','ADMIN_GROUPE')")`
+- [ ] Remboursement **en caisse, sans avoir** (`DEC-010`) — aucun bon d'achat, aucune table d'avoirs
+- [ ] Le remboursement tombe dans une **session ouverte** et pèse sur son écart (`DEC-009`)
+- [ ] Remboursement **partiel autorisé** : ligne par ligne, quantité par quantité
+- [ ] Un mouvement `REMBOURSEMENT` est créé par ligne remboursée — **entrée compensatoire (signe +)**, jamais une sortie (REF §4.2)
+- [ ] **Le mouvement `SORTIE` original n'est ni modifié ni supprimé** (immuabilité du journal)
+- [ ] La vente passe à `statut = REMBOURSEE` si tout est rendu ; elle reste `PAYEE` si le remboursement est partiel
+- [ ] Une vente `ANNULEE` ne peut pas être remboursée → `409` avec `ErrorCode.VENTE_DEJA_ANNULEE`
+- [ ] En-tête `Idempotency-Key` obligatoire (`DEC-027`)
+
+**Endpoint :** `POST /api/v1/caisse/ventes/{venteId}/rembourser`
+
+**Corps :**
+```json
+{
+  "lignes": [
+    { "ligneVenteId": 812, "quantite": 1.000 }
+  ],
+  "modeRemboursement": "ESPECES",
+  "motif": "Article défectueux"
+}
+```
+
+---
+
+## EPIC 15 — Campagnes d'inventaire
+
+> **Objectif :** donner au produit le **seul organe par lequel il peut découvrir qu'un stock est faux**. `DEC-037` ayant supprimé la détection automatique d'écart, l'inventaire n'est plus un confort de saisie : c'est la contrepartie de l'invariant « stock jamais négatif » (`DEC-023`).
+>
+> Périmètre issu de `DEC-036` — campagne **sans gel du stock** : les ventes continuent pendant le comptage.
+
+### US-092 — Ouvrir une campagne d'inventaire ⭐
+
+**Priorité :** P0 | **Sprint :** 9 | **Points :** 5
+
+**En tant que** Gestionnaire de stock,
+**je veux** ouvrir une campagne d'inventaire datée sur ma filiale,
+**afin de** confronter le stock système au stock physique de façon traçable.
+
+**Critères d'acceptation :**
+- [ ] `@PreAuthorize("hasAnyRole('GESTIONNAIRE_STOCK','ADMIN_FILIALE')")`
+- [ ] Session rattachée à **une filiale** (`entreprise_id`), **jamais au groupe** (`DEC-036`)
+- [ ] Périmètre au choix : tout le catalogue actif, ou une catégorie
+- [ ] Génère la **liste de comptage** : une ligne par article du périmètre, quantité constatée vide
+- [ ] Numéro de campagne `INV-{ANNEE}-{SEQUENCE}`
+- [ ] Une seule campagne ouverte par filiale à la fois → sinon `409` avec `ErrorCode.INVENTAIRE_DEJA_OUVERT`
+- [ ] **Aucun gel du stock** : les ventes, réceptions et transferts continuent normalement pendant la campagne
+
+**Endpoint :** `POST /api/v1/inventaires`
+
+**Corps :**
+```json
+{
+  "perimetre": "CATEGORIE",
+  "categorieId": 4
+}
+```
+
+---
+
+### US-093 — Saisir les quantités constatées ⭐
+
+**Priorité :** P0 | **Sprint :** 9 | **Points :** 8
+
+**En tant que** Gestionnaire de stock,
+**je veux** saisir la quantité physiquement comptée pour chaque article,
+**afin de** matérialiser l'écart avec le stock système.
+
+**Critères d'acceptation :**
+- [ ] `@PreAuthorize("hasAnyRole('GESTIONNAIRE_STOCK','ADMIN_FILIALE')")`
+- [ ] `quantite_constatee` en `DECIMAL(12,3)` (`DEC-003`), ≥ 0
+- [ ] À la saisie, la ligne **fige trois valeurs** : l'horodatage, le **stock système à cet instant**, et l'écart
+- [ ] `ecart = quantite_constatee − stock_systeme_au_comptage` — figé, jamais recalculé (`DEC-036`)
+- [ ] Un mouvement survenu **après** le comptage est réel et ne doit pas être annulé : le delta reste arithmétiquement juste
+- [ ] Saisie possible en plusieurs fois ; une ligne peut être recomptée tant que la campagne est ouverte
+- [ ] Saisie interdite sur une campagne validée → `409` avec `ErrorCode.INVENTAIRE_DEJA_VALIDE`
+
+**Endpoint :** `PUT /api/v1/inventaires/{id}/lignes/{ligneId}`
+
+**Corps :**
+```json
+{
+  "quantiteConstatee": 47.500
+}
+```
+
+---
+
+### US-094 — Consulter la feuille d'écarts
+
+**Priorité :** P0 | **Sprint :** 9 | **Points :** 3
+
+**En tant que** Gestionnaire de stock ou Admin Filiale,
+**je veux** voir la liste des écarts constatés avant validation,
+**afin de** décider en connaissance de cause et repérer les erreurs de comptage.
+
+**Critères d'acceptation :**
+- [ ] Retourne par ligne : article, stock système figé, quantité constatée, écart, horodatage du comptage
+- [ ] Filtre `ecartNonNul` (booléen) pour n'afficher que ce qui bouge
+- [ ] Totaux : nombre de lignes comptées / non comptées, écart positif cumulé, écart négatif cumulé
+- [ ] Valorisation indicative de l'écart au prix d'achat (`INTEGER` XAF) — **indicative**, la comptabilité ne dérive pas de cet écran
+- [ ] Pagination obligatoire
+
+**Endpoint :** `GET /api/v1/inventaires/{id}/ecarts?ecartNonNul=true&page=0&size=20`
+
+---
+
+### US-095 — Valider une campagne et générer les corrections ⭐
+
+**Priorité :** P0 | **Sprint :** 10 | **Points :** 8
+
+**En tant qu'** Admin Filiale,
+**je veux** valider la campagne pour que les écarts deviennent des mouvements de stock,
+**afin d'** aligner le stock système sur le réel, de façon tracée et justifiable.
+
+**Critères d'acceptation :**
+- [ ] `@PreAuthorize("hasRole('ADMIN_FILIALE')")` — **celui qui compte ne valide pas son propre comptage** (`DEC-036`) ; le `GESTIONNAIRE_STOCK` est explicitement exclu
+- [ ] Chaque ligne à écart non nul produit une `CORRECTION_POS` (écart > 0) ou `CORRECTION_NEG` (écart < 0)
+- [ ] `motif = "Inventaire n° INV-{ANNEE}-{SEQUENCE}"` sur chaque mouvement généré
+- [ ] Les lignes à écart nul ne produisent **aucun mouvement**
+- [ ] **Cas limite `DEC-023`** : si appliquer l'écart ferait passer le stock sous zéro, la ligne est **refusée et marquée `A_RECOMPTER`** — elle n'est **jamais** appliquée partiellement (« le comptage est périmé, pas approximatif »)
+- [ ] Les lignes refusées n'empêchent pas la validation des autres ; elles sont listées dans la réponse
+- [ ] Opération transactionnelle : `@Transactional(rollbackFor = Exception.class)`
+- [ ] Campagne passe à `VALIDEE` et devient immuable ; `StockUpdatedEvent` publié par article corrigé
+- [ ] Une campagne s'ouvre et se valide **le jour même** (`DEC-036`) — au-delà, les lignes périment au sens du cas limite ci-dessus
+
+**Endpoint :** `POST /api/v1/inventaires/{id}/valider`
+
+---
+
+## EPIC 16 — Import de mise en service (CSV)
+
+> **Objectif :** lever la friction d'entrée qui rendait l'essai de 90 jours (`DEC-015`) inexploitable — saisir 2 000 références à la main n'est pas un onboarding.
+>
+> Périmètre issu de `DEC-038` : trois imports, gabarit téléchargeable, rapport d'erreurs **ligne à ligne**, import **transactionnel** (tout ou rien par lot validé). **Aucune reprise d'historique** (ventes, transferts, commandes) en V1.
+
+### US-096 — Télécharger les gabarits CSV
+
+**Priorité :** P0 | **Sprint :** 5 | **Points :** 2
+
+**En tant qu'** Admin,
+**je veux** télécharger le fichier modèle de chaque import,
+**afin de** préparer mes données au bon format sans deviner les colonnes.
+
+**Critères d'acceptation :**
+- [ ] Trois gabarits : `catalogue`, `stock-initial`, `tiers`
+- [ ] En-têtes en français, une ligne d'exemple commentée
+- [ ] Encodage **UTF-8 avec BOM** (ouverture correcte dans Excel en environnement francophone)
+- [ ] Séparateur `;` (convention Excel FR), documenté dans le gabarit
+- [ ] `Content-Type: text/csv`, `Content-Disposition: attachment`
+
+**Endpoint :** `GET /api/v1/imports/gabarits/{type}` (`type` = `catalogue` | `stock-initial` | `tiers`)
+
+---
+
+### US-097 — Importer le catalogue (catégories + articles) ⭐
+
+**Priorité :** P0 | **Sprint :** 5 | **Points :** 8
+
+**En tant qu'** Admin,
+**je veux** importer mes catégories et mes articles depuis un fichier CSV,
+**afin de** mettre le produit en service sans ressaisie manuelle.
+
+**Critères d'acceptation :**
+- [ ] `@PreAuthorize("hasAnyRole('ADMIN_FILIALE','ADMIN_GROUPE')")`
+- [ ] Les catégories absentes sont créées à la volée depuis la colonne catégorie
+- [ ] Validation ligne à ligne : `code_article` unique, prix `INTEGER` ≥ 0, `taux_tva` valide, quantités `DECIMAL(12,3)` (`DEC-003`)
+- [ ] `prix_vente_ttc` **calculé côté serveur**, jamais lu depuis le fichier
+- [ ] **Rapport d'erreurs ligne à ligne** : numéro de ligne, colonne, valeur reçue, motif du rejet
+- [ ] Import **transactionnel** : une seule erreur ⇒ **aucune ligne n'est écrite** (`DEC-038`)
+- [ ] Mode `dryRun` : valide et retourne le rapport sans rien écrire
+- [ ] Taille maximale 5 Mo / 10 000 lignes par lot
+- [ ] Le fichier importé n'est pas conservé au-delà du traitement
+
+**Endpoint :** `POST /api/v1/imports/catalogue?dryRun=false` (multipart/form-data)
+
+---
+
+### US-098 — Importer le stock initial par filiale ⭐
+
+**Priorité :** P0 | **Sprint :** 6 | **Points :** 5
+
+**En tant qu'** Admin,
+**je veux** charger le stock de départ de chaque filiale,
+**afin de** partir d'un stock juste au jour 1 sans inventaire manuel.
+
+**Critères d'acceptation :**
+- [ ] `@PreAuthorize("hasAnyRole('ADMIN_FILIALE','ADMIN_GROUPE')")`
+- [ ] Chaque ligne génère un mouvement d'ouverture `CORRECTION_POS` avec `motif = "Import mise en service"` (`DEC-038`)
+- [ ] Quantités en `DECIMAL(12,3)` (`DEC-003`), strictement > 0
+- [ ] L'article doit exister → sinon la ligne est rejetée avec son numéro (pas de création implicite)
+- [ ] La filiale cible doit appartenir au groupe de l'appelant → sinon `403 CROSS_GROUP_FORBIDDEN`
+- [ ] **Refus si un stock d'ouverture existe déjà** pour le couple article/filiale → `409` avec `ErrorCode.STOCK_INITIAL_DEJA_IMPORTE` (un import d'ouverture ne se rejoue pas)
+- [ ] Import transactionnel + rapport ligne à ligne + `dryRun`, comme US-097
+- [ ] Lève la conséquence assumée de `DEC-036` : l'inventaire initial passe par cet import, pas à la main
+
+**Endpoint :** `POST /api/v1/imports/stock-initial?filialeId=3&dryRun=false` (multipart/form-data)
+
+---
+
+### US-099 — Importer les tiers (clients + fournisseurs)
+
+**Priorité :** P0 | **Sprint :** 5 | **Points :** 3
+
+**En tant qu'** Admin,
+**je veux** importer mon fichier clients et fournisseurs,
+**afin de** retrouver mes contacts existants dès la mise en service.
+
+**Critères d'acceptation :**
+- [ ] Colonne `type` obligatoire : `CLIENT` ou `FOURNISSEUR`
+- [ ] Téléphone au format camerounais validé ; e-mail optionnel mais validé s'il est présent
+- [ ] Doublon détecté sur (nom + téléphone) dans l'entreprise → ligne rejetée, jamais écrasée silencieusement
+- [ ] Import transactionnel + rapport ligne à ligne + `dryRun`, comme US-097
+
+**Endpoint :** `POST /api/v1/imports/tiers?dryRun=false` (multipart/form-data)
+
+---
+
+## EPIC 17 — Robustesse des écritures de stock
+
+> **Objectif :** empêcher qu'une connexion mobile instable ne crée un double mouvement de stock — une faute **indétectable a posteriori**, puisque le stock est calculé depuis le journal (ADR-003).
+>
+> Périmètre issu de `DEC-027`.
+
+### US-100 — Clé d'idempotence sur les écritures de stock ⭐
+
+**Priorité :** P0 | **Sprint :** 6 | **Points :** 5
+
+**En tant que** système,
+**je veux** rejeter la seconde soumission identique d'une écriture de stock,
+**afin qu'** une double soumission réseau ne crée jamais deux mouvements.
+
+**Critères d'acceptation :**
+- [ ] En-tête `Idempotency-Key` **obligatoire** sur toute écriture créant un `mouvement_stock` : vente (US-064), réception (US-049), transfert (US-068), correction (US-053/054), remboursement (US-091), validation d'inventaire (US-095)
+- [ ] Absence d'en-tête → `400` avec `ErrorCode.IDEMPOTENCY_KEY_REQUISE`
+- [ ] La clé est stockée **avec la réponse produite** (`DEC-027`)
+- [ ] Rejeu de la **même clé** avec le **même corps** → la réponse mémorisée est renvoyée telle quelle, **sans réexécuter** l'écriture (même code HTTP, même corps)
+- [ ] Rejeu de la même clé avec un corps **différent** → `409` avec `ErrorCode.IDEMPOTENCY_KEY_REUTILISEE`
+- [ ] Portée de la clé : `entreprise_id` + endpoint — deux entreprises peuvent employer la même clé sans se percuter
+- [ ] Rétention : 24 h glissantes, purge automatique (`DEC-032`)
+- [ ] L'enregistrement de la clé et l'écriture métier sont dans **la même transaction** — sinon la protection ne vaut rien
+
+**Endpoint :** transverse (en-tête HTTP sur les endpoints listés ci-dessus)
+
+---
+
 ## Récapitulatif par Sprint
 
 | Sprint | Durée | US incluses | Points | Objectif |
@@ -1985,21 +2505,41 @@
 | **Sprint 3** | 2 sem. | US-013 à US-021, US-074 | 22 | Groupe, Filiales, Utilisateurs, Email bienvenue |
 | **Sprint 3 (sécu)** | inclus | US-083 à US-086 *(nouveau — GS-CDA-2026-02)* | +14 | Rotation refresh token, Argon2id, fail-closed, audit logs |
 | **Sprint 4** | 2 sem. | US-019, US-022 à US-026, US-075 | 20 | Employés, Profil, Activation |
+| **Sprint 3 (plan)** | inclus | US-101 *(nouveau — `DEC-015`)* | +3 | Limite d'utilisateurs par plan |
 | **Sprint 5** | 2 sem. | US-027 à US-043 | 24 | Catalogue complet, Clients, Fournisseurs |
+| **Sprint 5 (cat./import)** | inclus | US-096, US-097, US-099, US-102, US-103 *(nouveaux)* | +26 | Catalogue groupe, unités d'achat, imports CSV catalogue et tiers |
 | **Sprint 6** | 2 sem. | US-044 à US-050 | 23 | Cycle d'achat complet avec mouvements ENTREE |
+| **Sprint 6 (add.)** | inclus | US-098, US-100, US-104 *(nouveaux)* | +15 | Import du stock initial, idempotence, lot / péremption |
 | **Sprint 7** | 2 sem. | US-051 à US-054, US-056 à US-062 | 34 | Stock réel, Corrections, Ventes B2B |
-| **Sprint 8** | 2 sem. | US-055, US-064, US-064b *(nouveau)*, US-065 à US-070, US-071 | 33 | Stock consolidé, Caisse (bloquante 409), Transferts, Alertes |
-| **Sprint 9** | 2 sem. | US-063, US-067 *(revu, 3→5 pts)*, US-072 à US-073, US-075 | 16 | Facture PDF, Annulation vente (mouvement compensatoire dédié), Centre alertes |
-| **Sprint 10** | 2 sem. | US-076 à US-079 | 14 | Reporting et statistiques P1 |
+| **Sprint 7 (add.)** | inclus | US-105 *(nouveau — `DEC-011`)* | +3 | Règlement et échéance B2B |
+| **Sprint 8** | 2 sem. | US-055, US-064, US-064b, US-065 à US-070, US-071 | 33 | Stock consolidé, Caisse (bloquante 409), Transferts, Alertes |
+| **Sprint 8 (caisse)** | inclus | US-087 à US-089, US-106 *(nouveaux)* | +26 | Sessions de caisse, paiement mixte, clôture, transfert multi-lignes |
+| **Sprint 9** | 2 sem. | US-063, US-067 *(revu, 3→5 pts)*, US-072 à US-073, US-075 | 16 | Facture PDF, Annulation vente, Centre alertes |
+| **Sprint 9 (add.)** | inclus | US-090 à US-094 *(nouveaux)* | +23 | Historique de caisse, remboursement, campagnes d'inventaire |
+| **Sprint 10** | 2 sem. | US-076 à US-079, US-095 *(nouveau)* | 22 | Reporting, validation d'inventaire |
 | **Sprint 11** | 2 sem. | US-080 | 3 | Export CSV P2 |
-| **Sprint 11 (add.)** | inclus | US-081, US-082 *(nouveau — GS-UNICITE-2026-07)* | 6 | Branding entreprise, Unicité stricte |
+| **Sprint 11 (add.)** | inclus | US-081, US-082 *(GS-UNICITE-2026-07)* | 6 | Branding entreprise, Unicité stricte |
 
-**Total P0 :** 52 user stories — 186 points estimés
-**Total P1 :** 26 user stories — 93 points estimés
-**Total P2 :** 4 user stories — 12 points estimés
-**Total backlog :** **82 user stories** | **291 story points** (≈ 11 sprints)
+**Total P0 :** 78 user stories — 248 points
+**Total P1 :** 29 user stories — 103 points
+**Total P2 :** 1 user story — 3 points
+**Total backlog :** **108 user stories** | **354 story points**
 
-> ⚠️ Ce total **ne couvre pas le périmètre décidé** : `REF §13.3` chiffre l'acté à **≈ 24,5 sprints**. Voir le tableau des décisions sans US en tête de fichier.
+> ⚠️ **La colonne « Sprint » est désormais sur-souscrite et n'est plus un plan.**
+>
+> Les 20 US ajoutées le 8 sept. 2026 (`DEC-002`, `007`, `009`, `010`, `011`, `012`, `013`, `015`,
+> `027`, `036`, `038`) ont été rattachées au sprint le plus proche **fonctionnellement**, sans
+> rééquilibrage de charge : le sprint 8 porte 57 points et le sprint 3 en porte 43, pour une
+> vélocité observée de l'ordre de 20-25. À ~22 points par sprint, 354 points représentent
+> **≈ 16 sprints**, et `REF §13.3` chiffre le périmètre acté à **≈ 24,5 sprints** une fois
+> comptés les coûts non exprimés en US.
+>
+> **Le rééquilibrage et l'ordre de livraison relèvent de `GS-PLAN-2026-01`**, autorité du
+> planning (`REF §13`) — pas de ce fichier, qui décrit *quoi* faire et non *quand*.
+
+> 📌 **Corrections de comptage (8 sept. 2026).** Les totaux précédents (« 82 US / 291 SP »)
+> ne correspondaient pas au contenu réel du fichier, qui comptait **88 US pour 250 SP**
+> avant les ajouts. Les totaux ci-dessus sont recalculés depuis les en-têtes des US.
 
 > **Changelog GS-CDA-2026-02 (voir addendum dédié)** : +5 US, +18 points par rapport à la version 1.0 — US-083 à US-086 (durcissement sécurité auth) et US-064b (association d'un client existant à une vente directe) ajoutées ; US-064 et US-067 revues en profondeur (comportement bloquant en `409` — `DEC-023`/`DEC-017` — + mouvement `ANNULATION_VENTE` dédié).
 

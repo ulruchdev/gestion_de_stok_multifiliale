@@ -252,7 +252,8 @@ CREATE TABLE tenant_group (
                           CHECK (plan_abonnement IN ('GRATUIT','PRO','PERSONNALISE')),
     actif                 BOOLEAN      NOT NULL DEFAULT TRUE,
     date_expiration_plan  DATE,        -- GRATUIT : creation + 90 jours (DEC-015)
-    limite_filiales       INTEGER      NOT NULL DEFAULT 4,  -- GRATUIT = 4 (DEC-015)
+    limite_filiales       INTEGER      NOT NULL DEFAULT 4,   -- GRATUIT = 4  (DEC-015)
+    limite_utilisateurs   INTEGER      NOT NULL DEFAULT 10,  -- GRATUIT = 10 (DEC-015)
     date_creation         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     date_modification     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     supprime              BOOLEAN      NOT NULL DEFAULT FALSE,

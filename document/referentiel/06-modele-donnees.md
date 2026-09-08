@@ -23,7 +23,7 @@ Le schéma réellement appliqué (`V1__init_schema.sql` → `V4`) est l'état **
 | Montants & quantités | montants en `INTEGER` (XAF) ; **toutes** les quantités en `DECIMAL(12,3)` — `article.seuil_alerte`, `mouvement_stock.quantite`, toutes les tables de lignes (`DEC-003`) | DEC-003 |
 | Utilisateur | `email_verifie` booléen ; suppression `token_reset`/`token_reset_expiry` ; `UNIQUE(email)` conservé | DEC-008, 016, 024 |
 | Alertes | `notification_alerte` refondue : `destinataire_utilisateur_id`, `type` extensible, `etat`, `article_id` nullable | DEC-004 |
-| Plans | `tenant_group.plan_abonnement` → 3 valeurs (`GRATUIT|PRO|PERSONNALISE`) ; `limite_filiales` ; `date_expiration_plan` | DEC-015 |
+| Plans | `tenant_group.plan_abonnement` → 3 valeurs (`GRATUIT|PRO|PERSONNALISE`) ; `limite_filiales` ; **`limite_utilisateurs`** (10 / 50 / négocié) ; `date_expiration_plan` | DEC-015 |
 | Commande client | `etat_reglement` (`NON_REGLEE|REGLEE`), `date_echeance`, `date_reglement` | DEC-011, 020 |
 | Idempotence | table des clés d'idempotence (avec réponse) | DEC-027 |
 | Inventaire | tables `session_inventaire`, `ligne_inventaire` | DEC-036 |

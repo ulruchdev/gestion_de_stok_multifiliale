@@ -42,6 +42,9 @@ Ce fichier constitue la **collection Postman officielle** du projet StockMaster 
   - [Groupes — Transferts — `/api/v1/groupe/transferts`](#9-groupes--transferts--apiv1groupetransferts)
   - [Notifications — `/api/v1/alertes`](#10-notifications--apiv1alertes)
   - [Reporting — `/api/v1/reporting`](#11-reporting--apiv1reporting)
+  - [Caisse — `/api/v1/caisse`](#12-caisse--apiv1caisse)
+  - [Inventaire — `/api/v1/inventaires`](#13-inventaire--apiv1inventaires)
+  - [Imports — `/api/v1/imports`](#14-imports--apiv1imports)
 - [Scripts de test Postman](#scripts-de-test-postman)
 - [Journal des modifications](#journal-des-modifications)
 
@@ -642,6 +645,50 @@ pm.test("Message de succès", () => {
 
 ---
 
+## 12. Caisse — `/api/v1/caisse`
+
+> **Statut :** 🔜 Non implémenté (EPIC 14, US-087 à US-091, Sprint 8-9 — `DEC-009`, `DEC-010`, `DEC-018`)
+
+### 12.1 POST — Ouvrir une session de caisse (futur)
+### 12.2 POST — Encaisser une vente en paiement mixte (futur) — `Idempotency-Key` requis
+### 12.3 POST — Clôturer une session de caisse (futur)
+### 12.4 GET — Historique des sessions de caisse (futur)
+### 12.5 POST — Rembourser une vente (futur) — `Idempotency-Key` requis
+
+---
+
+## 13. Inventaire — `/api/v1/inventaires`
+
+> **Statut :** 🔜 Non implémenté (EPIC 15, US-092 à US-095, Sprint 9-10 — `DEC-036`)
+
+### 13.1 POST — Ouvrir une campagne d'inventaire (futur)
+### 13.2 PUT — Saisir une quantité constatée (futur)
+### 13.3 GET — Feuille d'écarts (futur)
+### 13.4 POST — Valider la campagne et générer les corrections (futur) — `Idempotency-Key` requis
+
+---
+
+## 14. Imports — `/api/v1/imports`
+
+> **Statut :** 🔜 Non implémenté (EPIC 16, US-096 à US-099, Sprint 5-6 — `DEC-038`)
+
+### 14.1 GET — Télécharger un gabarit CSV (futur)
+### 14.2 POST — Importer le catalogue (futur) — multipart, `dryRun` supporté
+### 14.3 POST — Importer le stock initial d'une filiale (futur) — multipart, `dryRun` supporté
+### 14.4 POST — Importer les tiers (futur) — multipart, `dryRun` supporté
+
+---
+
+> ### ⚙️ Règle transverse — en-tête `Idempotency-Key` (`DEC-027`)
+>
+> Toute écriture créant un `mouvement_stock` **exige** l'en-tête `Idempotency-Key` :
+> vente, réception, transfert, correction, remboursement, validation d'inventaire.
+> Absence → `400 IDEMPOTENCY_KEY_REQUISE`. Rejeu à corps identique → la réponse mémorisée
+> est renvoyée sans réexécution. Rejeu à corps différent → `409 IDEMPOTENCY_KEY_REUTILISEE`.
+> Voir `US-100`.
+
+---
+
 ## Scripts de test Postman
 
 ### Scripts de test génériques (à ajouter à chaque requête)
@@ -690,6 +737,7 @@ if (pm.response.code === 201) {
 |---|---|---|---|
 | Juin 2026 | Codebuff | Création initiale | Documenter les endpoints pour Postman |
 | Juin 2026 | Codebuff | Ajout fichier JSON collection v2.1 + maintenance workflow | Création de `postman_collection.json` importable directement |
+| 8 sept. 2026 | Claude Code | Sections 12-14 (caisse, inventaire, imports) + règle `Idempotency-Key` ; §10.2 aligné sur `etat` | Rédaction des US `US-087` à `US-106` couvrant `DEC-009/010/027/036/038` |
 
 ---
 
