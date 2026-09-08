@@ -436,7 +436,7 @@ CREATE TABLE vente (
     client_id         BIGINT      REFERENCES client(id) ON DELETE RESTRICT,
     code              VARCHAR(30) NOT NULL,
     date_vente        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    statut            VARCHAR(20) NOT NULL DEFAULT 'VALIDEE' CHECK (statut IN ('VALIDEE','ANNULEE')),
+    statut            VARCHAR(20) NOT NULL DEFAULT 'PAYEE' CHECK (statut IN ('PAYEE','ANNULEE','REMBOURSEE')),
     commentaire       TEXT,
     date_creation     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     date_modification TIMESTAMPTZ NOT NULL DEFAULT NOW(),

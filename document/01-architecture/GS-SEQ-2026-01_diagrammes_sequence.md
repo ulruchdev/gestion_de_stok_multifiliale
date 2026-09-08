@@ -229,6 +229,6 @@ sequenceDiagram
 
 ## 6. Prochaines étapes
 
-- Compléter avec le flow **Vente Directe non bloquante** (comportement révisé par GS-CDA-2026-02 — vente autorisée même en cas de stock insuffisant, à la différence de CommandeClient) dès que le comportement exact de compensation (`ANNULATION_VENTE`) est stabilisé en implémentation.
+- Compléter avec le flow **Vente Directe bloquante** (comportement révisé par `DEC-023`/`DEC-017` — vente refusée en 409 si stock insuffisant, à la différence de l'ancien GS-CDA-2026-02 §1) dès que le comportement exact (`ANNULATION_VENTE`, sessions de caisse `DEC-009`) est stabilisé en implémentation.
 - Ajouter le flow d'**annulation de vente** une fois US-067 (revue) livrée.
 - Si un frontend externe rejoint le projet, ce fichier devient le contrat de référence à valider avec l'équipe frontend avant tout développement d'écran impliquant plusieurs appels API séquencés.

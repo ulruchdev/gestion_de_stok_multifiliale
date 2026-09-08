@@ -175,7 +175,7 @@ erDiagram
         long entreprise_id FK
         long client_id FK "nullable — GS-CDA-2026-02"
         long caissier_id FK
-        enum statut "VALIDEE ou ANNULEE — GS-CDA-2026-02"
+        enum statut "PAYEE ou ANNULEE ou REMBOURSEE — DEC-006/010/018"
         instant date_vente
     }
 
@@ -216,13 +216,13 @@ erDiagram
         long id PK
         long entreprise_id FK
         long article_id FK
-        enum type_alerte "STOCK_BAS"
+        enum type_alerte "STOCK_BAS ou RUPTURE (DEC-004 : type extensible en V5)"
         instant date_creation
         boolean lue
     }
 ```
 
-> ⚠️ **Note de synchronisation :** `VENTE.statut` (`VALIDEE`/`ANNULEE`) et `VENTE.client_id` (nullable) reflètent la décision GS-CDA-2026-02 (vente directe non bloquante + fidélité client). Le type de mouvement `ANNULATION_VENTE` a été ajouté au même titre. Si ce diagramme diverge de `V1__init_schema.sql` / migrations ultérieures en base, **ce fichier a tort** — corriger contre le schéma Flyway réel, jamais l'inverse.
+> ⚠️ **Note de synchronisation :** ce fichier est une **vue dérivée** — l'autorité est le référentiel `GS-REF-2026-01` (parties 4, 5, 6 du `document/referentiel/`) et les migrations Flyway. `VENTE.statut` = `PAYEE`/`ANNULEE`/`REMBOURSEE` (`DEC-006`, `DEC-010`, `DEC-018`) ; la vente directe **bloque** en 409 sur stock insuffisant (`DEC-023`/`DEC-017`) ; le type d'alerte `ECART_STOCK_DETECTE` est **supprimé** (`DEC-037`). Si ce diagramme diverge des migrations réelles, **ce fichier a tort** — corriger contre le schéma Flyway, jamais l'inverse.
 
 ---
 

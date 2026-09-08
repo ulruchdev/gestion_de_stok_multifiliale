@@ -1,6 +1,6 @@
 # Backlog Produit — StockMaster CM
 ### Référence : GS-BACKLOG-2026-01 | Version : 1.1 | Date : Juillet 2026 | Statut : Validé
-### Changements v1.1 : intégration des décisions GS-CDA-2026-02 (vente directe non bloquante, mouvement `ANNULATION_VENTE`, fidélité client sur vente directe, durcissement sécurité auth)
+### Changements v1.1 : intégration des décisions GS-CDA-2026-02 (mouvement `ANNULATION_VENTE`, `client_id` nullable, durcissement sécurité auth) — **révisé le 8 sept. 2026** par le référentiel `GS-REF-2026-01` : la vente directe **bloque** en 409 sur stock insuffisant (`DEC-023`), l'état de la vente est `PAYEE`/`ANNULEE`/`REMBOURSEE` (`DEC-006/010/018`), le point de fidélité est abandonné (`DEC-034`)
 
 ---
 
@@ -1963,7 +1963,7 @@
 | **Sprint 5** | 2 sem. | US-027 à US-043 | 24 | Catalogue complet, Clients, Fournisseurs |
 | **Sprint 6** | 2 sem. | US-044 à US-050 | 23 | Cycle d'achat complet avec mouvements ENTREE |
 | **Sprint 7** | 2 sem. | US-051 à US-054, US-056 à US-062 | 34 | Stock réel, Corrections, Ventes B2B |
-| **Sprint 8** | 2 sem. | US-055, US-064, US-064b *(nouveau)*, US-065 à US-070, US-071 | 33 | Stock consolidé, Caisse (non bloquante), Transferts, Alertes |
+| **Sprint 8** | 2 sem. | US-055, US-064, US-064b *(nouveau)*, US-065 à US-070, US-071 | 33 | Stock consolidé, Caisse (bloquante 409), Transferts, Alertes |
 | **Sprint 9** | 2 sem. | US-063, US-067 *(revu, 3→5 pts)*, US-072 à US-073, US-075 | 16 | Facture PDF, Annulation vente (mouvement compensatoire dédié), Centre alertes |
 | **Sprint 10** | 2 sem. | US-076 à US-079 | 14 | Reporting et statistiques P1 |
 | **Sprint 11** | 2 sem. | US-080 | 3 | Export CSV P2 |
