@@ -138,7 +138,7 @@
 | ID | User Story | SP | Priorité | Critères d'acceptation |
 |---|---|---|---|---|
 | US-F060 | Création de commande client (multi-lignes) | 8 | **P0** | Réutilise le composant de saisie multi-lignes de US-F050 |
-| US-F061 | Gestion de l'erreur "stock insuffisant" à la validation | 5 | **P0** | Affiche par article la quantité demandée vs disponible, retournée par le backend (422 avec `articlesEnRupture[]` — GS-SEQ-2026-01 §3) ; **aucun recalcul de disponibilité côté client** |
+| US-F061 | Gestion de l'erreur "stock insuffisant" à la validation | 5 | **P0** | Affiche par article la quantité demandée vs disponible, retournée par le backend (409 `INSUFFICIENT_STOCK` avec `articlesEnRupture[]` — `DEC-017`, GS-SEQ-2026-01 §3) ; **aucun recalcul de disponibilité côté client** |
 | US-F062 | Génération et téléchargement de facture PDF | 3 | P1 | Ouvre/télécharge le fichier retourné par `GET /commandes-client/{id}/facture` |
 | US-F063 | Écran caisse / vente directe (recherche rapide, saisie tactile) | 8 | **P0** | Recherche d'article utilisable en < 2 interactions tactiles ; fonctionne en mode dégradé si latence réseau élevée |
 | US-F064 | Ticket de caisse (impression navigateur + partage) | 3 | P1 | Format imprimable A4/thermique ; bouton de partage (lien ou image) |

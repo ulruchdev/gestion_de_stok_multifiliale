@@ -596,5 +596,5 @@ Le comparateur est figé à **`≤ seuil`**, ce qui élimine les quatre définit
 
 > **Règle :** sauf contre-ordre écrit du porteur **avant le démarrage de l'implémentation**, les défauts retenus du Lot 5 **font foi**. Toute remise en cause ultérieure passe par une nouvelle `DEC-nnn`.
 
-**Correspondance des audits :** la table entre `GS-AUDIT-2026-01`, `INCOHERENCES_DOCUMENTAIRES_StockMaster_CM.docx` et `audit-analyse-2026-09.md` est dans `document/referentiel/annexe-correspondance-audits.md`.
+**Correspondance des audits :** la table entre `GS-AUDIT-2026-01`, `INCOHERENCES_DOCUMENTAIRES_StockMaster_CM.docx` et `audit-analyse-stockmaster-2026-09.md` est dans `document/referentiel/annexe-correspondance-audits.md`.
 **Suivi des points mécaniques :** `document/03-pilotage/checklist-stabilisation-DEC-031.md`.

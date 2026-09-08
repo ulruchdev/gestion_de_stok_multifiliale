@@ -21,7 +21,7 @@ graph LR
     note right of Validee
         Verification STOCK bloquante:
         1. Verifier stock pour CHAQUE ligne
-        2. Si un article manque -> 422 InsufficientStock
+        2. Si un article manque -> 409 InsufficientStock
         3. Si OK -> creer SORTIE + valider (atomique)
     end note
 ```
@@ -53,7 +53,7 @@ sequenceDiagram
 
     alt Stock INSUFFISANT
         STK-->>SVC: InsufficientStockException
-        SVC-->>API: 422 avec liste articles manquants
+        SVC-->>API: 409 avec liste articles manquants
         API-->>FE: Stock insuffisant pour RIZ50KG (dispo: 3)
         FE-->>CO: Erreur detaillee
 

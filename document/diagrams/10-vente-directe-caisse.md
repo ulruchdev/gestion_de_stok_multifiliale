@@ -37,8 +37,8 @@ graph TD
 graph TD
     Annulation[Annuler une vente] --> CheckStatut{Statut actuel de la vente ?}
 
-    CheckStatut -->|ANNULEE| Error[400 BAD REQUEST<br/>Vente deja annulee]
-    CheckStatut -->|VALIDEE| Proceed[Proceder a l annulation]
+    CheckStatut -->|ANNULEE| Error[409 CONFLICT<br/>Vente deja annulee]
+    CheckStatut -->|PAYEE| Proceed[Proceder a l annulation]
 
     Proceed --> Compensate[Creer mouvement ANNULATION_VENTE<br/>Quantite compensatoire positive<br/>pour remettre le stock a niveau]
 
@@ -68,7 +68,7 @@ graph TD
 ```mermaid
 graph LR
     subgraph Vente["Vente Directe"]
-        V[ID: 1<br/>Date: 15/07/2026 14:30<br/>Caissier: Paul Biya<br/>Statut: VALIDEE]
+        V[ID: 1<br/>Date: 15/07/2026 14:30<br/>Caissier: Paul Biya<br/>Statut: PAYEE]
     end
 
     subgraph ClientInfo["Client"]

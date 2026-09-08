@@ -60,7 +60,7 @@ Ces documents ont produit le présent référentiel. Ils sont **gelés et ne son
 
 - `document/03-pilotage/GS-AUDIT-2026-01_rapport_incoherences.md` — audit vertical par parcours (blocs A et B rédigés, 29 entrées) — gelé au 17 août 2026
 - `document/03-pilotage/INCOHERENCES_DOCUMENTAIRES_StockMaster_CM.docx` — balayage horizontal du corpus (83 contradictions + 16 annexes) — gelé au 17 août 2026
-- `document/03-pilotage/audit-analyse-2026-09.md` — audit technique du dépôt (code, CI, secrets, tests) — gelé au 7 septembre 2026
+- `document/03-pilotage/audit-analyse-stockmaster-2026-09.md` — audit technique du dépôt (code, CI, secrets, tests) — gelé au 7 septembre 2026
 
 Recoupement : 28 paires communes entre les deux premiers ; l'audit technique apporte les points code/CI. Total de points uniques : ≈ 96.
 

@@ -1679,7 +1679,7 @@
 
 **Critères d'acceptation :**
 - [ ] `@PreAuthorize("hasAnyRole('CAISSIER','ADMIN_FILIALE','ADMIN_GROUPE')")`
-- [ ] Annulation possible uniquement si vente du jour même (`date_vente::date = CURRENT_DATE`) et `statut = VALIDEE`
+- [ ] Annulation possible uniquement si vente du jour même (`date_vente::date = CURRENT_DATE`) et `statut = PAYEE`
 - [ ] Vente déjà `ANNULEE` → `409 CONFLICT` avec `ErrorCode.VENTE_DEJA_ANNULEE`
 - [ ] **Le mouvement `SORTIE` original n'est ni modifié ni supprimé** (immuabilité absolue du journal, règle CDA §6.4)
 - [ ] Un mouvement `ANNULATION_VENTE` est créé pour chaque ligne de la vente annulée, avec `origine_type = ANNULATION_VENTE` et `origine_id` = id de la vente annulée
@@ -1974,7 +1974,7 @@
 **Total P2 :** 4 user stories — 12 points estimés
 **Total backlog :** **82 user stories** | **291 story points**
 
-> **Changelog GS-CDA-2026-02 (voir addendum dédié)** : +5 US, +18 points par rapport à la version 1.0 — US-083 à US-086 (durcissement sécurité auth) et US-064b (fidélité client sur vente directe) ajoutées ; US-064 et US-067 revues en profondeur (comportement non bloquant + mouvement `ANNULATION_VENTE` dédié).
+> **Changelog GS-CDA-2026-02 (voir addendum dédié)** : +5 US, +18 points par rapport à la version 1.0 — US-083 à US-086 (durcissement sécurité auth) et US-064b (association d'un client existant à une vente directe) ajoutées ; US-064 et US-067 revues en profondeur (comportement bloquant en `409` — `DEC-023`/`DEC-017` — + mouvement `ANNULATION_VENTE` dédié).
 
 ---
 

@@ -2,6 +2,13 @@
 ### Date : 7 septembre 2026 | Périmètre : code (backend + frontend) + dossier `document/` (fondation du projet)
 ### Méthode : lecture effective de chaque fichier, vérification par exécution (build, tests, decodeur jjwt, greps) — aucune supposition ; toute zone d'ombre est une question ouverte (Partie 3)
 
+> 🧊 **Document gelé — pièce justificative, pas une norme.**
+> Il décrit l'état du corpus **au moment de l'audit** et propose des corrections dont plusieurs ont depuis été
+> **tranchées autrement, voire rendues sans objet** par le journal des décisions. N'appliquez **aucune**
+> recommandation de ce fichier sans la confronter à `document/referentiel/12-journal-decisions.md`
+> (exemple : l'ajout de `ECART_STOCK_DETECTE`, ici recommandé, est **supprimé** par `DEC-037`).
+> L'autorité est le référentiel `GS-REF-2026-01` (`document/referentiel/`).
+
 ---
 
 # PARTIE 1 — LOGIQUE MÉTIER (Business Logic)

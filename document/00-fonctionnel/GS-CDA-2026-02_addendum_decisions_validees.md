@@ -12,7 +12,7 @@ Ce document complète GS-CDA-2026-01 avec 3 décisions issues d'une revue de coh
 
 ---
 
-## §1 — Vente Directe : comportement non bloquant sur le stock
+## §1 — Vente Directe : comportement bloquant sur le stock
 
 ### Constat initial
 Le document parent ne précisait pas si la Vente Directe (caisse) devait bloquer une vente en cas de stock système insuffisant, contrairement à la Commande Client (UC-03) qui bloque explicitement.
@@ -71,5 +71,5 @@ Cela répare le gap sans changer le workflow existant : la vente anonyme reste p
 |---|---|
 | GS-CDA-2026-01 (analyse fonctionnelle) | Ajouter une note de renvoi vers ce document dans les sections 3.7 (Vente Directe), 6.2 (entité Vente) et 6.4 (règles d'intégrité) lors de la prochaine révision majeure du docx |
 | GS-BACKLOG-2026-01 | Fait — v1.1 intègre US-064, US-064b, US-067 mis à jour |
-| CDCT (Cahier des Charges Technique) | Ajouter la valeur d'enum `ANNULATION_VENTE`, le champ `statut` sur `Vente`, le champ `client_id` nullable sur `Vente`, et la nouvelle notification `ECART_STOCK_DETECTE` |
+| CDCT (Cahier des Charges Technique) | Ajouter la valeur d'enum `ANNULATION_VENTE`, le champ `statut` sur `Vente`, le champ `client_id` nullable sur `Vente`. La notification `ECART_STOCK_DETECTE` initialement prévue ici est **supprimée** (`DEC-037`) — ne pas l'ajouter au `CHECK type_alerte` |
 | Migrations Flyway | Nouvelle migration : `ALTER TYPE type_mouvement_enum ADD VALUE 'ANNULATION_VENTE'`, ajout colonnes `statut` et `client_id` sur `vente` |

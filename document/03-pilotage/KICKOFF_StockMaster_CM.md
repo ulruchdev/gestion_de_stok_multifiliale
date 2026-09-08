@@ -94,7 +94,7 @@ gestion_de_stok_multifiliale/
 | `BACKLOG_StockMaster_CM.md` (v1.1) | ✅ Lecture complète — son backlog | ✅ Lecture complète — il va y contribuer | Survol seulement (comprendre les endpoints à venir) |
 | `CDCT_...Sections22-30.md` | ✅ Obligatoire (archi qu'il a écrite) | ✅ Obligatoire (onboarding code) | ❌ Pas nécessaire |
 | `GS-DATA-2026-01_modele_donnees.md` | ✅ Obligatoire | ✅ Utile | ❌ Pas nécessaire |
-| `GS-CDA-2026-02_addendum.md` | ✅ Obligatoire — 3 décisions à coder (vente non bloquante, ANNULATION_VENTE, client_id) | ✅ Utile | ❌ Pas nécessaire |
+| `GS-CDA-2026-02_addendum.md` | ✅ Obligatoire — 3 décisions à coder (vente bloquante en 409 — `DEC-023`, ANNULATION_VENTE, client_id) | ✅ Utile | ❌ Pas nécessaire |
 | `analyse_fonctionnelle...docx` (GS-CDA-2026-01) | Référence si doute métier | Référence si doute métier | ✅ Obligatoire — §1.4 (contraintes Cameroun) et §2 (acteurs) |
 | `GS-IA-2026-01_architecture_information.md` | Pas prioritaire | ✅ Obligatoire (routing/RBAC frontend) | ✅ Obligatoire — base de CHAQUE maquette |
 | `GS-SEQ-2026-01_diagrammes_sequence.md` | ✅ Référence (il l'a écrit) | ✅ Obligatoire (contrats d'erreur exacts) | ❌ Pas nécessaire |

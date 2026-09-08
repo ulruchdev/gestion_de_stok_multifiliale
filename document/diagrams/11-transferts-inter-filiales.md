@@ -14,7 +14,7 @@ graph TD
     Validate -->|Source = Cible| Error[409 STK_TRANSFERT_IDENTIQUE]
     Validate -->|Distinctes| CheckStock{Verifier stock source<br/>suffisant ?}
 
-    CheckStock -->|Non| ErrorStock[422 InsufficientStock<br/>Stock disponible: X unites]
+    CheckStock -->|Non| ErrorStock[409 InsufficientStock<br/>Stock disponible: X unites]
     CheckStock -->|Oui| Transaction[DEBUT TRANSACTION]
 
     Transaction --> Insert[INSERT transfert_stock<br/>source + cible + article + qte]

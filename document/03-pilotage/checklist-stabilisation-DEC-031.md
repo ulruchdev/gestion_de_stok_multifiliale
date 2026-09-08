@@ -3,7 +3,7 @@
 ### Référence : `DEC-031` | Statut : lot d'implémentation | Ouverte le 7 septembre 2026
 
 > **Règle :** chaque item = une **petite PR isolée**, sans changement de comportement, avec **preuve de sortie** vérifiable. Un item est **fermé** quand sa preuve est fournie. Cette checklist est la **seule référence de suivi** du lot (pas le journal).
-> Sources : `GS-AUDIT-2026-01` (B-15), `INCOHERENCES_DOCUMENTAIRES.docx` (familles B, E, G, H), `audit-analyse-2026-09.md` (S1–S8, D1–D6, I7–I12).
+> Sources : `GS-AUDIT-2026-01` (B-15), `INCOHERENCES_DOCUMENTAIRES.docx` (familles B, E, G, H), `audit-analyse-stockmaster-2026-09.md` (S1–S8, D1–D6, I7–I12).
 
 ## Bloc 1 — P0 « machine » (préalable à tout) 
 

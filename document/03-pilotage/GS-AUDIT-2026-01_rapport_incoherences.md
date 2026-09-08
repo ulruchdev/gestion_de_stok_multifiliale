@@ -1,6 +1,13 @@
 # Rapport d'audit documentaire — StockMaster CM
-### Référence : GS-AUDIT-2026-01 | Version : 1.0 | Date : 10 août 2026 | Statut : **Soumis à arbitrage — réunion Business Analyse**
+### Référence : GS-AUDIT-2026-01 | Version : 1.0 | Date : 10 août 2026 | Statut : **🧊 Gelé au 17 août 2026 — pièce justificative, plus maintenue**
 ### Périmètre audité : intégralité du dossier `document/` (39 fichiers), confronté au code et au schéma Flyway réellement appliqués
+
+> 🧊 **Document gelé — pièce justificative, pas une norme.**
+> Il décrit l'état du corpus **au moment de l'audit** et propose des corrections dont plusieurs ont depuis été
+> **tranchées autrement, voire rendues sans objet** par le journal des décisions. N'appliquez **aucune**
+> recommandation de ce fichier sans la confronter à `document/referentiel/12-journal-decisions.md`
+> (exemple : l'ajout de `ECART_STOCK_DETECTE`, ici recommandé, est **supprimé** par `DEC-037`).
+> L'autorité est le référentiel `GS-REF-2026-01` (`document/referentiel/`).
 
 ---
 
