@@ -37,20 +37,20 @@ En cas de conflit entre ce référentiel et n'importe quel autre document de `do
 
 | # | Partie | Fichier | Absorbe | Statut |
 |---|---|---|---|---|
-| 1 | Vision, cible, périmètre V1/V2 | `01-vision-perimetre.md` | AF §1, KICKOFF §1 | 🔜 à rédiger |
-| 2 | Glossaire normatif | `02-glossaire.md` | épars — **création** | 🔜 à rédiger |
-| 3 | Multi-tenant, rôles, isolation | `03-multitenant-rbac.md` | AF §2.2, GS-IA §5 | 🔜 à rédiger |
-| 4 | Règles de gestion par domaine | `04-regles-gestion.md` | AF §3, §7, §8, UC §5 | 🔜 à rédiger |
-| 5 | Machines à états | `05-machines-etats.md` | épars — **création** | 🔜 à rédiger |
-| 6 | Modèle de données (vue dérivée) | `06-modele-donnees.md` | GS-DATA, CDCT §23.3 | 🔜 à rédiger |
-| 7 | Contrats d'API & erreurs (dérivé) | `07-api-erreurs.md` | test_postman | 🔜 à rédiger |
-| 8 | Parcours & séquences | `08-parcours-sequences.md` | GS-SEQ, `diagrams/01→15`, PDF | 🔜 à rédiger |
-| 9 | Architecture technique & ADR | `09-architecture-adr.md` | CDCT §22→30 | 🔜 à rédiger |
-| 10 | Exploitation, sauvegarde, volumétrie | `10-exploitation.md` | néant — **création** | 🔜 à rédiger |
-| 11 | Design system (pointeur) | `11-design-system.md` | DESIGN_TOKENS_REFERENCE | 🔜 à rédiger |
+| 1 | Vision, cible, périmètre V1/V1.5 | `01-vision-perimetre.md` | AF §1, KICKOFF §1 | ✅ 8 sept. 2026 |
+| 2 | Glossaire normatif | `02-glossaire.md` | épars — **création** | ✅ 8 sept. 2026 |
+| 3 | Multi-tenant, rôles, isolation | `03-multitenant-rbac.md` | AF §2.2, GS-IA §5 | ✅ 8 sept. 2026 |
+| 4 | Règles de gestion par domaine | `04-regles-gestion.md` | AF §3, §7, §8, UC §5 | ✅ 8 sept. 2026 |
+| 5 | Machines à états | `05-machines-etats.md` | épars — **création** | ✅ 8 sept. 2026 |
+| 6 | Modèle de données (vue dérivée) | `06-modele-donnees.md` | GS-DATA, CDCT §23.3 | ✅ 8 sept. 2026 (🔍 dérivée) |
+| 7 | Contrats d'API & erreurs (dérivé) | `07-api-erreurs.md` | test_postman | ✅ 8 sept. 2026 (🔍 dérivée) |
+| 8 | Parcours & séquences | `08-parcours-sequences.md` | GS-SEQ, `diagrams/01→15`, PDF | ✅ 8 sept. 2026 (🔍 dérivée) |
+| 9 | Architecture technique & ADR | `09-architecture-adr.md` | CDCT §22→30 | ✅ 8 sept. 2026 (🔍 dérivée) |
+| 10 | Exploitation, sauvegarde, volumétrie | `10-exploitation.md` | néant — **création** | ✅ 8 sept. 2026 |
+| 11 | Design system (pointeur) | `11-design-system.md` | DESIGN_TOKENS_REFERENCE | ✅ 8 sept. 2026 (🔍 dérivée) |
 | 12 | **Journal des décisions** | `12-journal-decisions.md` | — | ✅ 40 décisions actives, **0 ouverte** (Lot 5, 7 sept. 2026) |
-| 13 | Périmètre & planning (pointeurs) | `13-perimetre-planning.md` | GS-PLAN, KICKOFF §3-4 | 🔜 à rédiger |
-| 14 | Workflow, CI, environnements | `14-workflow-ci.md` | A_JIRA_ET_GIT_FLOW, strategie_test, guideconfiguration, GS-RACI | 🔜 à rédiger |
+| 13 | Périmètre & planning (pointeurs) | `13-perimetre-planning.md` | GS-PLAN, KICKOFF §3-4 | ✅ 8 sept. 2026 (🔍 dérivée) |
+| 14 | Workflow, CI, environnements | `14-workflow-ci.md` | A_JIRA_ET_GIT_FLOW, strategie_test, guideconfiguration, GS-RACI | ✅ 8 sept. 2026 (🔍 dérivée) |
 
 ---
 
