@@ -7,12 +7,12 @@
 
 ## Bloc 1 — P0 « machine » (préalable à tout) 
 
-| # | Item | Fichier(s) | Preuve de sortie | Source |
-|---|---|---|---|---|
-| C-01 | Commiter `RedisHealthTracker.java` + les 3 fichiers de test (JwtAuthenticationFilter, RateLimitFilter, RedisHealthTracker) | branche `feature/GS-085-fail-closed-redis` | `git clone` de HEAD → `mvn test` vert | audit-09 R1 / S6 |
-| C-02 | Remplacer les secrets JWT par défaut par de vraies clés base64 (≥ 32 octets) : docker-compose, `.env.example`, `application.yml`, profil test | `docker-compose.yml`, `.env.example`, `backend/stockmaster-bootstrap/src/main/resources/application.yml` | `docker compose up` puis login = 200 ; decodeur jjwt OK | audit-09 R2 / S8 / I12 |
-| C-03 | Supprimer le fichier `nul` (0 octet) et la ligne `[TEMPLATE]` de `.env.example` | racine, `.env.example` | `git status` propre | audit-09 S7 |
-| C-04 | Resynchroniser `test_postman.md` + `postman_collection.json` sur l'API réelle (DTO inscription, `pm.collectionVariables`, `/refresh` avec `refreshToken`) | `document/test_postman.md`, `document/postman_collection.json` | aucun endpoint documenté absent du code | GS-AUDIT B-15 / docx B-04 |
+| # | Item | Fichier(s) | Preuve de sortie | Source | Statut |
+|---|---|---|---|---|---|
+| C-01 | Commiter `RedisHealthTracker.java` + les 3 fichiers de test (JwtAuthenticationFilter, RateLimitFilter, RedisHealthTracker) | branche de travail | `mvn test -pl stockmaster-shared,stockmaster-auth` → BUILD SUCCESS, 0 échec | audit-09 R1 / S6 | ✅ 8 sept. — commit `31026e8` (tests réécrits pour matcher les constructeurs réels de `main`) |
+| C-02 | Remplacer les secrets JWT par défaut par de vraies clés base64 (≥ 32 octets) : docker-compose, `.env.example`, `application.yml`, profil test | `docker-compose.yml`, `.env.example`, `backend/stockmaster-bootstrap/src/main/resources/application.yml` | decodeur jjwt OK (62 octets base64 ≥ 32) | audit-09 R2 / S8 / I12 | ✅ `e800a7e` |
+| C-03 | Supprimer le fichier `nul` (0 octet) et la ligne `[TEMPLATE]` de `.env.example` | racine, `.env.example` | `git status` propre | audit-09 S7 | ✅ 8 sept. (`nul` supprimé ; `[TEMPLATE]` déjà absent) |
+| C-04 | Resynchroniser `test_postman.md` + `postman_collection.json` sur l'API réelle (DTO inscription, `pm.collectionVariables`, `/refresh` avec `refreshToken`) | `document/test_postman.md`, `document/postman_collection.json` | aucun endpoint documenté absent du code | GS-AUDIT B-15 / docx B-04 | ⏳ |
 
 ## Bloc 2 — Compteurs et chemins
 
