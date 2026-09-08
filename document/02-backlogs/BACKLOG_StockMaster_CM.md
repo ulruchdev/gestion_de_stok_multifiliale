@@ -1586,7 +1586,7 @@
 **je veux** enregistrer rapidement une vente comptoir sans saisir de client,
 **afin de** traiter les transactions au point de vente sans délai.
 
-> **Décision validée GS-CDA-2026-02 (§1)** : la Vente Directe ne bloque **jamais** sur stock insuffisant. Le contrôle physique de disponibilité se fait par les yeux du caissier (l'article est devant lui), pas par le stock système. Bloquer créerait des pertes de vente pour un problème de donnée (désynchro, casse non enregistrée), pas un problème réel de disponibilité. Ce comportement diffère volontairement de la Commande Client (EPIC 9), où le stock retiré est dans un entrepôt non visible au moment de la saisie — le blocage y a du sens.
+> **Décision `DEC-023` / `DEC-017` (révise GS-CDA-2026-02 §1)** : la Vente Directe **bloque** sur stock insuffisant, comme la Commande Client. L'invariant produit est que le stock d'un article ne peut jamais devenir négatif : une vente qui l'y ferait passer est refusée en `409`. L'ancien raisonnement (« le caissier voit l'article, donc on laisse passer ») est écarté — il traitait un écart de donnée en le propageant dans le journal de mouvements, rendant le stock système définitivement faux. L'écart entre stock physique et stock système se constate et se corrige par les **campagnes d'inventaire** (`DEC-036`), seul organe capable de le découvrir.
 
 **Critères d'acceptation :**
 - [ ] `@PreAuthorize("hasAnyRole('CAISSIER','COMMERCIAL','ADMIN_FILIALE','ADMIN_GROUPE')")`
@@ -1678,8 +1678,10 @@
 - [ ] Nouvel état sur l'entité `Vente` : `statut` (enum `PAYEE` | `ANNULEE` | `REMBOURSEE`) — remplace le booléen `annulee` ; `REMBOURSEE` couvert par `DEC-010` (remboursement en caisse) et confirmé par `DEC-018` (contre `VALIDEE | ANNULEE`)
 
 **Critères d'acceptation :**
-- [ ] `@PreAuthorize("hasAnyRole('CAISSIER','ADMIN_FILIALE','ADMIN_GROUPE')")`
-- [ ] Annulation possible uniquement si vente du jour même (`date_vente::date = CURRENT_DATE`) et `statut = PAYEE`
+- [ ] `@PreAuthorize("hasAnyRole('CAISSIER','COMMERCIAL','ADMIN_FILIALE','ADMIN_GROUPE')")` — le `COMMERCIAL` est inclus : `DEC-018` a tranché que celui qui encaisse (US-064 l'y autorise) doit pouvoir corriger sa propre erreur
+- [ ] Règle citable (`DEC-018`) : *« Quiconque a créé une vente peut l'annuler le jour même, dans sa propre session. »* — le contrôle porte sur la **session de caisse** (`DEC-009`), pas sur le rôle
+- [ ] Annulation possible uniquement si la vente appartient à la **session de caisse ouverte de l'utilisateur courant** et `statut = PAYEE`
+- [ ] La journée est bornée par la session, pas par `CURRENT_DATE` — la journée comptable court 00:00-23:59 en `Africa/Douala` (`DEC-021`), jamais en UTC
 - [ ] Vente déjà `ANNULEE` → `409 CONFLICT` avec `ErrorCode.VENTE_DEJA_ANNULEE`
 - [ ] **Le mouvement `SORTIE` original n'est ni modifié ni supprimé** (immuabilité absolue du journal, règle CDA §6.4)
 - [ ] Un mouvement `ANNULATION_VENTE` est créé pour chaque ligne de la vente annulée, avec `origine_type = ANNULATION_VENTE` et `origine_id` = id de la vente annulée

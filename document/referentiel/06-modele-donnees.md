@@ -20,6 +20,7 @@ Le schéma réellement appliqué (`V1__init_schema.sql` → `V4`) est l'état **
 | Caisse | tables `session_caisse` (ouverture, fond, clôture, écart) et `paiement` (`vente_id`, mode, montant, référence) | DEC-009 |
 | Vente | `vente.statut` (`PAYEE|ANNULEE|REMBOURSEE`) ; `client_id` nullable ; suppression `annulee` ; `caissier_id`/session | DEC-010, B-03 |
 | Mouvement | `ANNULATION_VENTE`, `REMBOURSEMENT` ajoutés au CHECK ; `origine_type` + `'ANNULATION_VENTE'` ; suppression de `vue_stock_reel` (objet mort) ; trigger `update_date_modification` exclu de la table | DEC-010, B-03, C-12 |
+| Montants & quantités | montants en `INTEGER` (XAF) ; **toutes** les quantités en `DECIMAL(12,3)` — `article.seuil_alerte`, `mouvement_stock.quantite`, toutes les tables de lignes (`DEC-003`) | DEC-003 |
 | Utilisateur | `email_verifie` booléen ; suppression `token_reset`/`token_reset_expiry` ; `UNIQUE(email)` conservé | DEC-008, 016, 024 |
 | Alertes | `notification_alerte` refondue : `destinataire_utilisateur_id`, `type` extensible, `etat`, `article_id` nullable | DEC-004 |
 | Plans | `tenant_group.plan_abonnement` → 3 valeurs (`GRATUIT|PRO|PERSONNALISE`) ; `limite_filiales` ; `date_expiration_plan` | DEC-015 |

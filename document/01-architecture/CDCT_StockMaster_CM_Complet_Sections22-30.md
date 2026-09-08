@@ -212,19 +212,33 @@ Règles :
 
 ### 23.3 Schéma de référence (cible)
 
-> ⚠️ **Ce listing n'est PAS une copie d'un fichier de migration.** C'est le **schéma cible**
-> consolidé, tenu à jour contre le référentiel `GS-REF-2026-01 §6.2`.
+> ⚠️ **Ce listing n'est PAS une copie d'un fichier de migration, et il est INCOMPLET.**
 >
-> | | Où | État |
+> | | Où | Autorité |
 > |---|---|---|
 > | **Schéma appliqué** | `backend/stockmaster-shared/src/main/resources/db/migration/V1→V4` | seule vérité pour la base réelle |
-> | **Schéma cible (ci-dessous)** | ce document | intègre les décisions non encore migrées |
-> | **Écart** | migration `V5` **non écrite** | à produire au démarrage des modules concernés |
+> | **Schéma cible (liste normative)** | `GS-REF-2026-01 §6.2` | **fait foi** |
+> | **Ce listing** | ci-dessous | illustration partielle de la cible |
+> | **Écart** | migration `V5` **non écrite** | à produire module par module |
 >
-> Les divergences connues avec le V1 appliqué sont annotées en commentaire dans le SQL
-> (`vente.statut` vs `annulee`, `notification_alerte` refondue, types de mouvement
-> compensatoires). **Ne jamais copier ce bloc dans un fichier Flyway sans le confronter à
-> `REF §6.2`** — le rejouer tel quel sur une base V1 échouerait.
+> **Couverture réelle de la cible `REF §6.2` par ce listing — 5 domaines sur 16 :**
+>
+> | Transcrit ici ✅ | Décidé mais **absent** de ce listing ❌ |
+> |---|---|
+> | `article.group_id` (`DEC-002`) | unité gestion/achat + facteur (`DEC-013`) |
+> | `vente.statut` (`DEC-006/010/018`) | `lot` / `date_peremption` (`DEC-012`) |
+> | mouvement : `ANNULATION_VENTE`, `REMBOURSEMENT` (`DEC-010`) | `entreprise.site_operationnel` (`DEC-015`) |
+> | `notification_alerte` refondue (`DEC-004`) | en-tête transfert + `ligne_transfert` (`DEC-007`) |
+> | plans à 3 valeurs (`DEC-015`) | `session_caisse`, `paiement` (`DEC-009`) |
+> | | `utilisateur.email_verifie` (`DEC-016`) |
+> | | `commande_client.etat_reglement`, échéance (`DEC-011`) |
+> | | table des clés d'idempotence (`DEC-027`) |
+> | | `session_inventaire`, `ligne_inventaire` (`DEC-036`) |
+> | | `mouvement_stock` partitionné par mois (`DEC-033`) |
+>
+> **En cas de divergence entre ce listing et `REF §6.2`, c'est `REF §6.2` qui a raison.**
+> **Ne jamais copier ce bloc dans un fichier Flyway** : il ne contient pas toute la cible,
+> et le rejouer tel quel sur une base V1 échouerait.
 
 ```sql
 -- Schéma de référence consolidé (cible V5) — voir l'encadré ci-dessus.
@@ -233,11 +247,12 @@ Règles :
 CREATE TABLE tenant_group (
     id                    BIGSERIAL PRIMARY KEY,
     nom_groupe            VARCHAR(100) NOT NULL,
+    -- Cible V5 (DEC-015) : 3 plans. STARTER supprime, ENTERPRISE devient PERSONNALISE.
     plan_abonnement       VARCHAR(20)  NOT NULL DEFAULT 'GRATUIT'
-                          CHECK (plan_abonnement IN ('GRATUIT','STARTER','PRO','ENTERPRISE')),
+                          CHECK (plan_abonnement IN ('GRATUIT','PRO','PERSONNALISE')),
     actif                 BOOLEAN      NOT NULL DEFAULT TRUE,
-    date_expiration_plan  DATE,
-    limite_filiales       INTEGER      NOT NULL DEFAULT 1,
+    date_expiration_plan  DATE,        -- GRATUIT : creation + 90 jours (DEC-015)
+    limite_filiales       INTEGER      NOT NULL DEFAULT 4,  -- GRATUIT = 4 (DEC-015)
     date_creation         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     date_modification     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     supprime              BOOLEAN      NOT NULL DEFAULT FALSE,
@@ -328,7 +343,7 @@ CREATE TABLE article (
     prix_vente_ht     INTEGER      NOT NULL CHECK (prix_vente_ht >= 0),
     taux_tva          NUMERIC(5,2) NOT NULL CHECK (taux_tva >= 0),
     prix_vente_ttc    INTEGER      NOT NULL CHECK (prix_vente_ttc >= 0),
-    seuil_alerte      INTEGER      NOT NULL DEFAULT 0 CHECK (seuil_alerte >= 0),
+    seuil_alerte      DECIMAL(12,3) NOT NULL DEFAULT 0 CHECK (seuil_alerte >= 0),
     photo             VARCHAR(500),
     actif             BOOLEAN      NOT NULL DEFAULT TRUE,
     date_creation     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
@@ -396,7 +411,7 @@ CREATE TABLE ligne_commande_fournisseur (
     entreprise_id     BIGINT       NOT NULL REFERENCES entreprise(id) ON DELETE RESTRICT,
     commande_id       BIGINT       NOT NULL REFERENCES commande_fournisseur(id) ON DELETE RESTRICT,
     article_id        BIGINT       NOT NULL REFERENCES article(id) ON DELETE RESTRICT,
-    quantite          INTEGER      NOT NULL CHECK (quantite > 0),
+    quantite          DECIMAL(12,3) NOT NULL CHECK (quantite > 0),
     prix_unitaire     INTEGER      NOT NULL CHECK (prix_unitaire >= 0),
     taux_tva_snapshot NUMERIC(5,2) NOT NULL,
     date_creation     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
@@ -429,7 +444,7 @@ CREATE TABLE ligne_commande_client (
     entreprise_id     BIGINT       NOT NULL REFERENCES entreprise(id) ON DELETE RESTRICT,
     commande_id       BIGINT       NOT NULL REFERENCES commande_client(id) ON DELETE RESTRICT,
     article_id        BIGINT       NOT NULL REFERENCES article(id) ON DELETE RESTRICT,
-    quantite          INTEGER      NOT NULL CHECK (quantite > 0),
+    quantite          DECIMAL(12,3) NOT NULL CHECK (quantite > 0),
     prix_unitaire     INTEGER      NOT NULL CHECK (prix_unitaire >= 0),
     taux_tva_snapshot NUMERIC(5,2) NOT NULL,
     date_creation     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
@@ -463,7 +478,7 @@ CREATE TABLE ligne_vente (
     entreprise_id     BIGINT       NOT NULL REFERENCES entreprise(id) ON DELETE RESTRICT,
     vente_id          BIGINT       NOT NULL REFERENCES vente(id) ON DELETE RESTRICT,
     article_id        BIGINT       NOT NULL REFERENCES article(id) ON DELETE RESTRICT,
-    quantite          INTEGER      NOT NULL CHECK (quantite > 0),
+    quantite          DECIMAL(12,3) NOT NULL CHECK (quantite > 0),
     prix_unitaire     INTEGER      NOT NULL CHECK (prix_unitaire >= 0),
     taux_tva_snapshot NUMERIC(5,2) NOT NULL,
     date_creation     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
@@ -478,7 +493,7 @@ CREATE TABLE transfert_stock (
     filiale_source_id   BIGINT      NOT NULL REFERENCES entreprise(id) ON DELETE RESTRICT,
     filiale_cible_id    BIGINT      NOT NULL REFERENCES entreprise(id) ON DELETE RESTRICT,
     article_id          BIGINT      NOT NULL REFERENCES article(id) ON DELETE RESTRICT,
-    quantite            INTEGER     NOT NULL CHECK (quantite > 0),
+    quantite            DECIMAL(12,3) NOT NULL CHECK (quantite > 0),
     utilisateur_id      BIGINT      NOT NULL REFERENCES utilisateur(id) ON DELETE RESTRICT,
     reference           VARCHAR(30) NOT NULL,
     date_transfert      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -504,7 +519,7 @@ CREATE TABLE mouvement_stock (
                           'ENTREE','SORTIE','CORRECTION_POS','CORRECTION_NEG',
                           'TRANSFERT_ENTREE','TRANSFERT_SORTIE',
                           'ANNULATION_VENTE','REMBOURSEMENT')),
-    quantite          INTEGER     NOT NULL CHECK (quantite > 0),
+    quantite          DECIMAL(12,3) NOT NULL CHECK (quantite > 0),
     date_mouvement    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     utilisateur_id    BIGINT      NOT NULL REFERENCES utilisateur(id) ON DELETE RESTRICT,
     origine_id        BIGINT,
@@ -535,8 +550,8 @@ CREATE TABLE notification_alerte (
     destinataire_utilisateur_id BIGINT NOT NULL REFERENCES utilisateur(id) ON DELETE RESTRICT,
     article_id        BIGINT      REFERENCES article(id) ON DELETE RESTRICT,  -- nullable
     type_alerte       VARCHAR(30) NOT NULL,
-    stock_actuel      INTEGER,
-    seuil_alerte      INTEGER,
+    stock_actuel      DECIMAL(12,3),
+    seuil_alerte      DECIMAL(12,3),
     etat              VARCHAR(20) NOT NULL DEFAULT 'NON_LU'
                           CHECK (etat IN ('NON_LU','LU','RESOLU')),
     date_creation     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -734,7 +749,7 @@ erDiagram
         integer prix_vente_ht
         numeric taux_tva
         integer prix_vente_ttc
-        integer seuil_alerte
+        decimal seuil_alerte
     }
 
     CATEGORIE {
@@ -768,7 +783,7 @@ erDiagram
         bigint id PK
         bigint commande_id FK
         bigint article_id FK
-        integer quantite
+        decimal quantite
         integer prix_unitaire
     }
 
@@ -783,7 +798,7 @@ erDiagram
         bigint id PK
         bigint commande_id FK
         bigint article_id FK
-        integer quantite
+        decimal quantite
         integer prix_unitaire
     }
 
@@ -799,7 +814,7 @@ erDiagram
         bigint id PK
         bigint vente_id FK
         bigint article_id FK
-        integer quantite
+        decimal quantite
     }
 
     MOUVEMENT_STOCK {
@@ -807,7 +822,7 @@ erDiagram
         bigint entreprise_id FK
         bigint article_id FK
         varchar type_mouvement
-        integer quantite
+        decimal quantite
         bigint origine_id
         bigint transfert_id FK
     }
@@ -817,7 +832,7 @@ erDiagram
         bigint filiale_source_id FK
         bigint filiale_cible_id FK
         bigint article_id FK
-        integer quantite
+        decimal quantite
     }
 
     TENANT_GROUP ||--o{ ENTREPRISE : "possède"
