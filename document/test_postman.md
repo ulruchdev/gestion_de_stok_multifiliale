@@ -1,10 +1,10 @@
-# StockMaster CM — Collection Postman
+﻿# StockMaster CM — Collection Postman
 
 > **Référence :** GS-POSTMAN-2026-01
 > **Version :** 1.0 — Juin 2026
 > **Statut :** ✅ Document actif — doit être mis à jour à chaque nouvel endpoint ou modification d'API
 >
-> **⚠️ CE FICHIER DOIT ÊTRE MAINTENU COMME `implementation.md`** — toute modification d'API doit être reflétée ici dans la même PR.
+> **⚠️ CE FICHIER EST LE CONTRAT D'API OPPOSABLE (porte G4)** — toute modification d'API doit être reflétée ici dans la même PR.
 
 ---
 
@@ -695,7 +695,7 @@ if (pm.response.code === 201) {
 
 > **Règle de gestion — Les deux fichiers :**
 >
-> Ce document ET le fichier `document/postman_collection.json` sont versionnés avec le code et doivent être traités avec le même sérieux que `implementation.md`.
+> Ce document ET le fichier `document/postman_collection.json` sont versionnés avec le code et doivent être traités avec le même sérieux que le code et que `progress-ledger.md`.
 >
 > - **Toute modification d'API** (nouvel endpoint, nouveau champ, changement de réponse) DOIT être reflétée dans les **deux fichiers** dans la **même PR**.
 > - **Tout nouvel endpoint** DOIT inclure dans `test_postman.md` : méthode HTTP, URL, corps de requête (JSON), réponse succès, réponse erreur, tests Postman.

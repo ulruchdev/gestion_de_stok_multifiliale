@@ -1,4 +1,4 @@
-# Freebuff — Configuration StockMaster CM
+﻿# Freebuff — Configuration StockMaster CM
 
 ## Installation (une fois, par Ulrich)
 
@@ -32,7 +32,7 @@ gestion_de_stok_multifiliale/
 └── .gitignore                                ← S'assurer que .env y est
 ```
 
-`TECHNICAL_CHANGELOG.md` existe déjà sous `document/implementation.md` — `doc-writer.ts` écrit dedans.
+Le journal d'avancement unique est `document/03-pilotage/progress-ledger.md`. `document/implementation.md` a été **supprimé** le 7 septembre 2026 (consolidation `GS-REF`).
 
 > **Historique :** `document/knowledge.md` a existé un temps en parallèle du `knowledge.md` racine (contenu divergent, risque de dérive). Il a été fusionné dans le fichier racine et supprimé — `knowledge.md` (racine) est désormais la seule copie, lue automatiquement par Freebuff (convention Codebuff) et par Claude Code (via `CLAUDE.md`).
 

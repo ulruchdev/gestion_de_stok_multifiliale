@@ -1,4 +1,4 @@
-
+﻿
 # 🔄 JIRA & GIT FLOW — StockMaster CM
 
 > **Ce document définit le workflow exact du projet StockMaster CM. Il doit être appliqué strictement pour chaque User Story.**
@@ -47,7 +47,7 @@ Chaque User Story doit suivre **exactement** ce workflow. Aucune étape ne doit 
 │ Vérifier : BUILD SUCCESS, 0 failures, 0 errors                │
 ├─────────────────────────────────────────────────────────────┤
 │ ÉTAPE 8  — METTRE À JOUR LES DOCUMENTS                        │
-│ implementation.md — ajouter la section de l'US                │
+│ progress-ledger.md — maj statut de l'US                        │
 │ strategie_test.md — mettre à jour les comptes                 │
 │ test_postman.md / postman_collection.json — si API changée    │
 │ A_JIRA_ET_GIT_FLOW.md — si workflow modifié                  │
@@ -104,7 +104,7 @@ type(scope): description en minuscule sans point final
 Types autorisés :
   feat     → nouvelle fonctionnalité ou configuration (US implémentée)
   fix      → correction de bug ou d'incohérence
-  docs     → documentation seulement (implementation.md, workflow, etc.)
+  docs     → documentation seulement (workflow, etc.)
   refactor → refactoring sans changement fonctionnel
   test     → ajout/modification de tests
   chore    → maintenance (dépendances, CI, config)
@@ -115,7 +115,7 @@ Le scope = l'ID de l'User Story (GS-XXX)
 Exemples valides :
   feat(GS-012): add reset password endpoint with Redis token validation
   fix(GS-012): align password regex across all DTOs
-  docs(GS-012): update implementation.md with US-012 status
+  docs(GS-012): update progress-ledger.md with US-012 status
   test(GS-012): add 5 tests for reset password flow
 ```
 
@@ -134,12 +134,12 @@ Avant toute implémentation, ces éléments DOIVENT être vérifiés :
 
 | Document | Utilité |
 |---|---|
-| `document/BACKLOG_StockMaster_CM.md` | Critères d'acceptation, endpoint, priorité |
-| `document/implementation.md` | État actuel du projet, dépendances entre US |
-| `document/A_JIRA_ET_GIT_FLOW.md` | Workflow à suivre (ce document) |
-| `document/strategie_test.md` | Stratégie et comptes de tests |
+| `document/02-backlogs/BACKLOG_StockMaster_CM.md` | Critères d'acceptation, endpoint, priorité |
+| `document/03-pilotage/progress-ledger.md` | Journal unique des statuts US (remplace implementation.md) |
+| `document/03-pilotage/A_JIRA_ET_GIT_FLOW.md` | Workflow à suivre (ce document) |
+| `document/03-pilotage/strategie_test.md` | Stratégie et comptes de tests |
 | `document/test_postman.md` | Endpoints documentés |
-| `document/CDCT_StockMaster_CM_Complet_Sections22-30.md` | Spécifications techniques |
+| `document/01-architecture/CDCT_StockMaster_CM_Complet_Sections22-30.md` | Spécifications techniques |
 
 ### 2. Codebase à inspecter
 
@@ -199,11 +199,11 @@ Toute modification d'API ou de comportement DOIT être répercutée dans ces doc
 
 | Document | Quand ? |
 |---|---|
-| `document/implementation.md` | ✅ TOUJOURS — ajouter/modifier la section de l'US |
-| `document/strategie_test.md` | ✅ Si comptes de tests changent |
+| `document/03-pilotage/progress-ledger.md` | ✅ TOUJOURS — mettre à jour le statut de l'US |
+| `document/03-pilotage/strategie_test.md` | ✅ Si comptes de tests changent |
 | `document/postman_collection.json` | ✅ Si nouvel endpoint ou modification d'endpoint |
 | `document/test_postman.md` | ✅ Si nouvel endpoint ou modification d'endpoint |
-| `document/A_JIRA_ET_GIT_FLOW.md` | ✅ Si le workflow évolue |
+| `document/03-pilotage/A_JIRA_ET_GIT_FLOW.md` | ✅ Si le workflow évolue |
 
 ---
 

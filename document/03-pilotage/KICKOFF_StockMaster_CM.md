@@ -1,4 +1,4 @@
-# StockMaster CM — Kickoff Projet
+﻿# StockMaster CM — Kickoff Projet
 ### Équipe : Ulrich (Fullstack + DevOps) · Stephan (Fullstack) · Siko (Frontend + Design)
 ### Démarrage : demain | Repo : github.com/ulruchdev/gestion_de_stok_multifiliale (monorepo)
 
@@ -44,7 +44,7 @@ gestion_de_stok_multifiliale/
 │   │   ├── KICKOFF_StockMaster_CM.md               (ce fichier)
 │   │   ├── A_JIRA_ET_GIT_FLOW.md                   (déjà existant — vérifier qu'il parle bien de StockMaster, pas d'un autre projet)
 │   │   └── strategie_test.md                        (déjà existant)
-│   ├── implementation.md                            (déjà existant — journal traçabilité, à continuer)
+│   ├── progress-ledger.md                             (journal unique — référentiel GS-REF)
 │   ├── guideconfiguration.md                        (déjà existant)
 │   └── test_postman.md                              (déjà existant — contrat API vivant, MAJ à chaque endpoint livré)
 ├── stockmaster-shared/          (existant, actif)
