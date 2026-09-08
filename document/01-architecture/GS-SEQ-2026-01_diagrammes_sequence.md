@@ -130,7 +130,7 @@ sequenceDiagram
     end
     alt Au moins un article en stock insuffisant
         STK-->>SVC: InsufficientStockException(articlesEnRupture[])
-        SVC-->>API: 422 ProblemResponse avec liste des articles + stock disponible
+        SVC-->>API: 409 ProblemResponse avec liste des articles + stock disponible (DEC-017)
         API-->>FE: Erreur détaillée
         FE-->>C: "Stock insuffisant pour X, Y — disponible : 3, 12"
         Note over SVC,DB: Validation bloquée — AUCUN mouvement créé
@@ -176,7 +176,7 @@ sequenceDiagram
         SVC->>STK: verifierStockSuffisant(articleId, filialeSourceId, quantite)
         alt Stock source insuffisant
             STK-->>SVC: InsufficientStockException
-            SVC-->>API: 422 ProblemResponse (stock disponible affiché)
+            SVC-->>API: 409 ProblemResponse (stock disponible affiché) — DEC-017
         else Stock suffisant
             SVC->>DB: BEGIN TRANSACTION
             SVC->>DB: INSERT transfert_stock (source, cible, article, quantite)

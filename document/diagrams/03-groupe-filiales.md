@@ -5,7 +5,7 @@
 ```mermaid
 graph TB
     subgraph TenantGroup["TenantGroup"]
-        TG[Groupe: Distribo Sarl<br/>Plan: PRO<br/>Limite: 10 filiales]
+        TG[Groupe: Distribo Sarl<br/>Plan: PRO<br/>Limite: 15 filiales]
     end
 
     subgraph Holding["Maison Mere"]

@@ -12,9 +12,10 @@ graph TD
     AddMore -->|Non, termine| CheckStock[Verifier le stock disponible<br/>pour chaque ligne]
 
     CheckStock -->|Stock suffisant pour tous| Continue[Passer a l encaissement]
-    CheckStock -->|Stock insuffisant pour certains| Warning[Avertir le caissier<br/>mais NE PAS BLOQUER la vente]
+    CheckStock -->|Stock insuffisant pour certains| Blocker[Bloquer la vente<br/>409 INSUFFICIENT_STOCK<br/>DEC-023]
 
-    Warning --> Continue
+    Blocker --> Start
+
     Continue --> Payment[Encaissement<br/>Especes / Mobile Money / Carte]
 
     Payment --> Validate[Valider la vente]
@@ -22,16 +23,11 @@ graph TD
     Validate --> CreateMvt[Creer mouvement SORTIE<br/>pour chaque ligne]
     Validate --> GenerateTicket[Generer le ticket de caisse]
 
-    CreateMvt --> CheckClient{Client identifie ?<br/>optionnel - fidelite}
-
-    CheckClient -->|Oui| Fidelity[Ajouter point de fidelite<br/>au compte client]
-    CheckClient -->|Non| End
-
-    Fidelity --> End[Vente terminee]
+    CreateMvt --> End[Vente terminee]
 
     style Start fill:#4CAF50,color:white
     style Validate fill:#2196F3,color:white
-    style Warning fill:#FF9800,color:white
+    style Blocker fill:#f44336,color:white
     style Payment fill:#9C27B0,color:white
 ```
 

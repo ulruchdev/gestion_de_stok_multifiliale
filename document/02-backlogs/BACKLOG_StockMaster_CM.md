@@ -1591,8 +1591,8 @@
 **Critères d'acceptation :**
 - [ ] `@PreAuthorize("hasAnyRole('CAISSIER','COMMERCIAL','ADMIN_FILIALE','ADMIN_GROUPE')")`
 - [ ] Pas de client requis (vente anonyme) — `clientId` optionnel (voir US-064b)
-- [ ] **Aucune vérification bloquante de stock** — le mouvement `SORTIE` est toujours créé, y compris si le stock réel devient négatif
-- [ ] Si le stock réel de l'article passe **strictement en dessous de 0** après la vente : une `NotificationAlerte` de type `ECART_STOCK_DETECTE` est créée à destination du Gestionnaire de Stock et de l'Admin Filiale (distincte de l'alerte `STOCK_BAS` du seuil d'alerte — ici il s'agit d'une anomalie de données à vérifier physiquement, pas d'un seuil métier)
+- [ ] **Vérification bloquante de stock** — si le stock réel passerait sous 0, la vente est **refusée en 409** (`DEC-017`, `DEC-023`) ; le mouvement `SORTIE` n'est créé que si le stock reste ≥ 0
+- [ ] Aucune `NotificationAlerte` d'écart n'est créée à la vente (`ECART_STOCK_DETECTE` supprimé par `DEC-037`) — la détection d'écart relève des campagnes d'inventaire (`DEC-036`)
 - [ ] Code vente généré : `VNT-{DATE}-{SEQUENCE}`
 - [ ] **Opération atomique** : 1 mouvement `SORTIE` par ligne
 - [ ] Totaux HT / TVA / TTC calculés côté serveur
@@ -1628,7 +1628,7 @@
 - [ ] Champ `client_id` (FK nullable vers `Client`) ajouté à l'entité `Vente`
 - [ ] Vente sans `clientId` reste 100% valide (vente anonyme conservée par défaut)
 - [ ] Si `clientId` fourni : la vente apparaît dans l'historique du client (CLI-05) et contribue à STAT-02
-- [ ] Aucun impact sur les règles US-064 (pas de vérification stock, pas de blocage)
+- [ ] Aucun impact sur les règles US-064 (vérification bloquante de stock, `DEC-023`)
 
 **Endpoint :** inclus dans `POST /api/v1/ventes` (champ `clientId` déjà présent dans le corps ci-dessus) + `GET /api/v1/clients/{id}/historique` mis à jour pour inclure les ventes directes rattachées
 
@@ -1675,7 +1675,7 @@
 
 **Modification du modèle (à répercuter sur CDCT + migration Flyway) :**
 - [ ] Nouvelle valeur d'enum `type_mouvement` : `ANNULATION_VENTE` (entrée compensatoire — remet la quantité en stock, au même titre que `ENTREE`/`CORRECTION_POS`/`TRANSFERT_ENTREE` dans la formule de stock réel)
-- [ ] Nouvel état sur l'entité `Vente` : `statut` (enum `VALIDEE` | `ANNULEE`), remplace le booléen `annulee` — aligne `Vente` sur la même logique de machine à états que `CommandeFournisseur`/`CommandeClient` (jusqu'ici seule entité de vente sans état documenté)
+- [ ] Nouvel état sur l'entité `Vente` : `statut` (enum `PAYEE` | `ANNULEE` | `REMBOURSEE`) — remplace le booléen `annulee` ; `REMBOURSEE` couvert par `DEC-010` (remboursement en caisse) et confirmé par `DEC-018` (contre `VALIDEE | ANNULEE`)
 
 **Critères d'acceptation :**
 - [ ] `@PreAuthorize("hasAnyRole('CAISSIER','ADMIN_FILIALE','ADMIN_GROUPE')")`

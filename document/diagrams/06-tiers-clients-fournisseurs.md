@@ -14,8 +14,8 @@ graph LR
     end
 
     subgraph Clients["Clients"]
-        C1[CL001 - Martin Tchinda<br/>Tel: 695000001<br/>Fidelite: 15 achats]
-        C2[CL002 - Esther Mbede<br/>Tel: 691000002<br/>Fidelite: 3 achats]
+        C1[CL001 - Martin Tchinda<br/>Tel: 695000001<br/>Historique: 15 achats]
+        C2[CL002 - Esther Mbede<br/>Tel: 691000002<br/>Historique: 3 achats]
     end
 
     Entreprise -->|isole| Fournisseurs

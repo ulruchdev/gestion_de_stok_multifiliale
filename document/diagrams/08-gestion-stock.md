@@ -12,7 +12,7 @@ graph TD
     Calcul --> Sorties[- SORTIE<br/>Commandes client validees]
     Calcul --> CorrectionsNeg[- CORRECTION_NEG<br/>Casse / Perte / Vol]
     Calcul --> TransfertsOut[- TRANSFERT_SORTIE<br/>Envoye a une autre filiale]
-    Calcul --> Annulations[- ANNULATION_VENTE<br/>Vente annulee]
+    Calcul --> Annulations[+ ANNULATION_VENTE<br/>Vente annulee (compensatoire)]
 
     StockReel --> Alerte{Comparer avec<br/>seuil_alerte}
     Alerte -->|Stock inferieur ou egal a 0| Rupture[RUPTURE]

@@ -18,18 +18,10 @@ Ce document complète GS-CDA-2026-01 avec 3 décisions issues d'une revue de coh
 Le document parent ne précisait pas si la Vente Directe (caisse) devait bloquer une vente en cas de stock système insuffisant, contrairement à la Commande Client (UC-03) qui bloque explicitement.
 
 ### Décision validée
-**La Vente Directe ne bloque jamais sur stock insuffisant.**
+**La Vente Directe bloque sur stock insuffisant.** *(Révise GS-CDA-2026-02 §1 — décisions `DEC-023` et `DEC-037` du référentiel.)*
 
 ### Justification métier
-En caisse, le client a le produit physiquement devant lui — le facteur limitant réel est le stock physique visible par le caissier, pas le stock système. Un blocage sur stock système ferait perdre une vente réelle à cause d'un problème de donnée (désynchronisation entre deux caisses, casse non enregistrée, écart d'inventaire), pas d'un problème de disponibilité réelle.
-
-Cette règle diffère volontairement de celle de la Commande Client, où le stock retiré se trouve dans un entrepôt non visible au moment de la saisie — le contrôle système y a un sens réel.
-
-### Mécanisme de compensation
-Si le stock réel devient négatif après une vente directe, le système ne bloque pas mais déclenche une alerte de type `ECART_STOCK_DETECTE` à destination du Gestionnaire de Stock et de l'Admin Filiale, afin qu'un recomptage ou une correction manuelle (UC-04) soit effectué. Cette alerte est distincte de l'alerte `STOCK_BAS` (seuil métier configuré) — elle signale une anomalie de donnée, pas un seuil d'approvisionnement.
-
-### Impact sur le modèle
-Aucun changement de structure. Impact sur le comportement de service uniquement (`VenteService.enregistrerVente()` ne doit pas appeler de vérification bloquante de stock).
+Le stock d'un article dans une filiale **ne peut jamais être négatif** — c'est l'invariant produit posé par `DEC-023`. En caisse comme ailleurs, toute vente qui ferait passer le stock sous zéro est **refusée en 409** (`DEC-017`), le mouvement `SORTIE` n'étant créé que si le stock reste ≥ 0. L'ancien « mécanisme de compensation » (`ECART_STOCK_DETECTE` à la vente) est **supprimé** (`DEC-037`) : la détection d'écart entre stock système et stock physique est reportée sur les **campagnes d'inventaire** (`DEC-036`), seul organe capable de découvrir qu'un stock est faux.
 
 ---
 
@@ -41,7 +33,7 @@ Le document parent ne définissait pas de mécanisme d'annulation pour la Vente 
 ### Décision validée
 1. Le mouvement `SORTIE` original d'une vente n'est **jamais modifié ni supprimé** — l'immuabilité du journal (`MouvementStock`, §6.4 GS-CDA-2026-01) est respectée à 100%.
 2. Un nouveau type de mouvement est introduit : **`ANNULATION_VENTE`** — une entrée compensatoire au même titre que `ENTREE` / `CORRECTION_POS` / `TRANSFERT_ENTREE` dans le calcul du stock réel, mais avec sa propre sémantique d'origine (`origine_type = ANNULATION_VENTE`, `origine_id` = id de la vente annulée).
-3. L'entité `Vente` reçoit un véritable état (`statut` : `VALIDEE` | `ANNULEE`) au lieu d'un booléen `annulee` — elle rejoint ainsi la logique de machine à états déjà appliquée aux commandes fournisseur/client, jusqu'ici absente pour les ventes.
+3. L'entité `Vente` reçoit un véritable état (`statut` : `PAYEE` | `ANNULEE` | `REMBOURSEE`) au lieu d'un booléen `annulee` — `REMBOURSEE` couvert par la décision `DEC-010` (remboursement en caisse), confirmée contre `VALIDEE | ANNULEE` par `DEC-018`.
 
 ### Justification métier
 C'est la pratique standard des systèmes de caisse professionnels : on ne réécrit jamais une transaction déjà enregistrée, on crée une écriture inverse traçable. Cela permet de distinguer sans ambiguïté, dans le journal, "un écart d'inventaire" d'une "vente annulée" — deux réalités métier différentes qui ne doivent pas partager le même type de mouvement.
