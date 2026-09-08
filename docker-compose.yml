@@ -21,7 +21,7 @@ services:
       DB_PASSWORD: stockmaster
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-key-that-is-at-least-256-bits-long-for-hs256}
+      JWT_SECRET: ${JWT_SECRET:-U3RvY2tNYXN0ZXItQ00tZGV2LWp3dC1zZWNyZXQtMjAyNi1jaGFuZ2UtaW4tcHJvZHVjdGlvbi1wbGVhc2U=}
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-stockmaster}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-stockmaster}
