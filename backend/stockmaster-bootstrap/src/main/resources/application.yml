@@ -79,7 +79,7 @@ management:
 # ========== StockMaster — Propriétés personnalisées ==========
 stockmaster:
   jwt:
-    secret: ${JWT_SECRET:defaultsecretkeythatshouldbereplacedwithastrongone}
+    secret: ${JWT_SECRET:U3RvY2tNYXN0ZXItQ00tZGV2LWp3dC1zZWNyZXQtMjAyNi1jaGFuZ2UtaW4tcHJvZHVjdGlvbi1wbGVhc2U=}
     access-token-expiration: 900
     refresh-token-expiration: 604800
     issuer: stockmaster
@@ -212,7 +212,7 @@ spring:
 
 stockmaster:
   jwt:
-    secret: test-secret-key-that-is-at-least-256-bits-long-for-hs256-test
+    secret: U3RvY2tNYXN0ZXItQ00tZGV2LWp3dC1zZWNyZXQtMjAyNi1jaGFuZ2UtaW4tcHJvZHVjdGlvbi1wbGVhc2U=
 
 management:
   health:
