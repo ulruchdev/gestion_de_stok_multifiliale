@@ -2,21 +2,58 @@
 -- V5__schema_decisionnel.sql
 -- Schéma cible décisionnel — applique les décisions du référentiel
 -- Référentiel : document/referentiel/06-modele-donnees.md (§6.2)
--- Décisions : DEC-002, 003, 004, 007, 008, 009, 010, 011, 012, 013,
---             015, 016, 020, 024, 027, 033, 036
+-- Décisions : DEC-002, 003, 004, 006, 007, 008, 009, 010, 011, 012,
+--             013, 015, 016, 017, 020, 023, 024, 027, 033, 036
 -- POSTGRES 16 / Flyway (les types enum sont des VARCHAR + CHECK)
+--
+-- Corrections apportées lors de la revue avant merge, par rapport
+-- au brouillon initial (voir échange de revue) :
+--   1. Réassemblage de 3 blocs dont le corps avait été séparé de
+--      l'en-tête (ligne_transfert, suite mouvement_stock,
+--      ligne_inventaire) — le brouillon ne pouvait pas s'exécuter.
+--   2. DEC-033 (partitionnement mensuel de mouvement_stock),
+--      absent du brouillon, implémenté ci-dessous (bloc 12).
+--   3. ligne_vente.quantite oublié dans la conversion DECIMAL(12,3)
+--      (DEC-003) — ajouté (bloc 16).
+--   4. FK mouvement_stock.transfert_id -> transfert_stock(id),
+--      perdue par le DROP TABLE CASCADE du bloc 8, restaurée
+--      explicitement (bloc 12bis).
+--   5. article/categorie : ajout de group_id en deux temps
+--      (colonne nullable + backfill depuis entreprise.group_id +
+--      NOT NULL) au lieu d'un NOT NULL direct sans défaut, qui
+--      aurait échoué sur toute ligne existante.
+--   6. idx_mouvement_article_entreprise / idx_mouvement_date /
+--      idx_mouvement_type recréés explicitement (ils disparaissent
+--      avec l'ancienne table mouvement_stock et n'étaient pas tous
+--      repris dans le brouillon).
+--   7. DROP VIEW vue_stock_reel ajouté par cohérence avec REF §6.2,
+--      bien que vérifié absent des migrations V1-V4 réellement
+--      appliquées (l'audit source qui la mentionne est inexact sur
+--      ce point précis — sans effet, IF EXISTS).
+--
+-- Hypothèse posée explicitement (à vérifier avant exécution en
+-- environnement partagé) : aucun module métier (stock, vente,
+-- achat, transfert) n'étant encore implémenté (stubs), les tables
+-- transfert_stock et mouvement_stock ne portent aucune donnée
+-- réelle à ce stade. Le bloc 12 copie néanmoins les données
+-- existantes de mouvement_stock de façon défensive, au cas où des
+-- données de test y auraient été insérées manuellement ; le lien
+-- transfert_id ne peut pas être préservé pour ces lignes (voir
+-- commentaire du bloc 12) puisque transfert_stock est totalement
+-- redéfini (DEC-007) et perd ses anciens identifiants.
 -- ============================================================
 
+
 -- ============================================================
--- Nettoyage d'index qui ciblent des colonnes transformées ci-dessous
--- (V2 + V4) — suppression anticipée pour permettre les ALTER TYPE.
+-- 0. Nettoyage d'index — uniquement pour les tables modifiées EN
+--    PLACE (article, categorie, utilisateur). Les tables
+--    intégralement recréées (transfert_stock, notification_alerte,
+--    mouvement_stock) n'ont pas besoin de ce nettoyage préalable :
+--    DROP TABLE supprime leurs index avec elles.
 -- ============================================================
 DROP INDEX IF EXISTS idx_article_entreprise;
 DROP INDEX IF EXISTS idx_categorie_entreprise;
 DROP INDEX IF EXISTS idx_utilisateur_token_reset;
-DROP INDEX IF EXISTS idx_transfert_source;
-DROP INDEX IF EXISTS idx_transfert_cible;
-DROP INDEX IF EXISTS idx_alerte_entreprise_non_lue;
 
 -- ============================================================
 -- 1. TENANT_GROUP — plans à 3 valeurs (DEC-015)
@@ -35,9 +72,10 @@ COMMENT ON COLUMN tenant_group.limite_utilisateurs IS 'Décimal : 10 (GRATUIT) /
 -- ============================================================
 -- 2. ENTREPRISE — site_operationnel (DEC-015)
 --              code_filiale NOT NULL (A-10 / DEC-015)
---              UNIQUE (id, group_id) pour la FK composite du transfert (DEC-007)
+--              UNIQUE (group_id, id) pour la FK composite du transfert (DEC-007)
+--    Ordre des colonnes dans la contrainte volontairement identique
+--    à celui utilisé dans la FK composite du bloc 8, par prudence.
 -- ============================================================
--- code_filiale : pour un dépôt vierge aucune ligne ; défensif sinon
 UPDATE entreprise SET code_filiale = 'SIEGE' WHERE code_filiale IS NULL;
 ALTER TABLE entreprise
     ALTER COLUMN code_filiale SET NOT NULL;
@@ -46,9 +84,8 @@ ALTER TABLE entreprise
     ADD COLUMN site_operationnel BOOLEAN NOT NULL DEFAULT TRUE;
 COMMENT ON COLUMN entreprise.site_operationnel IS 'TRUE = détient du stock / compte dans limite_filiales ; la maison mère peut être un pur siège (FALSE) — DEC-015.';
 
--- Index unique (id, group_id) : sert de cible aux FK composites de transfert_stock.
 ALTER TABLE entreprise
-    ADD CONSTRAINT uq_entreprise_id_group UNIQUE (id, group_id);
+    ADD CONSTRAINT uq_entreprise_group_id UNIQUE (group_id, id);
 
 -- ============================================================
 -- 3. UTILISATEUR — email_verifie (DEC-016),
@@ -60,13 +97,23 @@ COMMENT ON COLUMN utilisateur.email_verifie IS 'Compte inactif tant que FALSE (D
 
 ALTER TABLE utilisateur DROP COLUMN token_reset;
 ALTER TABLE utilisateur DROP COLUMN token_reset_expiry;
+
 -- ============================================================
 -- 4. CATEGORIE — rattachée au GROUPE (DEC-002) : group_id remplace entreprise_id
+--    group_id ajouté nullable, renseigné depuis entreprise.group_id,
+--    puis verrouillé NOT NULL (sûr même si des lignes existent déjà).
 -- ============================================================
+ALTER TABLE categorie
+    ADD COLUMN group_id BIGINT REFERENCES tenant_group(id) ON DELETE RESTRICT;
+UPDATE categorie c
+    SET group_id = e.group_id
+    FROM entreprise e
+    WHERE e.id = c.entreprise_id;
+ALTER TABLE categorie
+    ALTER COLUMN group_id SET NOT NULL;
+
 ALTER TABLE categorie DROP CONSTRAINT uq_categorie_code_entreprise;
 ALTER TABLE categorie DROP COLUMN entreprise_id;
-ALTER TABLE categorie
-    ADD COLUMN group_id BIGINT NOT NULL REFERENCES tenant_group(id) ON DELETE RESTRICT;
 ALTER TABLE categorie
     ADD CONSTRAINT uq_categorie_code_groupe UNIQUE (group_id, code);
 COMMENT ON TABLE categorie IS 'Catalogue partagé au niveau groupe (DEC-002).';
@@ -75,10 +122,17 @@ COMMENT ON TABLE categorie IS 'Catalogue partagé au niveau groupe (DEC-002).';
 -- 5. ARTICLE — rattaché au GROUPE (DEC-002) ; prix (INTEGER XAF, DEC-003)
 --    quantités DECIMAL(12,3) ; unités (DEC-013) ; lot/péremption (DEC-012)
 -- ============================================================
+ALTER TABLE article
+    ADD COLUMN group_id BIGINT REFERENCES tenant_group(id) ON DELETE RESTRICT;
+UPDATE article a
+    SET group_id = e.group_id
+    FROM entreprise e
+    WHERE e.id = a.entreprise_id;
+ALTER TABLE article
+    ALTER COLUMN group_id SET NOT NULL;
+
 ALTER TABLE article DROP CONSTRAINT uq_article_code_entreprise;
 ALTER TABLE article DROP COLUMN entreprise_id;
-ALTER TABLE article
-    ADD COLUMN group_id BIGINT NOT NULL REFERENCES tenant_group(id) ON DELETE RESTRICT;
 ALTER TABLE article
     ADD CONSTRAINT uq_article_code_groupe UNIQUE (group_id, code_article);
 
@@ -103,6 +157,7 @@ ALTER TABLE article
 COMMENT ON COLUMN article.lot IS 'Lot présente en V1 (schéma lot-ready) ; usage opérationnel (FEFO) en V1.5 — DEC-012.';
 
 COMMENT ON TABLE article IS 'Catalogue partagé au niveau groupe (DEC-002). Stock et prix restent par filiale.';
+
 -- ============================================================
 -- 6. COMMANDE_FOURNISSEUR — machine à états (DEC-006)
 --    COMMANDEE → PARTIELLEMENT_RECUE → RECEPTIONNEE | ANNULEE
@@ -139,7 +194,12 @@ ALTER TABLE ligne_commande_client ALTER COLUMN quantite TYPE DECIMAL(12,3);
 
 -- ============================================================
 -- 8. TRANSFERT_STOCK + LIGNE_TRANSFERT — multi-lignes, groupe, états (DEC-002/007)
---    Remplaçe l'ancienne table mono-article sans group_id.
+--    Remplace l'ancienne table mono-article sans group_id.
+--    Redesign complet assumé : aucune ligne historique n'existe
+--    (module stock jamais implémenté à ce stade) ; le CASCADE
+--    supprime aussi l'ancienne FK mouvement_stock.transfert_id,
+--    restaurée explicitement au bloc 12bis une fois cette nouvelle
+--    table en place.
 -- ============================================================
 DROP TABLE transfert_stock CASCADE;
 
@@ -171,12 +231,19 @@ COMMENT ON TABLE transfert_stock IS 'Bon de transfert multi-lignes, rattaché au
 COMMENT ON COLUMN transfert_stock.statut IS 'DEMANDE → VALIDE → EN_TRANSIT → RECU | ECART ; sorties : REFUSE, ANNULE (DEC-002).';
 
 CREATE TABLE ligne_transfert (
--- ============================================================
--- 8bis. MOUVEMENT_STOCK — retrait du trigger de mise à jour (C-12 / REF §6.2)
---       Le journal est IMMUABLE : aucun UPDATE ne doit exister.
---       V3 avait appliqué le trigger générique — on le retire.
--- ============================================================
-DROP TRIGGER IF EXISTS trg_mouvement_stock_update_date_modification ON mouvement_stock;
+    id                  BIGSERIAL PRIMARY KEY,
+    transfert_id        BIGINT      NOT NULL REFERENCES transfert_stock(id) ON DELETE CASCADE,
+    article_id          BIGINT      NOT NULL REFERENCES article(id) ON DELETE RESTRICT,
+    lot                 VARCHAR(50),
+    quantite_demandee   DECIMAL(12,3) NOT NULL CHECK (quantite_demandee > 0),
+    quantite_expediee   DECIMAL(12,3) NOT NULL DEFAULT 0 CHECK (quantite_expediee >= 0),
+    quantite_recue      DECIMAL(12,3) NOT NULL DEFAULT 0 CHECK (quantite_recue >= 0),
+    date_creation       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    date_modification   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    supprime            BOOLEAN     NOT NULL DEFAULT FALSE
+);
+COMMENT ON TABLE ligne_transfert IS 'Lignes du transfert : écart = expédié − reçu (DEC-007). Le lot est porté par la ligne (DEC-012).';
+
 -- ============================================================
 -- 9. CAISSE — session_caisse + paiement (DEC-009, DEC-010, DEC-018)
 -- ============================================================
@@ -201,7 +268,9 @@ COMMENT ON COLUMN session_caisse.ecart IS 'Constitué à la clôture (constaté 
 -- ============================================================
 -- 10. VENTE — statut PAYEE | ANNULEE | REMBOURSEE (DEC-006/010/018)
 --     client_id nullable (vendue à un client connu, DEC-010)
---     rattachée à une session de caisse (DEC-009)
+--     rattachée à une session de caisse (DEC-009) ; l'identité du
+--     caissier est portée par session_caisse.utilisateur_id — pas
+--     de colonne caissier_id redondante sur vente (REF §6.2, "caissier_id/session").
 -- ============================================================
 ALTER TABLE vente DROP COLUMN annulee;
 ALTER TABLE vente
@@ -230,14 +299,123 @@ CREATE TABLE paiement (
 COMMENT ON TABLE paiement IS 'Paiement mixte espèce / Mobile Money / carte à la caisse (DEC-009).';
 
 -- ============================================================
--- 12. MOUVEMENT_STOCK — immuable, quantités DECIMAL(12,3),
---     + ANNULATION_VENTE, REMBOURSEMENT (DEC-010), origine_type + ANNULATION_VENTE
+-- 12. MOUVEMENT_STOCK — reconstruction complète (et non un simple
+--     ALTER) pour trois raisons qui exigent toutes une recréation :
+--       a) DEC-033 : partitionnement PARTITION BY RANGE(date_mouvement)
+--          — PostgreSQL ne sait pas convertir une table ordinaire en
+--          table partitionnée par ALTER TABLE.
+--       b) DEC-003 : quantite en DECIMAL(12,3).
+--       c) C-12 (REF §6.2) : retrait du trigger générique
+--          update_date_modification (appliqué par V3 à mouvement_stock,
+--          vérifié dans V3__functions_and_triggers.sql). Recréer la
+--          table sans ce trigger règle le point sans DROP TRIGGER
+--          séparé : l'ancien trigger disparaît avec l'ancienne table.
+--     Une contrainte PARTITION BY impose que la clé de partition
+--     fasse partie de toute clé primaire : PRIMARY KEY (id, date_mouvement)
+--     remplace PRIMARY KEY (id) seul. Aucune autre table ne référence
+--     mouvement_stock(id) (vérifié), ce changement est donc sans impact.
 -- ============================================================
-ALTER TABLE mouvement_stock DROP CONSTRAINT mouvement_stock_type_mouvement_check;
-ALTER TABLE mouvement_stock
+ALTER TABLE mouvement_stock RENAME TO mouvement_stock_v1_v4;
+
+CREATE TABLE mouvement_stock (
+    id                BIGSERIAL,
+    entreprise_id     BIGINT        NOT NULL REFERENCES entreprise(id) ON DELETE RESTRICT,
+    article_id        BIGINT        NOT NULL REFERENCES article(id) ON DELETE RESTRICT,
+    type_mouvement    VARCHAR(30)   NOT NULL,
+    quantite          DECIMAL(12,3) NOT NULL,
+    date_mouvement    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    utilisateur_id    BIGINT        NOT NULL REFERENCES utilisateur(id) ON DELETE RESTRICT,
+    origine_id        BIGINT,
+    origine_type      VARCHAR(30),
+    transfert_id      BIGINT        REFERENCES transfert_stock(id) ON DELETE RESTRICT,
+    motif             TEXT,
+    date_creation     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    date_modification TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    supprime          BOOLEAN       NOT NULL DEFAULT FALSE,
+    CONSTRAINT pk_mouvement_stock PRIMARY KEY (id, date_mouvement),
+    CONSTRAINT chk_mouvement_quantite_positive CHECK (quantite > 0),
+    CONSTRAINT chk_type_mouvement
+        CHECK (type_mouvement IN ('ENTREE','SORTIE','CORRECTION_POS','CORRECTION_NEG',
+                                  'TRANSFERT_ENTREE','TRANSFERT_SORTIE','ANNULATION_VENTE','REMBOURSEMENT')),
+    CONSTRAINT chk_origine_type
+        CHECK (origine_type IN ('COMMANDE_FOURNISSEUR','COMMANDE_CLIENT','VENTE',
+                                'CORRECTION','TRANSFERT','ANNULATION_VENTE'))
+) PARTITION BY RANGE (date_mouvement);
+COMMENT ON TABLE mouvement_stock IS 'Journal immuable des mouvements de stock (REF §4.2) — partitionné par mois (DEC-033). Aucun UPDATE/DELETE ; trigger update_date_modification volontairement absent (C-12).';
+COMMENT ON COLUMN mouvement_stock.quantite IS 'DECIMAL(12,3) — vente au poids/litre (DEC-003).';
+
+-- Partitions couvrant le mois courant et les deux suivants (référence :
+-- 10 septembre 2026) + une partition DEFAULT pour tout le reste, afin
+-- qu'aucun INSERT ne puisse échouer faute de partition. La création
+-- des partitions futures est une tâche opérationnelle récurrente
+-- (job planifié / pg_partman), hors du périmètre de cette migration —
+-- à tracer dans document/referentiel/10-exploitation.md si ce n'est
+-- pas déjà outillé.
+CREATE TABLE mouvement_stock_2026_09 PARTITION OF mouvement_stock
+    FOR VALUES FROM ('2026-09-01') TO ('2026-10-01');
+CREATE TABLE mouvement_stock_2026_10 PARTITION OF mouvement_stock
+    FOR VALUES FROM ('2026-10-01') TO ('2026-11-01');
+CREATE TABLE mouvement_stock_2026_11 PARTITION OF mouvement_stock
+    FOR VALUES FROM ('2026-11-01') TO ('2026-12-01');
+CREATE TABLE mouvement_stock_default PARTITION OF mouvement_stock DEFAULT;
+
+-- Reprise défensive des données existantes. Le lien transfert_id ne
+-- peut pas être préservé : transfert_stock a été entièrement redéfini
+-- au bloc 8 (nouveaux identifiants, DEC-007) ; toute ancienne valeur
+-- ne correspond plus à rien. Il est donc mis à NULL pour les lignes
+-- reprises — ce qui n'a d'effet que si des données de test existaient
+-- déjà, aucun module métier n'écrivant encore dans cette table.
+INSERT INTO mouvement_stock (
+    id, entreprise_id, article_id, type_mouvement, quantite, date_mouvement,
+    utilisateur_id, origine_id, origine_type, transfert_id, motif,
+    date_creation, date_modification, supprime
+)
+SELECT
+    m.id, m.entreprise_id, m.article_id, m.type_mouvement, m.quantite::DECIMAL(12,3), m.date_mouvement,
+    m.utilisateur_id, m.origine_id, m.origine_type, NULL, m.motif,
+    m.date_creation, m.date_modification, m.supprime
+FROM mouvement_stock_v1_v4 m;
+
+-- Resynchronisation de la séquence BIGSERIAL après reprise d'IDs explicites.
+SELECT setval(
+    pg_get_serial_sequence('mouvement_stock', 'id'),
+    COALESCE((SELECT MAX(id) FROM mouvement_stock), 1),
+    (SELECT MAX(id) FROM mouvement_stock) IS NOT NULL
+);
+
+-- CASCADE retire au passage l'ancien trigger trg_mouvement_stock_update_date_modification
+-- (appliqué par V3) et les anciens index de l'ancienne table — C-12 est ainsi réglé.
+DROP TABLE mouvement_stock_v1_v4 CASCADE;
+
+CREATE INDEX idx_mouvement_article_entreprise
+    ON mouvement_stock(article_id, entreprise_id);
+CREATE INDEX idx_mouvement_type
+    ON mouvement_stock(type_mouvement);
+CREATE INDEX idx_mouvement_date
+    ON mouvement_stock(date_mouvement DESC);
+
+-- ============================================================
+-- 12bis. Remarque sur transfert_id : la table mouvement_stock étant
+--        entièrement recréée ci-dessus (bloc 12, pas un simple ALTER),
+--        sa FK vers transfert_stock(id) est déjà déclarée en ligne
+--        dans le CREATE TABLE et pointe directement vers la nouvelle
+--        transfert_stock du bloc 8 — aucune restauration séparée
+--        n'est nécessaire ici (contrairement à une approche par ALTER,
+--        où le DROP TABLE ... CASCADE du bloc 8 aurait supprimé la
+--        contrainte sans la recréer).
+-- ============================================================
+
+-- Suppression défensive d'un objet mort mentionné par REF §6.2 (C-12).
+-- Vérifié : cette vue n'existe dans aucune migration V1-V4 réellement
+-- appliquée (l'audit source qui l'attribue à V3 est inexact) — sans
+-- effet, conservé par cohérence documentaire avec le référentiel.
+DROP VIEW IF EXISTS vue_stock_reel CASCADE;
+
 -- ============================================================
 -- 13. NOTIFICATION_ALERTE — refondue (DEC-004)
 --     destinataire explicite, type extensible (pas de CHECK), etat (non lu/lu/résolu)
+--     Redesign complet assumé : module notification jamais implémenté,
+--     aucune donnée réelle attendue.
 -- ============================================================
 DROP TABLE notification_alerte;
 
@@ -292,16 +470,28 @@ COMMENT ON TABLE session_inventaire IS 'Campagne d''inventaire datée, avec vali
 
 CREATE TABLE ligne_inventaire (
     id                    BIGSERIAL PRIMARY KEY,
-    session_inventaire_id BIGINT      NOT NULL REFERENCES session_inventaire(id) ON DELETE CASCADE,
-    article_id            BIGINT      NOT NULL REFERENCES article(id) ON DELETE RESTRICT,
+    session_inventaire_id BIGINT        NOT NULL REFERENCES session_inventaire(id) ON DELETE CASCADE,
+    article_id            BIGINT        NOT NULL REFERENCES article(id) ON DELETE RESTRICT,
     quantite_constatee    DECIMAL(12,3),
     stock_systeme         DECIMAL(12,3),
     ecart                 DECIMAL(12,3),
-    statut                VARCHAR(20) NOT NULL DEFAULT 'A_COMPTER'
+    statut                VARCHAR(20)   NOT NULL DEFAULT 'A_COMPTER'
                           CHECK (statut IN ('A_COMPTER','COMPTEE','A_RECOMPTER','VALIDE')),
-    date_creation         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    date_creation         TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    date_modification     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    supprime              BOOLEAN       NOT NULL DEFAULT FALSE
+);
+COMMENT ON TABLE ligne_inventaire IS 'Écart = constatée − stock(instant du comptage), figé sur la ligne (DEC-036). La ligne refusée (stock sous zéro) est marquée A_RECOMPTER, jamais appliquée en partie.';
+
 -- ============================================================
--- 16. INDEX finaux (socle V5)
+-- 16. QUANTITÉS RESTANTES EN DECIMAL(12,3) (DEC-003)
+--     ligne_vente avait été omise du brouillon initial ; les deux
+--     autres tables de lignes sont déjà traitées aux blocs 6 et 7.
+-- ============================================================
+ALTER TABLE ligne_vente ALTER COLUMN quantite TYPE DECIMAL(12,3);
+
+-- ============================================================
+-- 17. INDEX finaux (socle V5) — hors mouvement_stock, déjà traité au bloc 12
 -- ============================================================
 -- Isolation tenant — catalogue partagé au niveau groupe (DEC-002)
 CREATE INDEX idx_article_groupe
@@ -310,12 +500,6 @@ CREATE INDEX idx_article_groupe_code
     ON article(group_id, code_article) WHERE supprime = FALSE;
 CREATE INDEX idx_categorie_groupe
     ON categorie(group_id) WHERE supprime = FALSE;
-
--- Calcul stock réel (requête la plus fréquente) — colonnes en DECIMAL désormais
-CREATE INDEX idx_mouvement_article_entreprise
-    ON mouvement_stock(article_id, entreprise_id);
-CREATE INDEX idx_mouvement_date
-    ON mouvement_stock(date_mouvement DESC);
 
 -- Alertes non lues par entreprise
 CREATE INDEX idx_alerte_entreprise_non_lue
@@ -348,29 +532,3 @@ CREATE INDEX idx_cle_idempotence_entreprise
     ON cle_idempotence(entreprise_id);
 CREATE INDEX idx_cle_idempotence_expiration
     ON cle_idempotence(date_expiration);
-    date_modification     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    supprime              BOOLEAN     NOT NULL DEFAULT FALSE
-);
-COMMENT ON TABLE ligne_inventaire IS 'Écart = constatée − stock(instant du comptage), figé sur la ligne (DEC-036). La ligne refusée (stock sous zéro) est marquée A_RECOMPTER, jamais appliquée en partie.';
-    ADD CONSTRAINT chk_type_mouvement
-    CHECK (type_mouvement IN ('ENTREE','SORTIE','CORRECTION_POS','CORRECTION_NEG',
-                              'TRANSFERT_ENTREE','TRANSFERT_SORTIE','ANNULATION_VENTE','REMBOURSEMENT'));
-ALTER TABLE mouvement_stock DROP CONSTRAINT mouvement_stock_origine_type_check;
-ALTER TABLE mouvement_stock
-    ADD CONSTRAINT chk_origine_type
-    CHECK (origine_type IN ('COMMANDE_FOURNISSEUR','COMMANDE_CLIENT','VENTE',
-                            'CORRECTION','TRANSFERT','ANNULATION_VENTE'));
-ALTER TABLE mouvement_stock ALTER COLUMN quantite TYPE DECIMAL(12,3);
-COMMENT ON COLUMN mouvement_stock.quantite IS 'DECIMAL(12,3) — vente au poids/litre (DEC-003).';
-    id                  BIGSERIAL PRIMARY KEY,
-    transfert_id        BIGINT      NOT NULL REFERENCES transfert_stock(id) ON DELETE CASCADE,
-    article_id          BIGINT      NOT NULL REFERENCES article(id) ON DELETE RESTRICT,
-    lot                 VARCHAR(50),
-    quantite_demandee   DECIMAL(12,3) NOT NULL CHECK (quantite_demandee > 0),
-    quantite_expediee   DECIMAL(12,3) NOT NULL DEFAULT 0 CHECK (quantite_expediee >= 0),
-    quantite_recue      DECIMAL(12,3) NOT NULL DEFAULT 0 CHECK (quantite_recue >= 0),
-    date_creation       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    date_modification   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    supprime            BOOLEAN     NOT NULL DEFAULT FALSE
-);
-COMMENT ON TABLE ligne_transfert IS 'Lignes du transfert : écart = expédié − reçu (DEC-007). Le lot est porté par la ligne (DEC-012).';
