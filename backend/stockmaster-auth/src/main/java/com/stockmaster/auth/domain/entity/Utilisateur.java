@@ -52,11 +52,11 @@ public class Utilisateur {
     @Column(name = "adresse_ville", length = 100)
     private String adresseVille;
 
-    @Column(name = "token_reset", length = 255)
+    /*@Column(name = "token_reset", length = 255)
     private String tokenReset;
 
     @Column(name = "token_reset_expiry")
-    private Instant tokenResetExpiry;
+    private Instant tokenResetExpiry;*/
 
     @Column(name = "date_creation", nullable = false, updatable = false)
     private Instant dateCreation;
