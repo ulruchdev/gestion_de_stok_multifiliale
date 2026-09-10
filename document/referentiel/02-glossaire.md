@@ -13,7 +13,7 @@
 | **Catalogue groupe** | Les articles/catégories définis **une fois au niveau du groupe**, partagés par toutes les filiales | `DEC-002` — un article = un identifiant dans tout le groupe |
 | **Filiale** | Une entreprise `FILIALE` rattachée à un groupe, avec son propre stock et sa propre caisse | `type_entreprise = 'FILIALE'` |
 | **Maison mère** | L'entreprise `MERE` du groupe ; peut être opérationnelle (siège-entrepôt) ou non (`site_operationnel`) | `DEC-015` |
-| **Stock réel** | Σ ENTREE − Σ SORTIE calculé à la volée depuis `mouvement_stock` (journal immuable) | ADR-003 ; jamais dénormalisé |
+| **Stock réel** | Σ(types d'entrée) − Σ(types de sortie), calculé à la volée depuis `mouvement_stock` (journal immuable) — **liste complète des 8 types en `REF §4.2`** | ADR-003 ; jamais dénormalisé |
 | **Caisse** | La session de caisse (`DEC-009`) : ouverture, encaissements, clôture, écart | Une vente est toujours rattachée à une session |
 | **Vente directe** | Vente au comptoir, encaissée immédiatement (caisse) | `PAYEE | ANNULEE | REMBOURSEE` |
 | **Commande client (B2B)** | Vente à un client connu, livrée puis réglée | `VALIDEE → LIVREE | ANNULEE` + règlement/échéance |

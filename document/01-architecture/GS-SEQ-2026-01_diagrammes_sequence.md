@@ -126,7 +126,7 @@ sequenceDiagram
     SVC->>STK: verifierDisponibilite(lignes) — AVANT toute écriture
     loop Pour chaque ligne
         STK->>DB: SELECT SUM(mouvements) WHERE article_id AND entreprise_id
-        STK->>STK: Calculer stock réel = Σ ENTREE − Σ SORTIE (+ variantes)
+        STK->>STK: Calculer stock réel = Σ(entrées) − Σ(sorties), 8 types (REF §4.2)
     end
     alt Au moins un article en stock insuffisant
         STK-->>SVC: InsufficientStockException(articlesEnRupture[])
