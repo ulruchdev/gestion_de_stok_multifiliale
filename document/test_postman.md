@@ -514,7 +514,7 @@ pm.test("Message de succès", () => {
 
 ## 2. Groupe — `/api/v1/groupe`
 
-> **Statut :** 🔜 EPIC 3 en cours (US-017 à US-020, Sprint 3-4) — US-014, US-015 et US-016 ✅ implémentées
+> **Statut :** 🔜 EPIC 3 en cours (US-018 à US-020, Sprint 3-4) — US-014, US-015, US-016 et US-017 ✅ implémentées
 
 ### 2.1 PUT — Modifier le groupe
 
@@ -760,7 +760,70 @@ pm.test("Filiale créée avec parentId", () => {
 
 ---
 
-### 2.4 GET — Lister les filiales (futur)
+### 2.4 GET — Lister les filiales
+
+> **US :** US-017
+> **Statut :** ✅ Implémenté
+> **Authentification :** ✅ Oui — rôle `ADMIN_GROUPE` uniquement (`@PreAuthorize`)
+
+Retourne uniquement les filiales du groupe du JWT (`groupId` du principal). Pagination + filtres `actif`/`ville` optionnels.
+
+#### Requête
+
+```http
+GET {{base_url}}/api/v1/groupe/filiales?page=0&size=20&actif=true&ville=Douala
+Authorization: Bearer {{access_token}}
+```
+
+Tous les paramètres sont optionnels : `page` (défaut 0), `size` (défaut 20, borné à `stockmaster.pagination.max-page-size` = 100), `actif`, `ville`.
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": 42,
+                "nom": "Boutique Akwa",
+                "codeFiliale": "DLA01",
+                "ville": "Douala",
+                "quartier": "Akwa",
+                "actif": true,
+                "siteOperationnel": true,
+                "parentId": 10,
+                "nombreEmployes": 3
+            }
+        ],
+        "page": 0,
+        "size": 20,
+        "totalElements": 1,
+        "totalPages": 1
+    }
+}
+```
+
+#### Réponse — Rôle non autorisé (403 Forbidden)
+
+Tout rôle autre que `ADMIN_GROUPE` (ex. `CAISSIER`) reçoit un `403` via `@PreAuthorize`.
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Page de filiales bien formee", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.content).to.be.an('array');
+    pm.expect(json.data.totalElements).to.be.a('number');
+});
+```
+
+---
+
 ### 2.5 PUT — Modifier une filiale (futur)
 ### 2.6 PATCH — Activer/Désactiver une filiale (futur)
 ### 2.7 GET — Dashboard consolidé (futur)
