@@ -1,6 +1,6 @@
 package com.stockmaster.groupe;
 
-import com.stockmaster.groupe.controller.GroupeController;
+import com.stockmaster.groupe.controller.FilialeController;
 import com.stockmaster.shared.handler.GlobalExceptionHandler;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -13,21 +13,15 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * Contexte de test MVC minimal pour {@link GroupeController} — même pattern que
- * {@code AuthTestApplication}. La chaîne HTTP est permitAll : ce sont les
- * {@code @PreAuthorize} (méthode) qui portent le contrôle d'accès, comme en production.
- *
- * <p>{@code @Import} explicite (pas {@code @ComponentScan} du package) : plusieurs
- * contrôleurs coexistent désormais dans {@code groupe.controller}
- * ({@link GroupeController}, {@code FilialeController}...) — un scan large
- * chargerait tous les contrôleurs du package dans chaque test {@code @WebMvcTest},
- * y compris ceux dont le service n'est pas {@code @MockBean} ici.</p>
+ * Contexte de test MVC minimal pour {@link FilialeController} — même pattern que
+ * {@link GroupeTestApplication} (voir sa javadoc : {@code @Import} ciblé, pas de
+ * {@code @ComponentScan} du package {@code groupe.controller}).
  */
 @SpringBootConfiguration
-@Import({GroupeController.class, GlobalExceptionHandler.class})
+@Import({FilialeController.class, GlobalExceptionHandler.class})
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)
 @EnableMethodSecurity
-public class GroupeTestApplication {
+public class FilialeTestApplication {
 
     @Bean
     public SecurityFilterChain testSecurityFilterChain(HttpSecurity http) throws Exception {
