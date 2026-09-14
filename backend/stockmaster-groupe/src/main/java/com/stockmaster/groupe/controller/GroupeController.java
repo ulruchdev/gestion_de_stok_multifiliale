@@ -2,6 +2,7 @@ package com.stockmaster.groupe.controller;
 
 import com.stockmaster.groupe.dto.response.GroupeResponse;
 import com.stockmaster.groupe.service.GroupeService;
+import com.stockmaster.shared.dto.response.ApiResponse;
 import com.stockmaster.shared.security.StockMasterPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +27,7 @@ public class GroupeController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN_GROUPE')")
-    public ResponseEntity<GroupeResponse> consulter(@AuthenticationPrincipal StockMasterPrincipal principal) {
-        return ResponseEntity.ok(groupeService.consulter(principal));
+    public ResponseEntity<ApiResponse<GroupeResponse>> consulter(@AuthenticationPrincipal StockMasterPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(groupeService.consulter(principal)));
     }
 }

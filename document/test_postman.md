@@ -535,16 +535,17 @@ Authorization: Bearer {{access_token}}
 
 #### Réponse — Succès (200 OK)
 
-> ⚠️ Contrairement aux endpoints `auth`, cette réponse n'est **pas** enveloppée dans `ApiResponse<T>` — le contrôleur retourne directement le DTO. Point à trancher pour harmoniser avec le reste de l'API avant d'ajouter d'autres endpoints `groupe` (voir note `progress-ledger.md`).
-
 ```json
 {
-    "id": 1,
-    "nomGroupe": "Distribo Sarl",
-    "planAbonnement": "PRO",
-    "limiteFiliales": 15,
-    "nombreFiliales": 7,
-    "dateExpirationPlan": "2027-06-30"
+    "success": true,
+    "data": {
+        "id": 1,
+        "nomGroupe": "Distribo Sarl",
+        "planAbonnement": "PRO",
+        "limiteFiliales": 15,
+        "nombreFiliales": 7,
+        "dateExpirationPlan": "2027-06-30"
+    }
 }
 ```
 
@@ -574,11 +575,12 @@ pm.test("Statut 200 OK", () => {
 });
 pm.test("Informations du groupe présentes", () => {
     const json = pm.response.json();
-    pm.expect(json.id).to.be.a('number');
-    pm.expect(json.nomGroupe).to.be.a('string');
-    pm.expect(json.planAbonnement).to.be.oneOf(['GRATUIT', 'PRO', 'PERSONNALISE']);
-    pm.expect(json.limiteFiliales).to.be.a('number');
-    pm.expect(json.nombreFiliales).to.be.a('number');
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.id).to.be.a('number');
+    pm.expect(json.data.nomGroupe).to.be.a('string');
+    pm.expect(json.data.planAbonnement).to.be.oneOf(['GRATUIT', 'PRO', 'PERSONNALISE']);
+    pm.expect(json.data.limiteFiliales).to.be.a('number');
+    pm.expect(json.data.nombreFiliales).to.be.a('number');
 });
 ```
 

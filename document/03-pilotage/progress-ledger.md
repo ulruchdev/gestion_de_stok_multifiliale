@@ -64,7 +64,7 @@
 | US-020 | GET `/api/v1/groupe/dashboard` — dashboard consolidé | P0 | ❌ | Non commencé — dépend des EPICs 5-6 (stock, vente), `@Cacheable` Redis TTL 5 min |
 | US-014b, US-019, US-081 | (P1, hors séquence P0) | P1 | ❌ | Non commencé |
 
-> ⚠️ **Point à trancher — enveloppe `ApiResponse<T>`** : `GroupeController.consulter()` retourne `ResponseEntity<GroupeResponse>` brut (`$.id`, `$.nomGroupe`…), alors que `AuthController` enveloppe systématiquement dans `ApiResponse<T>` (`$.data.id`…) conformément à `IA_CONTEXTE_PROJET.md` §6. Le test contrôleur US-015 (déjà écrit, non modifié) valide la forme brute — donc US-015 reste tel quel, mais **à harmoniser avant d'enchaîner sur US-014/016** (sinon les futurs endpoints `groupe` divergent du reste de l'API et du contrat frontend). Décision utilisateur requise.
+> ✅ **Enveloppe `ApiResponse<T>` harmonisée** : `GroupeController.consulter()` retournait initialement `ResponseEntity<GroupeResponse>` brut, désynchronisé d'`AuthController` (`ApiResponse<T>` partout, `IA_CONTEXTE_PROJET.md` §6). Corrigé — `ResponseEntity<ApiResponse<GroupeResponse>>` (`$.data.id`…), test contrôleur et docs Postman mis à jour en conséquence. Les futurs endpoints `groupe` (US-014/016-020) doivent suivre ce même pattern.
 
 ## EPIC 4 à 13 — (non commencé)
 

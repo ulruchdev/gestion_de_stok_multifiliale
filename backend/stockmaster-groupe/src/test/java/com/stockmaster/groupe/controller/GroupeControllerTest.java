@@ -74,12 +74,13 @@ class GroupeControllerTest {
             mockMvc.perform(get("/api/v1/groupe")
                             .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("ADMIN_GROUPE", 1L))))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.id").value(1))
-                    .andExpect(jsonPath("$.nomGroupe").value("Distribo Sarl"))
-                    .andExpect(jsonPath("$.planAbonnement").value("PRO"))
-                    .andExpect(jsonPath("$.limiteFiliales").value(15))
-                    .andExpect(jsonPath("$.nombreFiliales").value(7))
-                    .andExpect(jsonPath("$.dateExpirationPlan").value("2027-06-30"));
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.id").value(1))
+                    .andExpect(jsonPath("$.data.nomGroupe").value("Distribo Sarl"))
+                    .andExpect(jsonPath("$.data.planAbonnement").value("PRO"))
+                    .andExpect(jsonPath("$.data.limiteFiliales").value(15))
+                    .andExpect(jsonPath("$.data.nombreFiliales").value(7))
+                    .andExpect(jsonPath("$.data.dateExpirationPlan").value("2027-06-30"));
         }
 
         @Test
