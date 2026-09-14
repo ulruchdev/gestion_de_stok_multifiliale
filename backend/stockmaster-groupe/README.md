@@ -1,7 +1,7 @@
 # StockMaster CM — Groupe (Groupe & Filiales)
 
 > **Artefact :** `stockmaster-groupe`
-> **Statut :** 🔜 En cours (US-014/015 implémentées, US-016-020 à venir)
+> **Statut :** 🔜 En cours (US-014/015/016 implémentées, US-017-020 à venir)
 > **Dépendance :** `stockmaster-shared`
 > **Package :** `com.stockmaster.groupe`
 
@@ -26,7 +26,7 @@ Gestion des groupes multi-sites et de leurs filiales.
 |---|---|---|---|
 | **US-014** | Modifier les informations du groupe | P0 | ✅ Terminé |
 | **US-015** | Consulter les informations du groupe | P0 | ✅ Terminé |
-| **US-016** | Créer une filiale | P0 | 🔜 Non commencé |
+| **US-016** | Créer une filiale | P0 | ✅ Terminé |
 | **US-017** | Lister les filiales du groupe | P0 | 🔜 Non commencé |
 | **US-018** | Modifier une filiale | P0 | 🔜 Non commencé |
 | **US-019** | Activer / Désactiver une filiale | P1 | 🔜 Non commencé |
