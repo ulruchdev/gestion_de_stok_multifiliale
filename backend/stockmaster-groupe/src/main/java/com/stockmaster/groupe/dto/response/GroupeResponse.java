@@ -32,4 +32,13 @@ public class GroupeResponse {
     private Long nombreFiliales;
 
     private LocalDate dateExpirationPlan;
+
+    /** US-014 : URL MinIO du logo du groupe (peut être {@code null} si jamais renseigné). */
+    private String logo;
+
+    /** US-014 : Numéro d'Identifiant Fiscal du groupe. */
+    private String nif;
+
+    /** US-014 : dénomination légale du groupe. */
+    private String raisonSociale;
 }
