@@ -1,6 +1,7 @@
 package com.stockmaster.auth.config;
 
 import com.stockmaster.shared.config.RedisHealthTracker;
+import com.stockmaster.shared.security.StockMasterPrincipal;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
 import io.jsonwebtoken.Claims;

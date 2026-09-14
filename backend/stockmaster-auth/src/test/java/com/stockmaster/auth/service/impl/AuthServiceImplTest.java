@@ -27,7 +27,7 @@ import com.stockmaster.auth.mapper.AuthMapper;
 import com.stockmaster.shared.config.JwtProperties;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
-import com.stockmaster.auth.config.StockMasterPrincipal;
+import com.stockmaster.shared.security.StockMasterPrincipal;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.AfterEach;

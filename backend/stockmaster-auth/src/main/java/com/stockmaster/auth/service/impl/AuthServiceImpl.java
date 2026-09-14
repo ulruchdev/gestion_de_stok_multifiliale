@@ -1,7 +1,7 @@
 package com.stockmaster.auth.service.impl;
 
 import com.stockmaster.auth.config.JwtTokenProvider;
-import com.stockmaster.auth.config.StockMasterPrincipal;
+import com.stockmaster.shared.security.StockMasterPrincipal;
 import com.stockmaster.shared.domain.entity.Entreprise;
 import com.stockmaster.shared.domain.entity.TenantGroup;
 import com.stockmaster.shared.domain.entity.Utilisateur;
