@@ -154,3 +154,18 @@ La CI (profil dev, `ddl-auto=validate`) a attrapé un drift que les tests locaux
 - vérifié : Flyway V1→V5 + validate OK, **0 « missing column »**, 151/151 tests verts (dont 4 ArchUnit)
 
 *Dernière mise à jour : 14 septembre 2026 — fix CI (colonne fantôme, profil integration), 151/151 verts, branche `feature/GS-085-fail-closed-redis`*
+
+---
+
+## Qualité — merge main + couverture SonarCloud (14/09/2026)
+
+**Merge de `main` (PR #18) résolu** : V5 gardé côté branche (version exécutée et validée : reconstructions CHECK DEC-006, migrations `plan_abonnement`, contrainte `uq_entreprise_id_group` alignée sur les FK composites) ; `Utilisateur` gardé côté branche (champs `token_reset` supprimés, DEC-024 — pas de code commenté mort). Vérifié avant commit : reactor complet, 0 « missing column ».
+
+**Quality gate SonarCloud** (Coverage on New Code ≥ 80 %, alors 48,6 %) — deux actions :
+
+- `backend/lombok.config` : `lombok.addLombokGeneratedAnnotation = true` → les méthodes générées Lombok (~60 classes d'entités) portent `@Generated` et sont exclues du calcul de couverture (JaCoCo honore l'annotation) — la vraie logique métier n'est plus noyée dans le code généré
+- **+55 tests** couvrant ce qui était réellement découvert et compté : fabriques `ProblemResponse` (RFC 7807), hiérarchie d'exceptions (`BusinessException`, `EntityNotFoundException`, `InsufficientStockException`), défauts `@PrePersist` de tous les agrégats tenant/stock/vente/achat/catalogue/notification, énumérations verrouillées (7 rôles, 3 plans DEC-015, 8 types de mouvement DEC-023, machines d'état DEC-006/007/011), premiers tests de vente/achat/tiers/notification (0 test auparavant)
+- reactor : **206/206 tests verts** (13 modules), integration test + 4 règles ArchUnit incluses
+- reste hors couverture : packages déjà exclus par Sonar (`config/**`, `dto/**`), quatre modules sans logique de service encore (interfaces+entités posés, implémentations à venir par US)
+
+*Dernière mise à jour : 14 septembre 2026 — merge main + gate Sonar (lombok.config, 206/206 verts), branche `feature/GS-085-fail-closed-redis`*
