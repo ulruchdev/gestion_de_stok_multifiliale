@@ -49,4 +49,11 @@ public interface EntrepriseRepository extends JpaRepository<Entreprise, Long> {
             + "AND (:ville IS NULL OR e.adresseVille = :ville)")
     Page<Entreprise> findFilialesDuGroupe(@Param("groupeId") Long groupeId, @Param("type") TypeEntreprise type,
             @Param("actif") Boolean actif, @Param("ville") String ville, Pageable pageable);
+
+    /**
+     * US-018 : unicité de {@code codeFiliale} dans le groupe lors d'une modification,
+     * hors la filiale modifiée elle-même — même miroir de la contrainte DB que
+     * {@link #existsByGroupeIdAndCodeFiliale}, sans filtre {@code supprime}.
+     */
+    boolean existsByGroupeIdAndCodeFilialeAndIdNot(Long groupeId, String codeFiliale, Long id);
 }
