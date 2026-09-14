@@ -724,6 +724,59 @@
               ]
             }
           }
+        },
+        {
+          "name": "🏬 Creer une Filiale (US-016)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 201 Created\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Filiale creee avec parentId\", () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.id).to.be.a('number');",
+                  "    pm.expect(json.data.parentId).to.be.a('number');",
+                  "    pm.expect(json.data.siteOperationnel).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"nom\": \"Boutique Akwa\",\n    \"ville\": \"Douala\",\n    \"quartier\": \"Akwa\",\n    \"codeFiliale\": \"DLA01\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/groupe/filiales",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "groupe",
+                "filiales"
+              ]
+            }
+          }
         }
       ]
     },

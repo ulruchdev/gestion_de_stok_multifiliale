@@ -514,7 +514,7 @@ pm.test("Message de succès", () => {
 
 ## 2. Groupe — `/api/v1/groupe`
 
-> **Statut :** 🔜 EPIC 3 en cours (US-016 à US-020, Sprint 3-4) — US-014 et US-015 ✅ implémentées
+> **Statut :** 🔜 EPIC 3 en cours (US-017 à US-020, Sprint 3-4) — US-014, US-015 et US-016 ✅ implémentées
 
 ### 2.1 PUT — Modifier le groupe
 
@@ -678,7 +678,88 @@ pm.test("Informations du groupe présentes", () => {
 
 ---
 
-### 2.3 POST — Créer une filiale (futur)
+### 2.3 POST — Créer une filiale
+
+> **US :** US-016
+> **Statut :** ✅ Implémenté
+> **Authentification :** ✅ Oui — rôle `ADMIN_GROUPE` uniquement (`@PreAuthorize`)
+
+La filiale est créée dans le groupe du JWT (`groupId` du principal), rattachée à la maison mère du groupe (`parent_id`). Refusée si la limite de filiales du plan (`tenant_group.limite_filiales`, `DEC-015`) est atteinte, ou si `codeFiliale` est déjà utilisé dans le groupe.
+
+#### Requête
+
+```http
+POST {{base_url}}/api/v1/groupe/filiales
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "nom": "Boutique Akwa",
+    "ville": "Douala",
+    "quartier": "Akwa",
+    "codeFiliale": "DLA01"
+}
+```
+
+#### Réponse — Succès (201 Created)
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": 42,
+        "nom": "Boutique Akwa",
+        "codeFiliale": "DLA01",
+        "ville": "Douala",
+        "quartier": "Akwa",
+        "actif": true,
+        "siteOperationnel": true,
+        "parentId": 10
+    }
+}
+```
+
+#### Réponse — Limite de filiales atteinte (403 Forbidden)
+
+```json
+{
+    "errorCode": "GRP_001",
+    "detail": "Limite de filiales atteinte pour votre plan d'abonnement",
+    "status": 403
+}
+```
+
+#### Réponse — Code filiale déjà utilisé (409 Conflict)
+
+```json
+{
+    "errorCode": "RES_004",
+    "detail": "Ce code filiale existe déjà dans le groupe",
+    "status": 409
+}
+```
+
+#### Réponse — Rôle non autorisé (403 Forbidden)
+
+Tout rôle autre que `ADMIN_GROUPE` (ex. `CAISSIER`) reçoit un `403` via `@PreAuthorize`.
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 201 Created", () => {
+    pm.response.to.have.status(201);
+});
+pm.test("Filiale créée avec parentId", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.id).to.be.a('number');
+    pm.expect(json.data.parentId).to.be.a('number');
+    pm.expect(json.data.siteOperationnel).to.be.true;
+});
+```
+
+---
+
 ### 2.4 GET — Lister les filiales (futur)
 ### 2.5 PUT — Modifier une filiale (futur)
 ### 2.6 PATCH — Activer/Désactiver une filiale (futur)
