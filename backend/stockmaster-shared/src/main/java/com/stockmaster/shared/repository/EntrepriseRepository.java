@@ -12,4 +12,6 @@ public interface EntrepriseRepository extends JpaRepository<Entreprise, Long> {
     boolean existsByEmailAndSupprimeFalse(String email);
 
     long countByGroupeIdAndSupprimeFalse(Long groupeId);
+    long countByGroupeIdAndTypeEntrepriseAndActifTrueAndSupprimeFalse(Long groupeId,
+            com.stockmaster.shared.domain.enums.TypeEntreprise typeEntreprise);
 }

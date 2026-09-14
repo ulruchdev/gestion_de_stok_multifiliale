@@ -14,5 +14,10 @@
     <name>StockMaster CM — Groupe (groupe &amp; filiales)</name>
     <dependencies>
         <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-shared</artifactId></dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

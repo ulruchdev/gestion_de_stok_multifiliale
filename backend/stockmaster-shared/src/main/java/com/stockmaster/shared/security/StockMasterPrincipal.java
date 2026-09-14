@@ -1,10 +1,18 @@
-package com.stockmaster.auth.config;
+package com.stockmaster.shared.security;
 
 import io.jsonwebtoken.Claims;
 import lombok.Getter;
 
 import java.security.Principal;
 
+/**
+ * Principal Spring Security porté par le filtre JWT — contrat partagé.
+ *
+ * <p>Vit dans {@code shared} car tout module fonctionnel (groupe, catalogue,
+ * vente…) doit pouvoir lire l'identité du tenant depuis le JWT sans dépendre
+ * des internes d'auth (règle ArchUnit : accès inter-module sur la couche
+ * contrat uniquement).</p>
+ */
 @Getter
 public class StockMasterPrincipal implements Principal {
 
