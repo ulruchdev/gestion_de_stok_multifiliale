@@ -514,7 +514,7 @@ pm.test("Message de succès", () => {
 
 ## 2. Groupe — `/api/v1/groupe`
 
-> **Statut :** 🔜 EPIC 3 en cours (US-018 à US-020, Sprint 3-4) — US-014, US-015, US-016 et US-017 ✅ implémentées
+> **Statut :** 🔜 EPIC 3 en cours (US-019 à US-020, Sprint 3-4) — US-014 à US-018 ✅ implémentées
 
 ### 2.1 PUT — Modifier le groupe
 
@@ -824,7 +824,89 @@ pm.test("Page de filiales bien formee", () => {
 
 ---
 
-### 2.5 PUT — Modifier une filiale (futur)
+### 2.5 PUT — Modifier une filiale
+
+> **US :** US-018
+> **Statut :** ✅ Implémenté
+> **Authentification :** ✅ Oui — rôle `ADMIN_GROUPE` uniquement (`@PreAuthorize`)
+
+Modification **partielle** (sémantique PATCH, même contrat que US-014/016) — seuls les champs transmis sont appliqués. La filiale doit appartenir au groupe du JWT.
+
+#### Requête
+
+```http
+PUT {{base_url}}/api/v1/groupe/filiales/42
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "nom": "Boutique Bonanjo",
+    "codeFiliale": "DLA02",
+    "ville": "Douala",
+    "quartier": "Bonanjo"
+}
+```
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": 42,
+        "nom": "Boutique Bonanjo",
+        "codeFiliale": "DLA02",
+        "ville": "Douala",
+        "quartier": "Bonanjo",
+        "actif": true,
+        "siteOperationnel": true,
+        "parentId": 10,
+        "nombreEmployes": 2
+    }
+}
+```
+
+#### Réponse — Filiale introuvable / autre groupe (404 Not Found)
+
+Ne révèle jamais l'existence d'une filiale d'un autre groupe — même code d'erreur que pour un id inexistant.
+
+```json
+{
+    "errorCode": "RES_001",
+    "detail": "Ressource non trouvée",
+    "status": 404
+}
+```
+
+#### Réponse — Code filiale déjà utilisé (409 Conflict)
+
+```json
+{
+    "errorCode": "RES_004",
+    "detail": "Ce code filiale existe déjà dans le groupe",
+    "status": 409
+}
+```
+
+#### Réponse — Rôle non autorisé (403 Forbidden)
+
+Tout rôle autre que `ADMIN_GROUPE` (ex. `CAISSIER`) reçoit un `403` via `@PreAuthorize`.
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Filiale mise a jour", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.id).to.be.a('number');
+});
+```
+
+---
+
 ### 2.6 PATCH — Activer/Désactiver une filiale (futur)
 ### 2.7 GET — Dashboard consolidé (futur)
 

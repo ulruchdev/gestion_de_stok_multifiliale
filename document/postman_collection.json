@@ -835,6 +835,58 @@
               ]
             }
           }
+        },
+        {
+          "name": "🖊️ Modifier une Filiale (US-018)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Filiale mise a jour\", () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.id).to.be.a('number');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"nom\": \"Boutique Bonanjo\",\n    \"codeFiliale\": \"DLA02\",\n    \"ville\": \"Douala\",\n    \"quartier\": \"Bonanjo\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/groupe/filiales/42",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "groupe",
+                "filiales",
+                "42"
+              ]
+            }
+          }
         }
       ]
     },
