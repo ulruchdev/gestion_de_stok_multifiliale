@@ -3,6 +3,7 @@ package com.stockmaster.groupe.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stockmaster.groupe.FilialeTestApplication;
 import com.stockmaster.groupe.dto.request.FilialeCreateRequest;
+import com.stockmaster.groupe.dto.request.FilialeStatutRequest;
 import com.stockmaster.groupe.dto.request.FilialeUpdateRequest;
 import com.stockmaster.groupe.dto.response.FilialeResponse;
 import com.stockmaster.groupe.service.FilialeService;
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -289,6 +291,80 @@ class FilialeControllerTest {
             mockMvc.perform(put("/api/v1/groupe/filiales/42")
                             .contentType("application/json")
                             .content(objectMapper.writeValueAsString(validUpdateRequest())))
+                    .andExpect(status().is4xxClientError());
+        }
+    }
+
+    @Nested
+    @DisplayName("PATCH /api/v1/groupe/filiales/{id}/statut")
+    class ChangerStatut {
+
+        private FilialeStatutRequest statutRequest(boolean actif) {
+            FilialeStatutRequest request = new FilialeStatutRequest();
+            request.setActif(actif);
+            return request;
+        }
+
+        @Test
+        @DisplayName("✅ ADMIN_GROUPE, actif=false → 200")
+        void shouldReturn200WhenAdminGroupeDeactivates() throws Exception {
+            FilialeResponse updated = FilialeResponse.builder()
+                    .id(42L).nom("Boutique Akwa").codeFiliale("DLA01")
+                    .ville("Douala").quartier("Akwa").actif(false).siteOperationnel(true)
+                    .parentId(10L).nombreEmployes(5L)
+                    .build();
+            when(filialeService.changerStatut(any(StockMasterPrincipal.class), eq(42L), any(FilialeStatutRequest.class)))
+                    .thenReturn(updated);
+
+            mockMvc.perform(patch("/api/v1/groupe/filiales/42/statut")
+                            .contentType("application/json")
+                            .content(objectMapper.writeValueAsString(statutRequest(false)))
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("ADMIN_GROUPE", 1L))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.actif").value(false));
+        }
+
+        @Test
+        @DisplayName("❌ actif manquant → 400 (validation)")
+        void shouldReturn400WhenActifMissing() throws Exception {
+            mockMvc.perform(patch("/api/v1/groupe/filiales/42/statut")
+                            .contentType("application/json")
+                            .content(objectMapper.writeValueAsString(new FilialeStatutRequest()))
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("ADMIN_GROUPE", 1L))))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("❌ CAISSIER → 403 (@PreAuthorize hasRole ADMIN_GROUPE)")
+        void shouldReturn403WhenRoleNotAllowed() throws Exception {
+            mockMvc.perform(patch("/api/v1/groupe/filiales/42/statut")
+                            .contentType("application/json")
+                            .content(objectMapper.writeValueAsString(statutRequest(false)))
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("CAISSIER", 1L))))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("❌ Filiale introuvable / autre groupe (service) → 404 via GlobalExceptionHandler")
+        void shouldReturn404WhenServiceThrowsNotFound() throws Exception {
+            when(filialeService.changerStatut(any(StockMasterPrincipal.class), eq(999L), any(FilialeStatutRequest.class)))
+                    .thenThrow(new BusinessException(ErrorCode.RES_ENTITY_NOT_FOUND));
+
+            mockMvc.perform(patch("/api/v1/groupe/filiales/999/statut")
+                            .contentType("application/json")
+                            .content(objectMapper.writeValueAsString(statutRequest(false)))
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("ADMIN_GROUPE", 1L))))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.errorCode").value("RES_001"));
+        }
+
+        @Test
+        @DisplayName("❌ Non authentifié → 401/403 (accès refusé)")
+        void shouldRejectWhenAnonymous() throws Exception {
+            mockMvc.perform(patch("/api/v1/groupe/filiales/42/statut")
+                            .contentType("application/json")
+                            .content(objectMapper.writeValueAsString(statutRequest(false))))
                     .andExpect(status().is4xxClientError());
         }
     }

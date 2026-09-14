@@ -1,6 +1,7 @@
 package com.stockmaster.groupe.service;
 
 import com.stockmaster.groupe.dto.request.FilialeCreateRequest;
+import com.stockmaster.groupe.dto.request.FilialeStatutRequest;
 import com.stockmaster.groupe.dto.request.FilialeUpdateRequest;
 import com.stockmaster.groupe.dto.response.FilialeResponse;
 import com.stockmaster.shared.config.PaginationProperties;
@@ -98,6 +99,21 @@ class FilialeServiceTest {
         request.setVille("Douala");
         request.setQuartier("Akwa");
         return request;
+    }
+
+    private Entreprise filialeExistante(Long groupeId) {
+        return Entreprise.builder()
+                .id(42L)
+                .groupe(TenantGroup.builder().id(groupeId).build())
+                .typeEntreprise(TypeEntreprise.FILIALE)
+                .nom("Boutique Akwa")
+                .codeFiliale("DLA01")
+                .adresseVille("Douala")
+                .adresseQuartier("Akwa")
+                .actif(true)
+                .siteOperationnel(true)
+                .supprime(false)
+                .build();
     }
 
     @Nested
@@ -304,21 +320,6 @@ class FilialeServiceTest {
     @DisplayName("PUT /api/v1/groupe/filiales/{id} (US-018)")
     class Modifier {
 
-        private Entreprise filialeExistante(Long groupeId) {
-            return Entreprise.builder()
-                    .id(42L)
-                    .groupe(TenantGroup.builder().id(groupeId).build())
-                    .typeEntreprise(TypeEntreprise.FILIALE)
-                    .nom("Boutique Akwa")
-                    .codeFiliale("DLA01")
-                    .adresseVille("Douala")
-                    .adresseQuartier("Akwa")
-                    .actif(true)
-                    .siteOperationnel(true)
-                    .supprime(false)
-                    .build();
-        }
-
         @Test
         @DisplayName("✅ Nom seul modifié → autres champs inchangés")
         void shouldUpdateOnlyNomWhenOnlyNameProvided() {
@@ -426,6 +427,82 @@ class FilialeServiceTest {
             StockMasterPrincipal principal = principalWithGroup(null);
 
             assertThatThrownBy(() -> filialeService.modifier(principal, 42L, new FilialeUpdateRequest()))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
+        }
+    }
+
+    @Nested
+    @DisplayName("PATCH /api/v1/groupe/filiales/{id}/statut (US-019)")
+    class ChangerStatut {
+
+        private FilialeStatutRequest statut(boolean actif) {
+            FilialeStatutRequest request = new FilialeStatutRequest();
+            request.setActif(actif);
+            return request;
+        }
+
+        @Test
+        @DisplayName("✅ Désactive une filiale du groupe (actif=false)")
+        void shouldDeactivateFilialeOfOwnGroup() {
+            StockMasterPrincipal principal = principalWithGroup(1L);
+            when(entrepriseRepository.findById(42L)).thenReturn(Optional.of(filialeExistante(1L)));
+            when(entrepriseRepository.save(any(Entreprise.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(entrepriseRepository.findFirstByGroupeIdAndTypeEntreprise(1L, TypeEntreprise.MERE))
+                    .thenReturn(Optional.of(maisonMere()));
+            when(utilisateurRepository.countByEntrepriseIdAndSupprimeFalse(42L)).thenReturn(5L);
+
+            FilialeResponse response = filialeService.changerStatut(principal, 42L, statut(false));
+
+            assertThat(response.getActif()).isFalse();
+            assertThat(response.getNombreEmployes()).isEqualTo(5L);
+        }
+
+        @Test
+        @DisplayName("✅ Réactive une filiale du groupe (actif=true)")
+        void shouldReactivateFilialeOfOwnGroup() {
+            StockMasterPrincipal principal = principalWithGroup(1L);
+            Entreprise inactive = filialeExistante(1L);
+            inactive.setActif(false);
+            when(entrepriseRepository.findById(42L)).thenReturn(Optional.of(inactive));
+            when(entrepriseRepository.save(any(Entreprise.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(entrepriseRepository.findFirstByGroupeIdAndTypeEntreprise(1L, TypeEntreprise.MERE))
+                    .thenReturn(Optional.of(maisonMere()));
+            when(utilisateurRepository.countByEntrepriseIdAndSupprimeFalse(42L)).thenReturn(5L);
+
+            FilialeResponse response = filialeService.changerStatut(principal, 42L, statut(true));
+
+            assertThat(response.getActif()).isTrue();
+        }
+
+        @Test
+        @DisplayName("❌ Filiale d'un autre groupe → RES_ENTITY_NOT_FOUND (404, jamais révéler l'existence)")
+        void shouldThrowNotFoundWhenFilialeBelongsToAnotherGroup() {
+            StockMasterPrincipal principal = principalWithGroup(1L);
+            when(entrepriseRepository.findById(42L)).thenReturn(Optional.of(filialeExistante(99L)));
+
+            assertThatThrownBy(() -> filialeService.changerStatut(principal, 42L, statut(false)))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("❌ Filiale inexistante → RES_ENTITY_NOT_FOUND (404)")
+        void shouldThrowNotFoundWhenFilialeDoesNotExist() {
+            StockMasterPrincipal principal = principalWithGroup(1L);
+            when(entrepriseRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> filialeService.changerStatut(principal, 999L, statut(false)))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("❌ Principal sans groupId → GRP_CROSS_GROUP_FORBIDDEN (403)")
+        void shouldThrowForbiddenWhenPrincipalHasNoGroup() {
+            StockMasterPrincipal principal = principalWithGroup(null);
+
+            assertThatThrownBy(() -> filialeService.changerStatut(principal, 42L, statut(false)))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
         }

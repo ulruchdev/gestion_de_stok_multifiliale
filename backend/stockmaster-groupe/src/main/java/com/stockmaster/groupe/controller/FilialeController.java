@@ -1,6 +1,7 @@
 package com.stockmaster.groupe.controller;
 
 import com.stockmaster.groupe.dto.request.FilialeCreateRequest;
+import com.stockmaster.groupe.dto.request.FilialeStatutRequest;
 import com.stockmaster.groupe.dto.request.FilialeUpdateRequest;
 import com.stockmaster.groupe.dto.response.FilialeResponse;
 import com.stockmaster.groupe.service.FilialeService;
@@ -17,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
  * US-016 — {@code POST /api/v1/groupe/filiales} : créer une filiale.
  * US-017 — {@code GET /api/v1/groupe/filiales} : lister les filiales, paginé.
  * US-018 — {@code PUT /api/v1/groupe/filiales/{id}} : modifier une filiale.
+ * US-019 — {@code PATCH /api/v1/groupe/filiales/{id}/statut} : activer/désactiver une filiale.
  *
  * <p>Accès réservé à l'Admin Groupe. L'isolation multi-tenant est portée par
  * le service (groupId du JWT) — aucun groupId n'est accepté en entrée.</p>
@@ -68,6 +71,16 @@ public class FilialeController {
             @PathVariable Long id,
             @Valid @RequestBody FilialeUpdateRequest request) {
         FilialeResponse response = filialeService.modifier(principal, id, request);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @PatchMapping("/{id}/statut")
+    @PreAuthorize("hasRole('ADMIN_GROUPE')")
+    public ResponseEntity<ApiResponse<FilialeResponse>> changerStatut(
+            @AuthenticationPrincipal StockMasterPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody FilialeStatutRequest request) {
+        FilialeResponse response = filialeService.changerStatut(principal, id, request);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 }

@@ -1,6 +1,7 @@
 package com.stockmaster.groupe.service;
 
 import com.stockmaster.groupe.dto.request.FilialeCreateRequest;
+import com.stockmaster.groupe.dto.request.FilialeStatutRequest;
 import com.stockmaster.groupe.dto.request.FilialeUpdateRequest;
 import com.stockmaster.groupe.dto.response.FilialeResponse;
 import com.stockmaster.shared.config.PaginationProperties;
@@ -26,6 +27,7 @@ import org.springframework.util.StringUtils;
  * US-016 — Créer une filiale dans le groupe (P0).
  * US-017 — Lister les filiales du groupe, paginé (P0).
  * US-018 — Modifier une filiale (P0).
+ * US-019 — Activer / désactiver une filiale (P1).
  *
  * <p>Isolation multi-tenant structurelle : les filiales manipulées sont toujours
  * celles du groupe du JWT ({@code groupId} du principal) — aucun {@code groupId}
@@ -53,10 +55,7 @@ public class FilialeService {
      *         {@code SYS_INTERNAL_ERROR} si la maison mère du groupe est introuvable (invariant violé).
      */
     public FilialeResponse creer(StockMasterPrincipal principal, FilialeCreateRequest request) {
-        Long groupId = principal != null ? principal.getGroupId() : null;
-        if (groupId == null) {
-            throw new BusinessException(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
-        }
+        Long groupId = groupIdDuPrincipal(principal);
 
         TenantGroup groupe = groupeRepository.findById(groupId)
                 .filter(g -> !Boolean.TRUE.equals(g.getSupprime()))
@@ -105,10 +104,7 @@ public class FilialeService {
     @Transactional(readOnly = true)
     public PageResponse<FilialeResponse> lister(StockMasterPrincipal principal, Boolean actif, String ville,
             Pageable pageable) {
-        Long groupId = principal != null ? principal.getGroupId() : null;
-        if (groupId == null) {
-            throw new BusinessException(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
-        }
+        Long groupId = groupIdDuPrincipal(principal);
 
         Long parentId = entrepriseRepository.findFirstByGroupeIdAndTypeEntreprise(groupId, TypeEntreprise.MERE)
                 .map(Entreprise::getId)
@@ -136,16 +132,8 @@ public class FilialeService {
      */
     @Transactional
     public FilialeResponse modifier(StockMasterPrincipal principal, Long filialeId, FilialeUpdateRequest request) {
-        Long groupId = principal != null ? principal.getGroupId() : null;
-        if (groupId == null) {
-            throw new BusinessException(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
-        }
-
-        Entreprise filiale = entrepriseRepository.findById(filialeId)
-                .filter(e -> !Boolean.TRUE.equals(e.getSupprime()))
-                .filter(e -> e.getTypeEntreprise() == TypeEntreprise.FILIALE)
-                .filter(e -> e.getGroupe().getId().equals(groupId))
-                .orElseThrow(() -> new BusinessException(ErrorCode.RES_ENTITY_NOT_FOUND));
+        Long groupId = groupIdDuPrincipal(principal);
+        Entreprise filiale = chargerFilialeDuGroupe(groupId, filialeId);
 
         if (StringUtils.hasText(request.getCodeFiliale())) {
             if (entrepriseRepository.existsByGroupeIdAndCodeFilialeAndIdNot(groupId, request.getCodeFiliale(), filialeId)) {
@@ -164,13 +152,56 @@ public class FilialeService {
         }
 
         Entreprise sauvegardee = entrepriseRepository.save(filiale);
+        return toResponseAvecDetails(sauvegardee, groupId);
+    }
 
+    /**
+     * Active ou désactive une filiale du groupe du principal connecté (US-019).
+     * Ne touche à aucune autre donnée — les mouvements de stock/commandes n'existent
+     * pas encore (EPICs 5-6) ; c'est à ces modules de refuser toute écriture sur un
+     * site {@code actif = false} une fois construits.
+     *
+     * @throws BusinessException mêmes codes d'erreur que {@link #modifier}
+     *         (isolation groupe identique, sans vérification de doublon)
+     */
+    @Transactional
+    public FilialeResponse changerStatut(StockMasterPrincipal principal, Long filialeId, FilialeStatutRequest request) {
+        Long groupId = groupIdDuPrincipal(principal);
+        Entreprise filiale = chargerFilialeDuGroupe(groupId, filialeId);
+
+        filiale.setActif(request.getActif());
+
+        Entreprise sauvegardee = entrepriseRepository.save(filiale);
+        return toResponseAvecDetails(sauvegardee, groupId);
+    }
+
+    private Long groupIdDuPrincipal(StockMasterPrincipal principal) {
+        Long groupId = principal != null ? principal.getGroupId() : null;
+        if (groupId == null) {
+            throw new BusinessException(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
+        }
+        return groupId;
+    }
+
+    /**
+     * Charge une filiale et vérifie son appartenance au groupe — {@code 404} uniforme
+     * (jamais révéler l'existence) si elle n'existe pas, est soft-supprimée, n'est pas
+     * de type FILIALE, ou appartient à un autre groupe.
+     */
+    private Entreprise chargerFilialeDuGroupe(Long groupId, Long filialeId) {
+        return entrepriseRepository.findById(filialeId)
+                .filter(e -> !Boolean.TRUE.equals(e.getSupprime()))
+                .filter(e -> e.getTypeEntreprise() == TypeEntreprise.FILIALE)
+                .filter(e -> e.getGroupe().getId().equals(groupId))
+                .orElseThrow(() -> new BusinessException(ErrorCode.RES_ENTITY_NOT_FOUND));
+    }
+
+    private FilialeResponse toResponseAvecDetails(Entreprise filiale, Long groupId) {
         Long parentId = entrepriseRepository.findFirstByGroupeIdAndTypeEntreprise(groupId, TypeEntreprise.MERE)
                 .map(Entreprise::getId)
                 .orElse(null);
-        long nombreEmployes = utilisateurRepository.countByEntrepriseIdAndSupprimeFalse(sauvegardee.getId());
-
-        return toResponse(sauvegardee, parentId, nombreEmployes);
+        long nombreEmployes = utilisateurRepository.countByEntrepriseIdAndSupprimeFalse(filiale.getId());
+        return toResponse(filiale, parentId, nombreEmployes);
     }
 
     /** Protection contre les abus (DEC absente sur ce point) : jamais plus que {@code stockmaster.pagination.max-page-size}. */
