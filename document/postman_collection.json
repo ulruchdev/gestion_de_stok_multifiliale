@@ -613,6 +613,73 @@
           }
         },
         {
+          "name": "🖊️ Modifier le Groupe (US-014)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Groupe mis a jour\", () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.id).to.be.a('number');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "nomGroupe",
+                  "value": "Distribo Sarl Cameroun",
+                  "type": "text"
+                },
+                {
+                  "key": "raisonSociale",
+                  "value": "Distribo Sarl Cameroun SA",
+                  "type": "text"
+                },
+                {
+                  "key": "nif",
+                  "value": "M012345678901X",
+                  "type": "text"
+                },
+                {
+                  "key": "logo",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/groupe",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "groupe"
+              ]
+            }
+          }
+        },
+        {
           "name": "📋 Consulter le Groupe (US-015)",
           "event": [
             {

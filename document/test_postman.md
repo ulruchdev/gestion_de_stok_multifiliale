@@ -514,9 +514,101 @@ pm.test("Message de succès", () => {
 
 ## 2. Groupe — `/api/v1/groupe`
 
-> **Statut :** 🔜 EPIC 3 en cours (US-014 à US-020, Sprint 3-4) — US-015 ✅ implémentée
+> **Statut :** 🔜 EPIC 3 en cours (US-016 à US-020, Sprint 3-4) — US-014 et US-015 ✅ implémentées
 
-### 2.1 PUT — Modifier le groupe (futur)
+### 2.1 PUT — Modifier le groupe
+
+> **US :** US-014
+> **Statut :** ✅ Implémenté
+> **Authentification :** ✅ Oui — rôle `ADMIN_GROUPE` uniquement (`@PreAuthorize`)
+> **Content-Type :** `multipart/form-data` (upload de logo possible)
+
+Modification **partielle** (sémantique PATCH) : seuls les champs transmis sont appliqués. Le groupe modifié est toujours celui du JWT (`groupId` du principal) — aucun identifiant en entrée.
+
+#### Requête
+
+```http
+PUT {{base_url}}/api/v1/groupe
+Authorization: Bearer {{access_token}}
+Content-Type: multipart/form-data
+
+nomGroupe: Distribo Sarl Cameroun
+raisonSociale: Distribo Sarl Cameroun SA
+nif: M012345678901X
+logo: (fichier PNG/JPEG/WebP, 2 Mo max)
+```
+
+Tous les champs sont optionnels et indépendants — envoyer uniquement `logo` remplace le logo sans toucher au nom, par exemple.
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": 1,
+        "nomGroupe": "Distribo Sarl Cameroun",
+        "planAbonnement": "PRO",
+        "limiteFiliales": 15,
+        "nombreFiliales": 7,
+        "dateExpirationPlan": "2027-06-30",
+        "logo": "http://localhost:9000/stockmaster/groupe/1/3f2504e0-....png",
+        "nif": "M012345678901X",
+        "raisonSociale": "Distribo Sarl Cameroun SA"
+    }
+}
+```
+
+#### Réponse — Nom déjà utilisé (409 Conflict)
+
+```json
+{
+    "type": "/errors/grp-004",
+    "title": "Conflit",
+    "status": 409,
+    "detail": "Ce nom de groupe est déjà utilisé",
+    "instance": "/api/v1/groupe",
+    "errorCode": "GRP_004",
+    "timestamp": "2026-09-14T10:00:00Z"
+}
+```
+
+#### Réponse — NIF déjà utilisé (409 Conflict)
+
+```json
+{
+    "errorCode": "RES_006",
+    "detail": "Ce NIF est déjà utilisé",
+    "status": 409
+}
+```
+
+#### Réponse — Fichier logo invalide
+
+| Cas | Code | HTTP |
+|---|---|---|
+| Fichier vide | `SYS_002` | 400 |
+| Fichier > 2 Mo | `SYS_006` | 413 |
+| Type non autorisé (hors PNG/JPEG/WebP) | `SYS_004` | 415 |
+
+#### Réponse — Rôle non autorisé (403 Forbidden)
+
+Tout rôle autre que `ADMIN_GROUPE` (ex. `CAISSIER`) reçoit un `403` via `@PreAuthorize`.
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Groupe mis à jour", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.id).to.be.a('number');
+});
+```
+
+---
 
 ### 2.2 GET — Consulter le groupe
 
