@@ -2,14 +2,17 @@ package com.stockmaster.groupe.service;
 
 import com.stockmaster.groupe.dto.request.FilialeCreateRequest;
 import com.stockmaster.groupe.dto.response.FilialeResponse;
+import com.stockmaster.shared.config.PaginationProperties;
 import com.stockmaster.shared.domain.entity.Entreprise;
 import com.stockmaster.shared.domain.entity.TenantGroup;
 import com.stockmaster.shared.domain.enums.PlanAbonnement;
 import com.stockmaster.shared.domain.enums.TypeEntreprise;
+import com.stockmaster.shared.dto.response.PageResponse;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
 import com.stockmaster.shared.repository.EntrepriseRepository;
 import com.stockmaster.shared.repository.TenantGroupRepository;
+import com.stockmaster.shared.repository.UtilisateurRepository;
 import com.stockmaster.shared.security.StockMasterPrincipal;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.DisplayName;
@@ -19,8 +22,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,9 +38,10 @@ import static org.mockito.Mockito.when;
 
 /**
  * US-016 — Créer une filiale dans le groupe (P0).
+ * US-017 — Lister les filiales du groupe, paginé (P0).
  */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("FilialeService.creer(principal, request)")
+@DisplayName("FilialeService")
 class FilialeServiceTest {
 
     @Mock
@@ -43,7 +51,13 @@ class FilialeServiceTest {
     private EntrepriseRepository entrepriseRepository;
 
     @Mock
+    private UtilisateurRepository utilisateurRepository;
+
+    @Mock
     private ControleLimiteFilialesService controleLimiteFilialesService;
+
+    @Mock
+    private PaginationProperties paginationProperties;
 
     @InjectMocks
     private FilialeService filialeService;
@@ -118,6 +132,7 @@ class FilialeServiceTest {
             assertThat(response.getParentId()).isEqualTo(10L);
             assertThat(response.getActif()).isTrue();
             assertThat(response.getSiteOperationnel()).isTrue();
+            assertThat(response.getNombreEmployes()).isZero();
         }
 
         @Test
@@ -196,6 +211,89 @@ class FilialeServiceTest {
             StockMasterPrincipal principal = principalWithGroup(null);
 
             assertThatThrownBy(() -> filialeService.creer(principal, request()))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/groupe/filiales (US-017)")
+    class Lister {
+
+        private Entreprise filiale(Long id, String nom) {
+            return Entreprise.builder()
+                    .id(id).typeEntreprise(TypeEntreprise.FILIALE).nom(nom)
+                    .codeFiliale("C" + id).adresseVille("Douala").adresseQuartier("Akwa")
+                    .actif(true).siteOperationnel(true)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("✅ Retourne la page des filiales du groupe avec parentId et nombre d'employés")
+        void shouldReturnPagedFilialesWithParentAndEmployeeCount() {
+            StockMasterPrincipal principal = principalWithGroup(1L);
+            when(paginationProperties.getMaxPageSize()).thenReturn(100);
+            when(entrepriseRepository.findFirstByGroupeIdAndTypeEntreprise(1L, TypeEntreprise.MERE))
+                    .thenReturn(Optional.of(maisonMere()));
+            Pageable demande = PageRequest.of(0, 20);
+            Entreprise f1 = filiale(42L, "Boutique Akwa");
+            when(entrepriseRepository.findFilialesDuGroupe(1L, TypeEntreprise.FILIALE, null, null, demande))
+                    .thenReturn(new PageImpl<>(List.of(f1), demande, 1));
+            when(utilisateurRepository.countByEntrepriseIdAndSupprimeFalse(42L)).thenReturn(3L);
+
+            PageResponse<FilialeResponse> response = filialeService.lister(principal, null, null, demande);
+
+            assertThat(response.getContent()).hasSize(1);
+            assertThat(response.getTotalElements()).isEqualTo(1);
+            FilialeResponse item = response.getContent().get(0);
+            assertThat(item.getId()).isEqualTo(42L);
+            assertThat(item.getNom()).isEqualTo("Boutique Akwa");
+            assertThat(item.getParentId()).isEqualTo(10L);
+            assertThat(item.getNombreEmployes()).isEqualTo(3L);
+        }
+
+        @Test
+        @DisplayName("✅ Transmet les filtres actif/ville tels quels au repository")
+        void shouldForwardActifAndVilleFilters() {
+            StockMasterPrincipal principal = principalWithGroup(1L);
+            when(paginationProperties.getMaxPageSize()).thenReturn(100);
+            when(entrepriseRepository.findFirstByGroupeIdAndTypeEntreprise(1L, TypeEntreprise.MERE))
+                    .thenReturn(Optional.of(maisonMere()));
+            Pageable demande = PageRequest.of(0, 20);
+            when(entrepriseRepository.findFilialesDuGroupe(1L, TypeEntreprise.FILIALE, true, "Douala", demande))
+                    .thenReturn(new PageImpl<>(List.of(), demande, 0));
+
+            filialeService.lister(principal, true, "Douala", demande);
+
+            org.mockito.Mockito.verify(entrepriseRepository)
+                    .findFilialesDuGroupe(1L, TypeEntreprise.FILIALE, true, "Douala", demande);
+        }
+
+        @Test
+        @DisplayName("✅ Taille de page demandée bornée par stockmaster.pagination.max-page-size")
+        void shouldCapPageSizeAtConfiguredMax() {
+            StockMasterPrincipal principal = principalWithGroup(1L);
+            when(paginationProperties.getMaxPageSize()).thenReturn(100);
+            when(entrepriseRepository.findFirstByGroupeIdAndTypeEntreprise(1L, TypeEntreprise.MERE))
+                    .thenReturn(Optional.empty());
+            when(entrepriseRepository.findFilialesDuGroupe(any(), any(), any(), any(), any()))
+                    .thenReturn(new PageImpl<>(List.of()));
+
+            filialeService.lister(principal, null, null, PageRequest.of(0, 500));
+
+            org.mockito.ArgumentCaptor<Pageable> captor = org.mockito.ArgumentCaptor.forClass(Pageable.class);
+            org.mockito.Mockito.verify(entrepriseRepository)
+                    .findFilialesDuGroupe(org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.eq(TypeEntreprise.FILIALE),
+                            any(), any(), captor.capture());
+            assertThat(captor.getValue().getPageSize()).isEqualTo(100);
+        }
+
+        @Test
+        @DisplayName("❌ Principal sans groupId → GRP_CROSS_GROUP_FORBIDDEN (403)")
+        void shouldThrowForbiddenWhenPrincipalHasNoGroup() {
+            StockMasterPrincipal principal = principalWithGroup(null);
+
+            assertThatThrownBy(() -> filialeService.lister(principal, null, null, PageRequest.of(0, 20)))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
         }
