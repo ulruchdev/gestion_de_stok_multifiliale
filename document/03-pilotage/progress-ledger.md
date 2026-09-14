@@ -143,4 +143,14 @@ Pose des fondamentaux module par module (entités alignées V5, repositories sco
 
 Ajustements d'accompagnement : `CanalNotification` déplacé `service` → `port` (un port est fait pour être consommé inter-modules) ; `CalculTvaService` (DEC-003) déplacé catalogue → `shared.service` (règle universelle, utile partout) ; `archunit-junit5` (version déjà gérée par le parent) déclaré dans bootstrap ; surefire avec `-Djdk.attach.allowAttachSelf=true` (fixe l'échec intermittent d'auto-attache ByteBuddy/Mockito sur Windows, qui faisait échouer ~50 % des builds locaux).
 
-*Dernière mise à jour : 14 septembre 2026 — fondamentaux 9 modules + V5 validée en exécution réelle + règles ArchUnit (4/4 vertes), branche `feature/GS-085-fail-closed-redis`*
+---
+
+## Backend — Fix CI : colonne fantôme + schéma validé en local (14/09/2026)
+
+La CI (profil dev, `ddl-auto=validate`) a attrapé un drift que les tests locaux laissaient passer (profil test, `ddl-auto=none`) :
+
+- `CommandeFournisseur` mappait `utilisateur_id`, colonne qui n'existe **ni en V1 ni en V5** (REF §6.2) — champ supprimé ; la traçabilité du créateur passe par le journal `mouvement_stock.utilisateur_id`
+- **nouveau profil `integration`** (Flyway + `ddl-auto=validate`) utilisé par `StockMasterApplicationTest` : le test de démarrage vérifie désormais l'exactitude schéma↔entités **en local, à chaque build** — un écart comme celui-ci échoue au commit, plus seulement en CI
+- vérifié : Flyway V1→V5 + validate OK, **0 « missing column »**, 151/151 tests verts (dont 4 ArchUnit)
+
+*Dernière mise à jour : 14 septembre 2026 — fix CI (colonne fantôme, profil integration), 151/151 verts, branche `feature/GS-085-fail-closed-redis`*
