@@ -193,14 +193,57 @@ spring:
       on-profile: test
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/stockmaster_dev
-    username: stockmaster
-    password: stockmaster
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:stockmaster_dev}
+    username: ${DB_USERNAME:stockmaster}
+    password: ${DB_PASSWORD:stockmaster}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
       ddl-auto: none
+
+  flyway:
+    enabled: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+stockmaster:
+  jwt:
+    secret: U3RvY2tNYXN0ZXItQ00tZGV2LWp3dC1zZWNyZXQtMjAyNi1jaGFuZ2UtaW4tcHJvZHVjdGlvbi1wbGVhc2U=
+
+management:
+  health:
+    mail:
+      enabled: false
+
+logging:
+  level:
+    com.stockmaster: DEBUG
+
+---
+# ============================================================
+# Profil : integration (tests d'intégration bootstrap)
+# Comme test, MAIS avec ddl-auto=validate : le démarrage de l'application
+# vérifie que le schéma Flyway (V1..Vn) correspond exactement aux entités.
+# C'est le même contrôle que le profil dev de la CI — sans en dépendre.
+# ============================================================
+spring:
+  config:
+    activate:
+      on-profile: integration
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:stockmaster_dev}
+    username: ${DB_USERNAME:stockmaster}
+    password: ${DB_PASSWORD:stockmaster}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate    # ← le schéma doit correspondre aux entités, sinon le test échoue
 
   flyway:
     enabled: true

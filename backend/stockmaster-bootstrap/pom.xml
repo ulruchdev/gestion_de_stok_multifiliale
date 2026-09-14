@@ -29,6 +29,13 @@
         <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-vente</artifactId></dependency>
         <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-notification</artifactId></dependency>
         <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-reporting</artifactId></dependency>
+
+        <!-- ArchUnit (tests d'architecture inter-modules, version gérée par le parent) -->
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

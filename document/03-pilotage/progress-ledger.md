@@ -47,10 +47,10 @@
 |----|-------------|----------|--------|-------|
 | US-083 | Rotation du Refresh Token avec détection de rejeu | P0 | ✅ | Terminé (branche `feature/GS-083-rotation-refresh-token`) — familyId+jti chaînés, rotation à chaque refresh, révocation totale + événement sur rejeu détecté. 90 tests shared+auth verts, vérifié en conditions réelles (login→refresh→rejeu→401 AUTH_006) |
 | US-084 | Hachage des mots de passe en Argon2id | P1 | ❌ | Non commencé — vérifié : `SecurityConfig` utilise encore uniquement `BCryptPasswordEncoder` |
-| US-085 | Comportement fail-closed en cas d'indisponibilité de Redis | P0 | ❌ | Non commencé — vérifié : aucune gestion explicite dans `RateLimitFilter` |
+| US-085 | Comportement fail-closed ciblé en cas d'indisponibilité de Redis | P0 | ✅ | Terminé (branche `feature/GS-085-fail-closed-redis`) — fail-closed **503 SEC_004** ciblé sur `POST /auth/refresh` (lecture + écriture de rotation) et rate-limiting par endpoint sensible ; **fail-open** best-effort sur login/logout/forgot, compteur global de rate-limiting et vérification blacklist JWT. Réutilise `RedisHealthTracker` (shared, déjà sur `main`) → alerte ERROR après 60 s d'indisponibilité continue. Conforme ADR-005 (Redis mono-instance, pas de HA) |
 | US-086 | Logs d'audit structurés pour les événements d'authentification | P1 | ❌ | Non commencé — vérifié : aucun log JSON structuré (MDC/logstash) |
 
-> ⚠️ Tant que US-083/085 (P0) ne sont pas faites, EPIC 2 n'est pas complet au sens du backlog (`BACKLOG_StockMaster_CM.md` : dépendance EPIC 3 = « EPIC 2 complété »).
+> ✅ Les deux durcissements **P0** (US-083 rotation refresh + US-085 fail-closed ciblé Redis) sont terminés → le blocage EPIC 3 au sens du backlog (`BACKLOG_StockMaster_CM.md` : dépendance EPIC 3 = « EPIC 2 complété ») est levé côté P0. Restent US-084 (Argon2id) et US-086 (logs d'audit), tous deux **P1**, non bloquants pour EPIC 3.
 
 ## EPIC 3 à 13 — (non commencé)
 
@@ -106,4 +106,66 @@ Les fichiers `DESIGN_CORRECTIONS.md` (25 corrections) et `DESIGN_TOKENS_REFERENC
 
 ---
 
-*Dernière mise à jour : 31 juillet 2026 — corrections après vérification directe du code (session-bootstrap manuel)*
+---
+
+## Backend — Fondamentaux des 9 modules fonctionnels (session 14/09/2026)
+
+Pose des fondamentaux module par module (entités alignées V5, repositories scoping tenant, enums de machines à états, services métier purs + tests TDD). Les développeurs n'ont plus qu'à implémenter services applicatifs, contrôleurs, mappers et cas d'usage US.
+
+| Élément | Contenu | Statut |
+|---------|---------|--------|
+| Agrégats tenant | `TenantGroup`/`Entreprise`/`Utilisateur` + enums + repos déplacés de `auth` vers `shared` (tous modules référencent sans dépendre de auth) ; alignés V5 : `limite_utilisateurs`, `site_operationnel`, `code_filiale NOT NULL`, `email_verifie`, colonnes `token_reset` supprimées, `PlanAbonnement` 3 valeurs (DEC-015) | ✅ |
+| catalogue | `Categorie`/`Article` niveau GROUPE (DEC-002), XAF entiers + TTC calculé (DEC-003), 2 unités + facteur (DEC-013), lot-ready (DEC-012) ; `CalculTvaService` + 12 tests | ✅ |
+| tiers | `Client`/`Fournisseur` périmètre filiale + repos (unicité NIF, batch) | ✅ |
+| achat | `CommandeFournisseur`(+lignes), machine à états DEC-006 (`COMMANDEE→PARTIELLEMENT_RECUE→RECEPTIONNEE\|ANNULEE`), quantités DECIMAL(12,3) | ✅ |
+| vente | `Vente`/`LigneVente` (statut `PAYEE→ANNULEE\|REMBOURSEE`, client nullable, session DEC-018), `SessionCaisse` (écart anti-perte), `Paiement` mixte (DEC-009), `CommandeClient` (+règlement DEC-011/020) + 6 repos | ✅ |
+| stock | `MouvementStock` journal immuable partitionné (C-12/DEC-033, PK composite documentée), `TransfertStock` multi-lignes groupe + FK composites (DEC-007), inventaire DEC-036, `CleIdempotence` JSONB (DEC-027) ; `CalculStockService` signe map + rupture `≤ seuil` + invariant non-négatif + 10 tests | ✅ |
+| notification | `NotificationAlerte` refondue (destinataire explicite, type SANS CHECK — DEC-004/DEC-037) ; port `CanalNotification` (DEC-014) prêt pour EPIC 12 (email bienvenue/vérification AUTH-07) | ✅ |
+| groupe / utilisateur / reporting | `ControleLimiteFilialesService` (sites non opérationnels exclus), `ControleLimiteUtilisateursService` (10/50/négocié), `CalculCaService` (CA HT facturé, TVA, TTC — DEC-020) + 11 tests | ✅ |
+| **V5 validée en conditions réelles** | Flyway V1→V5 exécutée **pour de vrai** sur PostgreSQL 16 vierge (conteneur jetable port 5433) via le test d'intégration bootstrap + `ddl-auto=validate` OK sur les entités — dette de validation de V5 soldée | ✅ |
+| Qualité | `mvnw test` : **125/125 verts** (dont 3 tests d'intégration démarrage complet) ; CI `mvn verify` couvre tous les modules, rien à changer | ✅ |
+| Correction config | Profil `test` : datasource passée en `${DB_HOST}/${DB_PORT}/${DB_NAME}/${DB_USERNAME}/${DB_PASSWORD}` (comme les autres profils) — il était le seul codé en dur sur 5432 | ✅ |
+
+**Note machine locale (gestionulrich)** : un PostgreSQL natif Windows écoute `localhost:5432` avec des identifiants qui ne sont pas ceux documentés ; le conteneur compose ne peut pas publier son port (règle de bind Windows) et sa base n'a PAS été migrée ni effacée. Pour tester en local : `DB_PORT=5433 ./mvnw test` avec un conteneur jetable, ou arrêter le service natif. CI non concernée (elle provisionne son propre PG).
+
+---
+
+---
+
+## Backend — Règles d'architecture automatisées (ArchUnit)
+
+`ModuleDependencyArchTest` (dans bootstrap, seul module voyant tout le graphe) exécute 4 règles à chaque build :
+
+1. **Dépendances inter-modules** : seuls `shared` et la couche contrat (`domain.entity`, `domain.enums`, `event`, `port`) de catalogue/tiers/notification sont autorisés — les `service`/`repository`/`controller`/`dto`/`mapper`/`config` d'un autre module sont interdits (les FK de documents → `catalogue.Article`, `tiers.Client`… rendent le contrat inter-modules nécessaire, DEC-002).
+2. **shared est la base du graphe** : ne dépend d'aucun module fonctionnel.
+3. **auth est une feuille** : ne consomme aucun autre module (l'email passe par événements).
+4. **notification.service encapsulé** : les émetteurs passent par `CanalNotification` (`notification.port`, DEC-014).
+
+Ajustements d'accompagnement : `CanalNotification` déplacé `service` → `port` (un port est fait pour être consommé inter-modules) ; `CalculTvaService` (DEC-003) déplacé catalogue → `shared.service` (règle universelle, utile partout) ; `archunit-junit5` (version déjà gérée par le parent) déclaré dans bootstrap ; surefire avec `-Djdk.attach.allowAttachSelf=true` (fixe l'échec intermittent d'auto-attache ByteBuddy/Mockito sur Windows, qui faisait échouer ~50 % des builds locaux).
+
+---
+
+## Backend — Fix CI : colonne fantôme + schéma validé en local (14/09/2026)
+
+La CI (profil dev, `ddl-auto=validate`) a attrapé un drift que les tests locaux laissaient passer (profil test, `ddl-auto=none`) :
+
+- `CommandeFournisseur` mappait `utilisateur_id`, colonne qui n'existe **ni en V1 ni en V5** (REF §6.2) — champ supprimé ; la traçabilité du créateur passe par le journal `mouvement_stock.utilisateur_id`
+- **nouveau profil `integration`** (Flyway + `ddl-auto=validate`) utilisé par `StockMasterApplicationTest` : le test de démarrage vérifie désormais l'exactitude schéma↔entités **en local, à chaque build** — un écart comme celui-ci échoue au commit, plus seulement en CI
+- vérifié : Flyway V1→V5 + validate OK, **0 « missing column »**, 151/151 tests verts (dont 4 ArchUnit)
+
+*Dernière mise à jour : 14 septembre 2026 — fix CI (colonne fantôme, profil integration), 151/151 verts, branche `feature/GS-085-fail-closed-redis`*
+
+---
+
+## Qualité — merge main + couverture SonarCloud (14/09/2026)
+
+**Merge de `main` (PR #18) résolu** : V5 gardé côté branche (version exécutée et validée : reconstructions CHECK DEC-006, migrations `plan_abonnement`, contrainte `uq_entreprise_id_group` alignée sur les FK composites) ; `Utilisateur` gardé côté branche (champs `token_reset` supprimés, DEC-024 — pas de code commenté mort). Vérifié avant commit : reactor complet, 0 « missing column ».
+
+**Quality gate SonarCloud** (Coverage on New Code ≥ 80 %, alors 48,6 %) — deux actions :
+
+- `backend/lombok.config` : `lombok.addLombokGeneratedAnnotation = true` → les méthodes générées Lombok (~60 classes d'entités) portent `@Generated` et sont exclues du calcul de couverture (JaCoCo honore l'annotation) — la vraie logique métier n'est plus noyée dans le code généré
+- **+55 tests** couvrant ce qui était réellement découvert et compté : fabriques `ProblemResponse` (RFC 7807), hiérarchie d'exceptions (`BusinessException`, `EntityNotFoundException`, `InsufficientStockException`), défauts `@PrePersist` de tous les agrégats tenant/stock/vente/achat/catalogue/notification, énumérations verrouillées (7 rôles, 3 plans DEC-015, 8 types de mouvement DEC-023, machines d'état DEC-006/007/011), premiers tests de vente/achat/tiers/notification (0 test auparavant)
+- reactor : **206/206 tests verts** (13 modules), integration test + 4 règles ArchUnit incluses
+- reste hors couverture : packages déjà exclus par Sonar (`config/**`, `dto/**`), quatre modules sans logique de service encore (interfaces+entités posés, implémentations à venir par US)
+
+*Dernière mise à jour : 14 septembre 2026 — merge main + gate Sonar (lombok.config, 206/206 verts), branche `feature/GS-085-fail-closed-redis`*

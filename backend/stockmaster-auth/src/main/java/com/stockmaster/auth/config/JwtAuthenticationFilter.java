@@ -1,5 +1,6 @@
 package com.stockmaster.auth.config;
 
+import com.stockmaster.shared.config.RedisHealthTracker;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
 import io.jsonwebtoken.Claims;
@@ -11,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -29,6 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final StringRedisTemplate redisTemplate;
+    private final RedisHealthTracker redisHealthTracker;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -42,12 +45,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 Claims claims = jwtTokenProvider.validateToken(token);
 
-                // Vérifier si le jti est blacklisté (déconnexion)
+                // Vérifier si le jti est blacklisté (déconnexion). US-085 : fail-open si Redis
+                // est injoignable — la signature JWT reste valide localement, bloquer ici ferait
+                // tomber tous les endpoints authentifiés de l'application sur un incident Redis.
                 String jti = claims.get("jti", String.class);
                 if (jti != null) {
-                    String blacklistKey = "blacklist:jti:" + jti;
-                    Boolean isBlacklisted = redisTemplate.hasKey(blacklistKey);
-                    if (Boolean.TRUE.equals(isBlacklisted)) {
+                    boolean isBlacklisted;
+                    try {
+                        isBlacklisted = Boolean.TRUE.equals(
+                                redisTemplate.hasKey("blacklist:jti:" + jti));
+                        redisHealthTracker.recordSuccess();
+                    } catch (RedisConnectionFailureException e) {
+                        redisHealthTracker.recordFailure();
+                        log.warn("Redis injoignable — vérification blacklist ignorée pour jti={} (fail-open)", jti);
+                        isBlacklisted = false;
+                    }
+                    if (isBlacklisted) {
                         log.warn("Token blacklisté (jti={})", jti);
                         response.setStatus(401);
                         response.getWriter().write("{\"errorCode\":\"AUTH_005\",\"detail\":\"Token révoqué\"}");

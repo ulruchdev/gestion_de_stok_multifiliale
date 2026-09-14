@@ -14,5 +14,6 @@
     <name>StockMaster CM — Stock (gestion du stock &amp; mouvements)</name>
     <dependencies>
         <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-shared</artifactId></dependency>
+        <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-catalogue</artifactId></dependency>
     </dependencies>
 </project>

@@ -14,5 +14,7 @@
     <name>StockMaster CM — Achat (commandes fournisseur)</name>
     <dependencies>
         <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-shared</artifactId></dependency>
+        <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-catalogue</artifactId></dependency>
+        <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-tiers</artifactId></dependency>
     </dependencies>
 </project>

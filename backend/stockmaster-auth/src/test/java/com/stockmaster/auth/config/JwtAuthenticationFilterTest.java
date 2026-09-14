@@ -1,5 +1,6 @@
 package com.stockmaster.auth.config;
 
+import com.stockmaster.shared.config.RedisHealthTracker;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
@@ -20,15 +21,15 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("JwtAuthenticationFilter — comportement réel de main")
+@DisplayName("JwtAuthenticationFilter — vérification JWT & blacklist (US-085 fail-open)")
 class JwtAuthenticationFilterTest {
 
     @Mock private JwtTokenProvider jwtTokenProvider;
     @Mock private StringRedisTemplate redisTemplate;
+    @Mock private RedisHealthTracker redisHealthTracker;
     @Mock private HttpServletRequest request;
     @Mock private HttpServletResponse response;
     @Mock private FilterChain chain;
@@ -38,7 +39,7 @@ class JwtAuthenticationFilterTest {
 
     @BeforeEach
     void setUp() {
-        filter = new JwtAuthenticationFilter(jwtTokenProvider, redisTemplate);
+        filter = new JwtAuthenticationFilter(jwtTokenProvider, redisTemplate, redisHealthTracker);
         SecurityContextHolder.clearContext();
     }
 
@@ -92,19 +93,21 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    @DisplayName("⚠️ Redis indisponible sur la vérification blacklist → l'exception se propage (500 sur main, avant le branchement GS-085)")
-    void shouldPropagateWhenRedisUnavailableForBlacklistCheck() throws Exception {
+    @DisplayName("⚠️ US-085 — Redis indisponible sur la vérification blacklist → fail-open : authentification posée, chaîne poursuivie, échec enregistré")
+    void shouldFailOpenWhenRedisUnavailableForBlacklistCheck() throws Exception {
         when(request.getHeader("Authorization")).thenReturn("Bearer valid-token");
         when(jwtTokenProvider.validateToken("valid-token")).thenReturn(claims);
         when(claims.get("jti", String.class)).thenReturn("jti-1");
+        when(claims.get("userId", Long.class)).thenReturn(1L);
+        when(claims.get("role", String.class)).thenReturn("ADMIN_GROUPE");
         when(redisTemplate.hasKey("blacklist:jti:jti-1"))
                 .thenThrow(new RedisConnectionFailureException("down"));
 
-        assertThatThrownBy(() -> filter.doFilterInternal(request, response, chain))
-                .isInstanceOf(RedisConnectionFailureException.class);
+        filter.doFilterInternal(request, response, chain);
 
-        verify(chain, never()).doFilter(any(), any());
-        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(chain).doFilter(request, response);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+        verify(redisHealthTracker).recordFailure();
     }
 
     @Test

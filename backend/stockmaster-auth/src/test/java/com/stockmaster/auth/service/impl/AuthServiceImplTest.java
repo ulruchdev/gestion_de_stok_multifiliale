@@ -1,13 +1,16 @@
 package com.stockmaster.auth.service.impl;
 
 import com.stockmaster.auth.config.JwtTokenProvider;
-import com.stockmaster.auth.domain.entity.Entreprise;
-import com.stockmaster.auth.domain.entity.TenantGroup;
-import com.stockmaster.auth.domain.entity.Utilisateur;
-import com.stockmaster.auth.domain.enums.PlanAbonnement;
-import com.stockmaster.auth.domain.enums.RoleUtilisateur;
-import com.stockmaster.auth.domain.enums.ScopeUtilisateur;
-import com.stockmaster.auth.domain.enums.TypeEntreprise;
+import com.stockmaster.shared.domain.entity.Entreprise;
+import com.stockmaster.shared.domain.entity.TenantGroup;
+import com.stockmaster.shared.domain.entity.Utilisateur;
+import com.stockmaster.shared.domain.enums.PlanAbonnement;
+import com.stockmaster.shared.domain.enums.RoleUtilisateur;
+import com.stockmaster.shared.domain.enums.ScopeUtilisateur;
+import com.stockmaster.shared.domain.enums.TypeEntreprise;
+import com.stockmaster.shared.repository.EntrepriseRepository;
+import com.stockmaster.shared.repository.TenantGroupRepository;
+import com.stockmaster.shared.repository.UtilisateurRepository;
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
 import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import com.stockmaster.auth.dto.request.ForgotPasswordRequest;
@@ -21,9 +24,6 @@ import com.stockmaster.auth.dto.response.RefreshTokenResponse;
 import com.stockmaster.auth.event.InscriptionSuccessEvent;
 import com.stockmaster.auth.event.RefreshTokenReuseDetectedEvent;
 import com.stockmaster.auth.mapper.AuthMapper;
-import com.stockmaster.auth.repository.EntrepriseRepository;
-import com.stockmaster.auth.repository.TenantGroupRepository;
-import com.stockmaster.auth.repository.UtilisateurRepository;
 import com.stockmaster.shared.config.JwtProperties;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
@@ -78,6 +78,7 @@ class AuthServiceImplTest {
     @Mock private StringRedisTemplate redisTemplate;
     @Mock private ValueOperations<String, String> valueOperations;
     @Mock private JwtProperties jwtProperties;
+    @Mock private com.stockmaster.shared.config.RedisHealthTracker redisHealthTracker;
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -543,6 +544,29 @@ class AuthServiceImplTest {
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUTH_TENANT_SUSPENDED);
         }
+
+        @Test
+        @DisplayName("✅ US-085 : Redis injoignable → login réussit quand même (best-effort, mot de passe déjà vérifié)")
+        void shouldSucceedWhenRedisUnavailable() {
+            // Arrange
+            when(utilisateurRepository.findByEmail(loginRequest.getEmail())).thenReturn(Optional.of(savedUtilisateur));
+            when(passwordEncoder.matches(loginRequest.getMotDePasse(), savedUtilisateur.getMotDePasse())).thenReturn(true);
+            when(jwtTokenProvider.generateAccessToken(1L, 1L, 1L, "ADMIN_GROUPE", "GROUPE"))
+                    .thenReturn("access-token");
+            when(jwtTokenProvider.generateRefreshToken(eq(1L), anyString(), anyString())).thenReturn("refresh-token");
+            when(jwtProperties.getAccessTokenExpiration()).thenReturn(900L);
+            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+            doThrow(new org.springframework.data.redis.RedisConnectionFailureException("down"))
+                    .when(valueOperations).set(anyString(), anyString(), anyLong(), any());
+
+            // Act
+            LoginResponse response = authService.login(loginRequest);
+
+            // Assert : login réussit quand même, tokens retournés
+            assertThat(response).isNotNull();
+            assertThat(response.getAccessToken()).isEqualTo("access-token");
+            assertThat(response.getRefreshToken()).isEqualTo("refresh-token");
+        }
     }
 
     // ========================================================================
@@ -593,6 +617,44 @@ class AuthServiceImplTest {
             ArgumentCaptor<String> valueCaptor = ArgumentCaptor.forClass(String.class);
             verify(valueOperations).set(eq("refresh:1"), valueCaptor.capture(), eq(604800L), eq(TimeUnit.SECONDS));
             assertThat(valueCaptor.getValue()).startsWith("family-abc:").doesNotContain("jti-current");
+        }
+
+        @Test
+        @DisplayName("❌ US-085 : Redis injoignable à la lecture → fail-closed, lève SEC_STORE_UNAVAILABLE")
+        void shouldFailClosedWhenRedisUnavailableOnRead() {
+            // Arrange
+            Claims claims = mockClaims(1L, "family-abc", "jti-current");
+            when(jwtTokenProvider.validateToken("valid-refresh-token")).thenReturn(claims);
+            when(valueOperations.get("refresh:1"))
+                    .thenThrow(new org.springframework.data.redis.RedisConnectionFailureException("down"));
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.refreshAccessToken(refreshTokenRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SEC_STORE_UNAVAILABLE);
+
+            verify(jwtTokenProvider, never()).generateAccessToken(any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("❌ US-085 : Redis injoignable à l'écriture de la rotation → fail-closed, ne renvoie pas un token non persisté")
+        void shouldFailClosedWhenRedisUnavailableOnWrite() {
+            // Arrange
+            Claims claims = mockClaims(1L, "family-abc", "jti-current");
+            when(jwtTokenProvider.validateToken("valid-refresh-token")).thenReturn(claims);
+            when(valueOperations.get("refresh:1")).thenReturn("family-abc:jti-current");
+            when(utilisateurRepository.findById(1L)).thenReturn(Optional.of(savedUtilisateur));
+            when(jwtTokenProvider.generateAccessToken(1L, 1L, 1L, "ADMIN_GROUPE", "GROUPE"))
+                    .thenReturn("new-access-token");
+            when(jwtTokenProvider.generateRefreshToken(eq(1L), eq("family-abc"), anyString()))
+                    .thenReturn("new-refresh-token");
+            doThrow(new org.springframework.data.redis.RedisConnectionFailureException("down"))
+                    .when(valueOperations).set(eq("refresh:1"), anyString(), eq(604800L), eq(TimeUnit.SECONDS));
+
+            // Act & Assert
+            assertThatThrownBy(() -> authService.refreshAccessToken(refreshTokenRequest))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SEC_STORE_UNAVAILABLE);
         }
 
         @Test
@@ -747,6 +809,30 @@ class AuthServiceImplTest {
 
             verify(redisTemplate, never()).delete(anyString());
         }
+
+        @Test
+        @DisplayName("✅ US-085 : Redis injoignable → déconnexion locale quand même, pas d'exception (best-effort)")
+        void shouldNotThrowWhenRedisUnavailable() {
+            // Arrange
+            Claims mockClaims = mock(Claims.class);
+            when(mockClaims.get("jti", String.class)).thenReturn("test-jti-123");
+            when(mockClaims.getExpiration()).thenReturn(java.util.Date.from(
+                    java.time.Instant.now().plusSeconds(900)));
+            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+            doThrow(new org.springframework.data.redis.RedisConnectionFailureException("down"))
+                    .when(valueOperations).set(anyString(), anyString(), anyLong(), any());
+
+            StockMasterPrincipal principal = new StockMasterPrincipal(1L, mockClaims);
+            UsernamePasswordAuthenticationToken auth =
+                    new UsernamePasswordAuthenticationToken(principal, null, List.of());
+            SecurityContextHolder.getContext().setAuthentication(auth);
+
+            // Act (ne doit pas lever d'exception malgré la panne Redis)
+            authService.logout();
+
+            // Assert : contexte vidé quand même, échec Redis signalé au tracker
+            assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        }
     }
 
     // ========================================================================
@@ -790,6 +876,22 @@ class AuthServiceImplTest {
             // Assert
             verify(utilisateurRepository).findByEmail("jean.kamga@epicerie.cm");
             verify(redisTemplate, never()).opsForValue();
+        }
+
+        @Test
+        @DisplayName("✅ US-085 : Redis injoignable → pas d'exception, comportement générique préservé (best-effort)")
+        void shouldNotThrowWhenRedisUnavailable() {
+            // Arrange
+            when(utilisateurRepository.findByEmail("jean.kamga@epicerie.cm"))
+                    .thenReturn(Optional.of(savedUtilisateur));
+            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+            doThrow(new org.springframework.data.redis.RedisConnectionFailureException("down"))
+                    .when(valueOperations).set(anyString(), anyString(), anyLong(), any());
+
+            // Act & Assert (ne doit pas lever d'exception malgré la panne Redis)
+            authService.forgotPassword(forgotPasswordRequest);
+
+            verify(utilisateurRepository).findByEmail("jean.kamga@epicerie.cm");
         }
     }
 

@@ -26,7 +26,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <ul>
  *   <li>PostgreSQL 16 doit tourner sur {@code localhost:5432} (via {@code docker compose up} ou service CI)</li>
  *   <li>Redis doit être accessible sur {@code localhost:6379}</li>
- *   <li>Profil {@code test} : utilise {@code jdbc:postgresql://localhost:5432/stockmaster_dev}</li>
+ *   <li>Profil {@code integration} : Flyway + {@code ddl-auto=validate} — le schéma
+ *       migré doit correspondre EXACTEMENT aux entités (un écart fait échouer le test,
+ *       cf. SchemaManagementException). Pilotable par {@code DB_HOST/DB_PORT/DB_NAME}.</li>
  * </ul>
  *
  * @see StockMasterApplication
@@ -39,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "springdoc.swagger-ui.enabled=false"
     }
 )
-@ActiveProfiles("test")
+@ActiveProfiles("integration")
 @DisplayName("🚀 Test d'intégration — Démarrage application complète")
 class StockMasterApplicationTest {
 

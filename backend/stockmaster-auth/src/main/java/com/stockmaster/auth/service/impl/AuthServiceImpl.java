@@ -2,13 +2,16 @@ package com.stockmaster.auth.service.impl;
 
 import com.stockmaster.auth.config.JwtTokenProvider;
 import com.stockmaster.auth.config.StockMasterPrincipal;
-import com.stockmaster.auth.domain.entity.Entreprise;
-import com.stockmaster.auth.domain.entity.TenantGroup;
-import com.stockmaster.auth.domain.entity.Utilisateur;
-import com.stockmaster.auth.domain.enums.PlanAbonnement;
-import com.stockmaster.auth.domain.enums.RoleUtilisateur;
-import com.stockmaster.auth.domain.enums.ScopeUtilisateur;
-import com.stockmaster.auth.domain.enums.TypeEntreprise;
+import com.stockmaster.shared.domain.entity.Entreprise;
+import com.stockmaster.shared.domain.entity.TenantGroup;
+import com.stockmaster.shared.domain.entity.Utilisateur;
+import com.stockmaster.shared.domain.enums.PlanAbonnement;
+import com.stockmaster.shared.domain.enums.RoleUtilisateur;
+import com.stockmaster.shared.domain.enums.ScopeUtilisateur;
+import com.stockmaster.shared.domain.enums.TypeEntreprise;
+import com.stockmaster.shared.repository.EntrepriseRepository;
+import com.stockmaster.shared.repository.TenantGroupRepository;
+import com.stockmaster.shared.repository.UtilisateurRepository;
 import com.stockmaster.auth.dto.request.ForgotPasswordRequest;
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
 import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
@@ -22,11 +25,9 @@ import com.stockmaster.auth.dto.response.RefreshTokenResponse;
 import com.stockmaster.auth.event.InscriptionSuccessEvent;
 import com.stockmaster.auth.event.RefreshTokenReuseDetectedEvent;
 import com.stockmaster.auth.mapper.AuthMapper;
-import com.stockmaster.auth.repository.EntrepriseRepository;
-import com.stockmaster.auth.repository.TenantGroupRepository;
-import com.stockmaster.auth.repository.UtilisateurRepository;
 import com.stockmaster.auth.service.AuthService;
 import com.stockmaster.shared.config.JwtProperties;
+import com.stockmaster.shared.config.RedisHealthTracker;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
 import io.jsonwebtoken.Claims;
@@ -36,6 +37,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -66,6 +68,7 @@ public class AuthServiceImpl implements AuthService {
     private final ApplicationEventPublisher eventPublisher;
     private final StringRedisTemplate redisTemplate;
     private final JwtProperties jwtProperties;
+    private final RedisHealthTracker redisHealthTracker;
 
     // ========================================================================
     // US-006 — Inscription entreprise unique
@@ -305,10 +308,19 @@ public class AuthServiceImpl implements AuthService {
         String jti = UUID.randomUUID().toString();
         String refreshToken = jwtTokenProvider.generateRefreshToken(userId, familyId, jti);
 
-        // Persiste la paire familyId + jti en Redis, sous la clé de refresh préfixée par l'ID utilisateur
+        // Persiste la paire familyId + jti en Redis, sous la clé de refresh préfixée par l'ID utilisateur.
+        // US-085 : best-effort — la vérification du mot de passe ne dépend pas de Redis, bloquer
+        // tout le monde pour un incident Redis serait disproportionné. Si l'écriture échoue, le
+        // refresh échouera simplement plus tard (401), pas de régression de sécurité.
         String redisKey = REFRESH_KEY_PREFIX + userId;
-        redisTemplate.opsForValue().set(redisKey, familyId + ":" + jti,
-                jwtProperties.getRefreshTokenExpiration(), TimeUnit.SECONDS);
+        try {
+            redisTemplate.opsForValue().set(redisKey, familyId + ":" + jti,
+                    jwtProperties.getRefreshTokenExpiration(), TimeUnit.SECONDS);
+            redisHealthTracker.recordSuccess();
+        } catch (RedisConnectionFailureException e) {
+            redisHealthTracker.recordFailure();
+            log.error("Redis injoignable — refresh token non persisté pour userId={} (login autorisé quand même)", userId);
+        }
 
         log.info("Connexion réussie — userId={}, role={}", userId, role);
 
@@ -339,14 +351,22 @@ public class AuthServiceImpl implements AuthService {
             String token = UUID.randomUUID().toString();
             String redisKey = RESET_KEY_PREFIX + token;
 
-            // Stocker le token dans Redis avec TTL
-            redisTemplate.opsForValue().set(redisKey,
-                    String.valueOf(utilisateur.getId()),
-                    RESET_TOKEN_TTL_SECONDS, TimeUnit.SECONDS);
+            // Stocker le token dans Redis avec TTL. US-085 : best-effort — si Redis est
+            // injoignable, le pire cas est que le token de reset n'est pas créé, sans
+            // régression de sécurité à laisser passer.
+            try {
+                redisTemplate.opsForValue().set(redisKey,
+                        String.valueOf(utilisateur.getId()),
+                        RESET_TOKEN_TTL_SECONDS, TimeUnit.SECONDS);
+                redisHealthTracker.recordSuccess();
 
-            // Journaliser le lien (remplacé par l'envoi d'email quand le module notification sera implémenté)
-            String resetLink = "/api/v1/auth/reset-password?token=" + token;
-            log.info("Token de réinitialisation généré pour userId={}: {}", utilisateur.getId(), resetLink);
+                // Journaliser le lien (remplacé par l'envoi d'email quand le module notification sera implémenté)
+                String resetLink = "/api/v1/auth/reset-password?token=" + token;
+                log.info("Token de réinitialisation généré pour userId={}: {}", utilisateur.getId(), resetLink);
+            } catch (RedisConnectionFailureException e) {
+                redisHealthTracker.recordFailure();
+                log.error("Redis injoignable — token de réinitialisation non créé pour userId={}", utilisateur.getId());
+            }
         });
 
         log.info("Demande de réinitialisation traitée pour: {}", email);
@@ -370,24 +390,33 @@ public class AuthServiceImpl implements AuthService {
 
         Long userId = principal.getUserId();
 
-        // Blacklister le jti de l'access token courant (TTL = durée restante du token)
-        String jti = principal.getClaims().get("jti", String.class);
-        if (jti != null) {
-            Date expiration = principal.getClaims().getExpiration();
-            long remainingTtl = (expiration != null)
-                    ? (expiration.getTime() - System.currentTimeMillis()) / 1000
-                    : jwtProperties.getAccessTokenExpiration(); // fallback TTL config
-            if (remainingTtl > 0) {
-                String blacklistKey = "blacklist:jti:" + jti;
-                redisTemplate.opsForValue().set(blacklistKey, "true", remainingTtl, TimeUnit.SECONDS);
-                log.debug("jti {} blacklisté pour {}s", jti, remainingTtl);
+        // US-085 : best-effort — bloquer le logout serait contre-productif pour la sécurité
+        // (un utilisateur doit toujours pouvoir tenter de fermer sa session, même si la
+        // révocation serveur échoue partiellement). Le client discarde ses tokens de toute façon.
+        try {
+            // Blacklister le jti de l'access token courant (TTL = durée restante du token)
+            String jti = principal.getClaims().get("jti", String.class);
+            if (jti != null) {
+                Date expiration = principal.getClaims().getExpiration();
+                long remainingTtl = (expiration != null)
+                        ? (expiration.getTime() - System.currentTimeMillis()) / 1000
+                        : jwtProperties.getAccessTokenExpiration(); // fallback TTL config
+                if (remainingTtl > 0) {
+                    String blacklistKey = "blacklist:jti:" + jti;
+                    redisTemplate.opsForValue().set(blacklistKey, "true", remainingTtl, TimeUnit.SECONDS);
+                    log.debug("jti {} blacklisté pour {}s", jti, remainingTtl);
+                }
             }
-        }
 
-        // Révoquer le refresh token
-        String redisKey = REFRESH_KEY_PREFIX + userId;
-        redisTemplate.delete(redisKey);
-        log.info("Refresh token révoqué pour userId={}", userId);
+            // Révoquer le refresh token
+            String redisKey = REFRESH_KEY_PREFIX + userId;
+            redisTemplate.delete(redisKey);
+            log.info("Refresh token révoqué pour userId={}", userId);
+            redisHealthTracker.recordSuccess();
+        } catch (RedisConnectionFailureException e) {
+            redisHealthTracker.recordFailure();
+            log.error("Redis injoignable — révocation incomplète pour userId={} (déconnexion locale quand même)", userId);
+        }
 
         // Nettoyer le contexte de sécurité
         SecurityContextHolder.clearContext();
@@ -496,9 +525,19 @@ public class AuthServiceImpl implements AuthService {
         String familyId = claims.get("familyId", String.class);
         String jti = claims.get("jti", String.class);
 
-        // Vérifier l'état de la famille de tokens dans Redis
+        // Vérifier l'état de la famille de tokens dans Redis. US-085 : fail-closed — sans Redis,
+        // impossible de vérifier la rotation/le rejeu (US-083), accepter un refresh ici
+        // annulerait la protection que cette vérification apporte.
         String redisKey = REFRESH_KEY_PREFIX + userId;
-        String stored = redisTemplate.opsForValue().get(redisKey);
+        String stored;
+        try {
+            stored = redisTemplate.opsForValue().get(redisKey);
+            redisHealthTracker.recordSuccess();
+        } catch (RedisConnectionFailureException e) {
+            redisHealthTracker.recordFailure();
+            log.error("Redis injoignable — refresh rejeté (fail-closed) pour userId={}", userId);
+            throw new BusinessException(ErrorCode.SEC_STORE_UNAVAILABLE);
+        }
 
         if (stored == null) {
             log.warn("Refresh token non trouvé dans Redis pour userId={}", userId);
@@ -545,11 +584,20 @@ public class AuthServiceImpl implements AuthService {
         String newAccessToken = jwtTokenProvider.generateAccessToken(
                 userId, entrepriseId, groupId, role, scope);
 
-        // Rotation : nouveau jti, même familyId (chaînage) — usage unique du refresh token présenté
+        // Rotation : nouveau jti, même familyId (chaînage) — usage unique du refresh token présenté.
+        // US-085 : fail-closed aussi ici — si l'écriture échoue, ne pas renvoyer un refreshToken
+        // qui ne serait pas réellement persisté (le client croirait avoir un token valide).
         String newJti = UUID.randomUUID().toString();
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(userId, familyId, newJti);
-        redisTemplate.opsForValue().set(redisKey, familyId + ":" + newJti,
-                jwtProperties.getRefreshTokenExpiration(), TimeUnit.SECONDS);
+        try {
+            redisTemplate.opsForValue().set(redisKey, familyId + ":" + newJti,
+                    jwtProperties.getRefreshTokenExpiration(), TimeUnit.SECONDS);
+            redisHealthTracker.recordSuccess();
+        } catch (RedisConnectionFailureException e) {
+            redisHealthTracker.recordFailure();
+            log.error("Redis injoignable — rotation non persistée (fail-closed) pour userId={}", userId);
+            throw new BusinessException(ErrorCode.SEC_STORE_UNAVAILABLE);
+        }
 
         log.info("Refresh token accepté — rotation effectuée pour userId={}", userId);
 
