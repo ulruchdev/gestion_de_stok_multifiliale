@@ -1,6 +1,6 @@
 package com.stockmaster.auth.mapper;
 
-import com.stockmaster.auth.domain.entity.Entreprise;
+import com.stockmaster.shared.domain.entity.Entreprise;
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
 import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
 import org.mapstruct.Mapper;
@@ -23,6 +23,7 @@ public interface AuthMapper {
     @Mapping(target = "adresseRue", ignore = true)
     @Mapping(target = "adresseRegion", ignore = true)
     @Mapping(target = "codeFiliale", ignore = true)
+    @Mapping(target = "siteOperationnel", ignore = true)
     @Mapping(target = "logo", ignore = true)
     @Mapping(target = "actif", ignore = true)
     @Mapping(target = "dateCreation", ignore = true)
@@ -45,6 +46,7 @@ public interface AuthMapper {
     @Mapping(target = "adresseRegion", ignore = true)
     @Mapping(target = "logo", ignore = true)
     @Mapping(target = "codeFiliale", ignore = true)
+    @Mapping(target = "siteOperationnel", ignore = true)
     @Mapping(target = "actif", ignore = true)
     @Mapping(target = "dateCreation", ignore = true)
     @Mapping(target = "dateModification", ignore = true)

@@ -2,13 +2,16 @@ package com.stockmaster.auth.service.impl;
 
 import com.stockmaster.auth.config.JwtTokenProvider;
 import com.stockmaster.auth.config.StockMasterPrincipal;
-import com.stockmaster.auth.domain.entity.Entreprise;
-import com.stockmaster.auth.domain.entity.TenantGroup;
-import com.stockmaster.auth.domain.entity.Utilisateur;
-import com.stockmaster.auth.domain.enums.PlanAbonnement;
-import com.stockmaster.auth.domain.enums.RoleUtilisateur;
-import com.stockmaster.auth.domain.enums.ScopeUtilisateur;
-import com.stockmaster.auth.domain.enums.TypeEntreprise;
+import com.stockmaster.shared.domain.entity.Entreprise;
+import com.stockmaster.shared.domain.entity.TenantGroup;
+import com.stockmaster.shared.domain.entity.Utilisateur;
+import com.stockmaster.shared.domain.enums.PlanAbonnement;
+import com.stockmaster.shared.domain.enums.RoleUtilisateur;
+import com.stockmaster.shared.domain.enums.ScopeUtilisateur;
+import com.stockmaster.shared.domain.enums.TypeEntreprise;
+import com.stockmaster.shared.repository.EntrepriseRepository;
+import com.stockmaster.shared.repository.TenantGroupRepository;
+import com.stockmaster.shared.repository.UtilisateurRepository;
 import com.stockmaster.auth.dto.request.ForgotPasswordRequest;
 import com.stockmaster.auth.dto.request.InscriptionEntrepriseUniqueRequest;
 import com.stockmaster.auth.dto.request.InscriptionGroupeRequest;
@@ -22,9 +25,6 @@ import com.stockmaster.auth.dto.response.RefreshTokenResponse;
 import com.stockmaster.auth.event.InscriptionSuccessEvent;
 import com.stockmaster.auth.event.RefreshTokenReuseDetectedEvent;
 import com.stockmaster.auth.mapper.AuthMapper;
-import com.stockmaster.auth.repository.EntrepriseRepository;
-import com.stockmaster.auth.repository.TenantGroupRepository;
-import com.stockmaster.auth.repository.UtilisateurRepository;
 import com.stockmaster.auth.service.AuthService;
 import com.stockmaster.shared.config.JwtProperties;
 import com.stockmaster.shared.config.RedisHealthTracker;
@@ -78,40 +78,41 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(rollbackFor = Exception.class)
     public InscriptionResponse inscrireEntrepriseUnique(InscriptionEntrepriseUniqueRequest request) {
 
-
+        // Vérifier unicité du nom d'entreprise (utilisé comme nom de groupe)
         if (tenantGroupRepository.existsByNomGroupe(request.getNomEntreprise())) {
             log.warn("Tentative d'inscription avec un nom d'entreprise existant: {}", request.getNomEntreprise());
             throw new BusinessException(ErrorCode.GRP_DUPLICATE_NOM_GROUPE);
         }
 
-
+        // Vérifier unicité du NIF (si renseigné)
         if (request.getNif() != null && !request.getNif().isBlank()
                 && entrepriseRepository.existsByNifAndSupprimeFalse(request.getNif())) {
             log.warn("Tentative d'inscription avec un NIF existant: {}", request.getNif());
             throw new BusinessException(ErrorCode.RES_DUPLICATE_NIF);
         }
 
-
+        // Vérifier unicité du téléphone
         if (request.getTelephone() != null && !request.getTelephone().isBlank()
                 && entrepriseRepository.existsByTelephoneAndSupprimeFalse(request.getTelephone())) {
             log.warn("Tentative d'inscription avec un téléphone existant: {}", request.getTelephone());
             throw new BusinessException(ErrorCode.RES_DUPLICATE_TELEPHONE);
         }
 
-
-
+        // Vérifier unicité de l'email de l'entreprise (dans ce flux, l'email admin
+        // est aussi utilisé comme email de l'entreprise — cf. AuthMapper.toEntreprise)
         if (entrepriseRepository.existsByEmailAndSupprimeFalse(request.getEmail())) {
             log.warn("Tentative d'inscription avec un email entreprise existant: {}", request.getEmail());
             throw new BusinessException(ErrorCode.RES_DUPLICATE_EMAIL);
         }
 
-
+        // Vérifier unicité email admin
         if (utilisateurRepository.existsByEmail(request.getEmail())) {
             log.warn("Tentative d'inscription avec un email existant: {}", request.getEmail());
             throw new BusinessException(ErrorCode.AUTH_EMAIL_ALREADY_EXISTS,
                     "Cet email est déjà utilisé");
         }
 
+        // Création atomique : TenantGroup + Entreprise + Utilisateur
         TenantGroup groupe = TenantGroup.builder()
                 .nomGroupe(request.getNomEntreprise())
                 .planAbonnement(PlanAbonnement.GRATUIT)
@@ -122,7 +123,8 @@ public class AuthServiceImpl implements AuthService {
         log.debug("TenantGroup créé: id={}", groupe.getId());
 
         Entreprise entreprise = authMapper.toEntreprise(request);
-
+        // Normaliser le NIF optionnel : blank → null (sinon l'index UNIQUE partiel
+        // rejetterait une 2e inscription avec nif="" par une violation → 500)
         if (entreprise.getNif() != null && entreprise.getNif().isBlank()) {
             entreprise.setNif(null);
         }
@@ -146,6 +148,7 @@ public class AuthServiceImpl implements AuthService {
         utilisateur = utilisateurRepository.save(utilisateur);
         log.debug("Utilisateur ADMIN_GROUPE créé: id={}", utilisateur.getId());
 
+        // Publication événement asynchrone (email de bienvenue)
         eventPublisher.publishEvent(new InscriptionSuccessEvent(
                 this,
                 utilisateur.getEmail(),
@@ -170,41 +173,41 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(rollbackFor = Exception.class)
     public InscriptionResponse inscrireGroupe(InscriptionGroupeRequest request) {
 
-
+        // Vérifier unicité du nom de groupe
         if (tenantGroupRepository.existsByNomGroupe(request.getNomGroupe())) {
             log.warn("Tentative d'inscription groupe avec un nom de groupe existant: {}", request.getNomGroupe());
             throw new BusinessException(ErrorCode.GRP_DUPLICATE_NOM_GROUPE);
         }
 
-
+        // Vérifier unicité du NIF (si renseigné)
         if (request.getNif() != null && !request.getNif().isBlank()
                 && entrepriseRepository.existsByNifAndSupprimeFalse(request.getNif())) {
             log.warn("Tentative d'inscription groupe avec un NIF existant: {}", request.getNif());
             throw new BusinessException(ErrorCode.RES_DUPLICATE_NIF);
         }
 
-
+        // Vérifier unicité du téléphone
         if (request.getTelephone() != null && !request.getTelephone().isBlank()
                 && entrepriseRepository.existsByTelephoneAndSupprimeFalse(request.getTelephone())) {
             log.warn("Tentative d'inscription groupe avec un téléphone existant: {}", request.getTelephone());
             throw new BusinessException(ErrorCode.RES_DUPLICATE_TELEPHONE);
         }
 
-
+        // Vérifier unicité de l'email de l'entreprise
         if (request.getEmailEntreprise() != null && !request.getEmailEntreprise().isBlank()
                 && entrepriseRepository.existsByEmailAndSupprimeFalse(request.getEmailEntreprise())) {
             log.warn("Tentative d'inscription groupe avec un email entreprise existant: {}", request.getEmailEntreprise());
             throw new BusinessException(ErrorCode.RES_DUPLICATE_EMAIL);
         }
 
-
+        // Vérifier unicité email admin
         if (utilisateurRepository.existsByEmail(request.getEmailAdmin())) {
             log.warn("Tentative d'inscription groupe avec un email admin existant: {}", request.getEmailAdmin());
             throw new BusinessException(ErrorCode.AUTH_EMAIL_ALREADY_EXISTS,
                     "Cet email est déjà utilisé");
         }
 
-
+        // Création atomique : TenantGroup + Entreprise + Utilisateur
         TenantGroup groupe = TenantGroup.builder()
                 .nomGroupe(request.getNomGroupe())
                 .planAbonnement(PlanAbonnement.GRATUIT)
@@ -215,6 +218,7 @@ public class AuthServiceImpl implements AuthService {
         log.debug("TenantGroup créé pour groupe multi-sites: id={}", groupe.getId());
 
         Entreprise entreprise = authMapper.toEntrepriseFromGroupe(request);
+        // Normaliser le NIF optionnel : blank → null (cohérence avec l'index UNIQUE partiel)
         if (entreprise.getNif() != null && entreprise.getNif().isBlank()) {
             entreprise.setNif(null);
         }
@@ -237,6 +241,7 @@ public class AuthServiceImpl implements AuthService {
         utilisateur = utilisateurRepository.save(utilisateur);
         log.debug("Utilisateur ADMIN_GROUPE créé pour groupe: id={}", utilisateur.getId());
 
+        // Publication événement asynchrone (email de bienvenue)
         eventPublisher.publishEvent(new InscriptionSuccessEvent(
                 this,
                 utilisateur.getEmail(),
@@ -261,28 +266,33 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
 
+        // Recherche utilisateur par email
         Utilisateur utilisateur = utilisateurRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> {
                     log.warn("Tentative de connexion avec email inconnu: {}", request.getEmail());
                     return new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
                 });
 
+        // Vérification mot de passe
         if (!passwordEncoder.matches(request.getMotDePasse(), utilisateur.getMotDePasse())) {
             log.warn("Mot de passe incorrect pour: {}", request.getEmail());
             throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
         }
 
+        // Vérification compte actif
         if (!Boolean.TRUE.equals(utilisateur.getActif())) {
             log.warn("Compte désactivé: {}", request.getEmail());
             throw new BusinessException(ErrorCode.AUTH_ACCOUNT_DISABLED);
         }
 
+        // Vérification groupe actif
         TenantGroup groupe = utilisateur.getEntreprise().getGroupe();
         if (!Boolean.TRUE.equals(groupe.getActif())) {
             log.warn("Groupe suspendu: {}", groupe.getId());
             throw new BusinessException(ErrorCode.AUTH_TENANT_SUSPENDED);
         }
 
+        // Génération tokens
         Long userId = utilisateur.getId();
         Long entrepriseId = utilisateur.getEntreprise().getId();
         Long groupId = groupe.getId();
@@ -292,6 +302,8 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtTokenProvider.generateAccessToken(
                 userId, entrepriseId, groupId, role, scope);
 
+        // Nouvelle famille de rotation (US-083) : familyId constant sur la session,
+        // jti propre à ce token précis — chaîné à chaque refresh ultérieur
         String familyId = UUID.randomUUID().toString();
         String jti = UUID.randomUUID().toString();
         String refreshToken = jwtTokenProvider.generateRefreshToken(userId, familyId, jti);

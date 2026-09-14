@@ -47,10 +47,10 @@
 |----|-------------|----------|--------|-------|
 | US-083 | Rotation du Refresh Token avec détection de rejeu | P0 | ✅ | Terminé (branche `feature/GS-083-rotation-refresh-token`) — familyId+jti chaînés, rotation à chaque refresh, révocation totale + événement sur rejeu détecté. 90 tests shared+auth verts, vérifié en conditions réelles (login→refresh→rejeu→401 AUTH_006) |
 | US-084 | Hachage des mots de passe en Argon2id | P1 | ❌ | Non commencé — vérifié : `SecurityConfig` utilise encore uniquement `BCryptPasswordEncoder` |
-| US-085 | Comportement fail-closed en cas d'indisponibilité de Redis | P0 | ❌ | Non commencé — vérifié : aucune gestion explicite dans `RateLimitFilter` |
+| US-085 | Comportement fail-closed ciblé en cas d'indisponibilité de Redis | P0 | ✅ | Terminé (branche `feature/GS-085-fail-closed-redis`) — fail-closed **503 SEC_004** ciblé sur `POST /auth/refresh` (lecture + écriture de rotation) et rate-limiting par endpoint sensible ; **fail-open** best-effort sur login/logout/forgot, compteur global de rate-limiting et vérification blacklist JWT. Réutilise `RedisHealthTracker` (shared, déjà sur `main`) → alerte ERROR après 60 s d'indisponibilité continue. Conforme ADR-005 (Redis mono-instance, pas de HA) |
 | US-086 | Logs d'audit structurés pour les événements d'authentification | P1 | ❌ | Non commencé — vérifié : aucun log JSON structuré (MDC/logstash) |
 
-> ⚠️ Tant que US-083/085 (P0) ne sont pas faites, EPIC 2 n'est pas complet au sens du backlog (`BACKLOG_StockMaster_CM.md` : dépendance EPIC 3 = « EPIC 2 complété »).
+> ✅ Les deux durcissements **P0** (US-083 rotation refresh + US-085 fail-closed ciblé Redis) sont terminés → le blocage EPIC 3 au sens du backlog (`BACKLOG_StockMaster_CM.md` : dépendance EPIC 3 = « EPIC 2 complété ») est levé côté P0. Restent US-084 (Argon2id) et US-086 (logs d'audit), tous deux **P1**, non bloquants pour EPIC 3.
 
 ## EPIC 3 à 13 — (non commencé)
 
@@ -106,4 +106,28 @@ Les fichiers `DESIGN_CORRECTIONS.md` (25 corrections) et `DESIGN_TOKENS_REFERENC
 
 ---
 
-*Dernière mise à jour : 31 juillet 2026 — corrections après vérification directe du code (session-bootstrap manuel)*
+---
+
+## Backend — Fondamentaux des 9 modules fonctionnels (session 14/09/2026)
+
+Pose des fondamentaux module par module (entités alignées V5, repositories scoping tenant, enums de machines à états, services métier purs + tests TDD). Les développeurs n'ont plus qu'à implémenter services applicatifs, contrôleurs, mappers et cas d'usage US.
+
+| Élément | Contenu | Statut |
+|---------|---------|--------|
+| Agrégats tenant | `TenantGroup`/`Entreprise`/`Utilisateur` + enums + repos déplacés de `auth` vers `shared` (tous modules référencent sans dépendre de auth) ; alignés V5 : `limite_utilisateurs`, `site_operationnel`, `code_filiale NOT NULL`, `email_verifie`, colonnes `token_reset` supprimées, `PlanAbonnement` 3 valeurs (DEC-015) | ✅ |
+| catalogue | `Categorie`/`Article` niveau GROUPE (DEC-002), XAF entiers + TTC calculé (DEC-003), 2 unités + facteur (DEC-013), lot-ready (DEC-012) ; `CalculTvaService` + 12 tests | ✅ |
+| tiers | `Client`/`Fournisseur` périmètre filiale + repos (unicité NIF, batch) | ✅ |
+| achat | `CommandeFournisseur`(+lignes), machine à états DEC-006 (`COMMANDEE→PARTIELLEMENT_RECUE→RECEPTIONNEE\|ANNULEE`), quantités DECIMAL(12,3) | ✅ |
+| vente | `Vente`/`LigneVente` (statut `PAYEE→ANNULEE\|REMBOURSEE`, client nullable, session DEC-018), `SessionCaisse` (écart anti-perte), `Paiement` mixte (DEC-009), `CommandeClient` (+règlement DEC-011/020) + 6 repos | ✅ |
+| stock | `MouvementStock` journal immuable partitionné (C-12/DEC-033, PK composite documentée), `TransfertStock` multi-lignes groupe + FK composites (DEC-007), inventaire DEC-036, `CleIdempotence` JSONB (DEC-027) ; `CalculStockService` signe map + rupture `≤ seuil` + invariant non-négatif + 10 tests | ✅ |
+| notification | `NotificationAlerte` refondue (destinataire explicite, type SANS CHECK — DEC-004/DEC-037) ; port `CanalNotification` (DEC-014) prêt pour EPIC 12 (email bienvenue/vérification AUTH-07) | ✅ |
+| groupe / utilisateur / reporting | `ControleLimiteFilialesService` (sites non opérationnels exclus), `ControleLimiteUtilisateursService` (10/50/négocié), `CalculCaService` (CA HT facturé, TVA, TTC — DEC-020) + 11 tests | ✅ |
+| **V5 validée en conditions réelles** | Flyway V1→V5 exécutée **pour de vrai** sur PostgreSQL 16 vierge (conteneur jetable port 5433) via le test d'intégration bootstrap + `ddl-auto=validate` OK sur les entités — dette de validation de V5 soldée | ✅ |
+| Qualité | `mvnw test` : **125/125 verts** (dont 3 tests d'intégration démarrage complet) ; CI `mvn verify` couvre tous les modules, rien à changer | ✅ |
+| Correction config | Profil `test` : datasource passée en `${DB_HOST}/${DB_PORT}/${DB_NAME}/${DB_USERNAME}/${DB_PASSWORD}` (comme les autres profils) — il était le seul codé en dur sur 5432 | ✅ |
+
+**Note machine locale (gestionulrich)** : un PostgreSQL natif Windows écoute `localhost:5432` avec des identifiants qui ne sont pas ceux documentés ; le conteneur compose ne peut pas publier son port (règle de bind Windows) et sa base n'a PAS été migrée ni effacée. Pour tester en local : `DB_PORT=5433 ./mvnw test` avec un conteneur jetable, ou arrêter le service natif. CI non concernée (elle provisionne son propre PG).
+
+---
+
+*Dernière mise à jour : 14 septembre 2026 — fondamentaux des 9 modules posés, V5 validée en exécution réelle, 125/125 tests verts, branche `feature/GS-085-fail-closed-redis`*
