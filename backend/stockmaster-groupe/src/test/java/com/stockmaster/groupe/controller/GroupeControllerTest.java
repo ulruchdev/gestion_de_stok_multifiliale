@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
@@ -20,18 +21,21 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * US-015 — GET /api/v1/groupe : tests contrôleur (200 / 403 / 404).
+ * US-014 — PUT /api/v1/groupe : tests contrôleur (200 / 403 / 409), multipart.
  */
 @WebMvcTest(GroupeController.class)
 @ContextConfiguration(classes = GroupeTestApplication.class)
-@DisplayName("US-015 — GET /api/v1/groupe")
+@DisplayName("GroupeController")
 class GroupeControllerTest {
 
     @Autowired
@@ -109,6 +113,61 @@ class GroupeControllerTest {
                             .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("ADMIN_GROUPE", 42L))))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.errorCode").value("RES_001"));
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/v1/groupe (US-014)")
+    class Modifier {
+
+        @Test
+        @DisplayName("✅ ADMIN_GROUPE, nom seul (sans fichier) → 200")
+        void shouldReturn200WhenAdminGroupeUpdatesName() throws Exception {
+            when(groupeService.modifier(any(StockMasterPrincipal.class), any()))
+                    .thenReturn(response);
+
+            mockMvc.perform(multipart(org.springframework.http.HttpMethod.PUT, "/api/v1/groupe")
+                            .param("nomGroupe", "Nouveau Nom")
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("ADMIN_GROUPE", 1L))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.id").value(1));
+        }
+
+        @Test
+        @DisplayName("✅ ADMIN_GROUPE avec logo → 200, fichier transmis au service")
+        void shouldReturn200WhenAdminGroupeUploadsLogo() throws Exception {
+            when(groupeService.modifier(any(StockMasterPrincipal.class), any()))
+                    .thenReturn(response);
+            MockMultipartFile logo = new MockMultipartFile("logo", "logo.png", "image/png", "data".getBytes());
+
+            mockMvc.perform(multipart(org.springframework.http.HttpMethod.PUT, "/api/v1/groupe")
+                            .file(logo)
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("ADMIN_GROUPE", 1L))))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("❌ CAISSIER → 403 (@PreAuthorize hasRole ADMIN_GROUPE)")
+        void shouldReturn403WhenRoleNotAllowedOnModify() throws Exception {
+            mockMvc.perform(multipart(org.springframework.http.HttpMethod.PUT, "/api/v1/groupe")
+                            .param("nomGroupe", "Nouveau Nom")
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("CAISSIER", 1L))))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("❌ Nom déjà pris (service) → 409 via GlobalExceptionHandler")
+        void shouldReturn409WhenNomGroupeAlreadyTaken() throws Exception {
+            when(groupeService.modifier(any(StockMasterPrincipal.class), any()))
+                    .thenThrow(new com.stockmaster.shared.exception.BusinessException(
+                            com.stockmaster.shared.exception.ErrorCode.GRP_DUPLICATE_NOM_GROUPE));
+
+            mockMvc.perform(multipart(org.springframework.http.HttpMethod.PUT, "/api/v1/groupe")
+                            .param("nomGroupe", "Deja Pris")
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("ADMIN_GROUPE", 1L))))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.errorCode").value("GRP_004"));
         }
     }
 }

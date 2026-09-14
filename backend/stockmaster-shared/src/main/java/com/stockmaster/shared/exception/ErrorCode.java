@@ -62,7 +62,8 @@ public enum ErrorCode {
     SYS_BAD_REQUEST("SYS_002", "Requête invalide", 400),
     SYS_METHOD_NOT_ALLOWED("SYS_003", "Méthode non autorisée", 405),
     SYS_MEDIA_TYPE_NOT_SUPPORTED("SYS_004", "Type de média non supporté", 415),
-    SYS_VALIDATION_ERROR("SYS_005", "Erreur de validation des champs", 400);
+    SYS_VALIDATION_ERROR("SYS_005", "Erreur de validation des champs", 400),
+    SYS_FILE_TOO_LARGE("SYS_006", "Le fichier dépasse la taille maximale autorisée", 413);
 
     private final String code;
     private final String message;

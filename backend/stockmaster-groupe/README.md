@@ -1,7 +1,7 @@
 # StockMaster CM — Groupe (Groupe & Filiales)
 
 > **Artefact :** `stockmaster-groupe`
-> **Statut :** 🔜 En cours (US-015 implémentée, US-014/016-020 à venir)
+> **Statut :** 🔜 En cours (US-014/015 implémentées, US-016-020 à venir)
 > **Dépendance :** `stockmaster-shared`
 > **Package :** `com.stockmaster.groupe`
 
@@ -24,7 +24,7 @@ Gestion des groupes multi-sites et de leurs filiales.
 
 | US | Description | Priorité | Statut |
 |---|---|---|---|
-| **US-014** | Modifier les informations du groupe | P0 | 🔜 Non commencé |
+| **US-014** | Modifier les informations du groupe | P0 | ✅ Terminé |
 | **US-015** | Consulter les informations du groupe | P0 | ✅ Terminé |
 | **US-016** | Créer une filiale | P0 | 🔜 Non commencé |
 | **US-017** | Lister les filiales du groupe | P0 | 🔜 Non commencé |
@@ -50,11 +50,11 @@ Gestion des groupes multi-sites et de leurs filiales.
 
 ## Tables BDD associées
 
-- `tenant_group` — Groupe (plan, limite filiales)
+- `tenant_group` — Groupe (plan, limite filiales, `logo`/`nif`/`raison_sociale` depuis V6, US-014)
 - `entreprise` — Filiales avec `parent_id` → maison mère
 
 ## Dépendances inter-modules
 
-- → `stockmaster-shared` (AbstractEntity, ApiResponse, exceptions)
+- → `stockmaster-shared` (AbstractEntity, ApiResponse, exceptions, `storage.MinioService` pour l'upload du logo — US-014)
 - → `stockmaster-stock` (pour le dashboard : stock consolidé)
 - → `stockmaster-vente` (pour le dashboard : CA)

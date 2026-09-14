@@ -43,6 +43,18 @@ public class TenantGroup {
     @Column(name = "limite_utilisateurs", nullable = false)
     private Integer limiteUtilisateurs;
 
+    /** US-014 : URL MinIO du logo du groupe — distinct de {@code entreprise.logo} (US-081). */
+    @Column(length = 500)
+    private String logo;
+
+    /** US-014 : Numéro d'Identifiant Fiscal du groupe. */
+    @Column(length = 20)
+    private String nif;
+
+    /** US-014 : dénomination légale du groupe — distincte de {@code nomGroupe} (nom d'usage). */
+    @Column(name = "raison_sociale", length = 150)
+    private String raisonSociale;
+
     @Column(name = "date_creation", nullable = false, updatable = false)
     private Instant dateCreation;
 
