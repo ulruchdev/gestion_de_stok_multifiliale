@@ -2,23 +2,30 @@ package com.stockmaster.groupe.service;
 
 import com.stockmaster.groupe.dto.request.FilialeCreateRequest;
 import com.stockmaster.groupe.dto.response.FilialeResponse;
+import com.stockmaster.shared.config.PaginationProperties;
 import com.stockmaster.shared.domain.entity.Entreprise;
 import com.stockmaster.shared.domain.entity.TenantGroup;
 import com.stockmaster.shared.domain.enums.TypeEntreprise;
+import com.stockmaster.shared.dto.response.PageResponse;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
 import com.stockmaster.shared.repository.EntrepriseRepository;
 import com.stockmaster.shared.repository.TenantGroupRepository;
+import com.stockmaster.shared.repository.UtilisateurRepository;
 import com.stockmaster.shared.security.StockMasterPrincipal;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * US-016 — Créer une filiale dans le groupe (P0).
+ * US-017 — Lister les filiales du groupe, paginé (P0).
  *
- * <p>Isolation multi-tenant structurelle : la filiale est toujours créée dans
- * le groupe du JWT ({@code groupId} du principal) — aucun {@code groupId}
+ * <p>Isolation multi-tenant structurelle : les filiales manipulées sont toujours
+ * celles du groupe du JWT ({@code groupId} du principal) — aucun {@code groupId}
  * n'est accepté en entrée.</p>
  */
 @Service
@@ -28,7 +35,9 @@ public class FilialeService {
 
     private final TenantGroupRepository groupeRepository;
     private final EntrepriseRepository entrepriseRepository;
+    private final UtilisateurRepository utilisateurRepository;
     private final ControleLimiteFilialesService controleLimiteFilialesService;
+    private final PaginationProperties paginationProperties;
 
     /**
      * Crée une filiale dans le groupe du principal connecté.
@@ -85,6 +94,54 @@ public class FilialeService {
                 .actif(sauvegardee.getActif())
                 .siteOperationnel(sauvegardee.getSiteOperationnel())
                 .parentId(maisonMere.getId())
+                .nombreEmployes(0L)
                 .build();
+    }
+
+    /**
+     * Liste les filiales du groupe du principal connecté, paginées, avec filtres
+     * {@code actif}/{@code ville} optionnels.
+     *
+     * <p>La maison mère du groupe est résolue une seule fois (même parent pour
+     * toutes les filiales de la page) plutôt que de traverser l'association
+     * paresseuse {@code Entreprise.parent} pour chaque ligne.</p>
+     *
+     * @throws BusinessException {@code GRP_CROSS_GROUP_FORBIDDEN} si le principal
+     *         ne porte pas de {@code groupId}
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<FilialeResponse> lister(StockMasterPrincipal principal, Boolean actif, String ville,
+            Pageable pageable) {
+        Long groupId = principal != null ? principal.getGroupId() : null;
+        if (groupId == null) {
+            throw new BusinessException(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
+        }
+
+        Long parentId = entrepriseRepository.findFirstByGroupeIdAndTypeEntreprise(groupId, TypeEntreprise.MERE)
+                .map(Entreprise::getId)
+                .orElse(null);
+
+        Page<Entreprise> filiales = entrepriseRepository.findFilialesDuGroupe(
+                groupId, TypeEntreprise.FILIALE, actif, ville, bornerTaillePage(pageable));
+
+        Page<FilialeResponse> reponse = filiales.map(filiale -> FilialeResponse.builder()
+                .id(filiale.getId())
+                .nom(filiale.getNom())
+                .codeFiliale(filiale.getCodeFiliale())
+                .ville(filiale.getAdresseVille())
+                .quartier(filiale.getAdresseQuartier())
+                .actif(filiale.getActif())
+                .siteOperationnel(filiale.getSiteOperationnel())
+                .parentId(parentId)
+                .nombreEmployes(utilisateurRepository.countByEntrepriseIdAndSupprimeFalse(filiale.getId()))
+                .build());
+
+        return PageResponse.from(reponse);
+    }
+
+    /** Protection contre les abus (DEC absente sur ce point) : jamais plus que {@code stockmaster.pagination.max-page-size}. */
+    private Pageable bornerTaillePage(Pageable pageable) {
+        int taille = Math.min(pageable.getPageSize(), paginationProperties.getMaxPageSize());
+        return PageRequest.of(pageable.getPageNumber(), taille, pageable.getSort());
     }
 }

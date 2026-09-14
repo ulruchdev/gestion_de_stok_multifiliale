@@ -1,7 +1,7 @@
 # StockMaster CM — Groupe (Groupe & Filiales)
 
 > **Artefact :** `stockmaster-groupe`
-> **Statut :** 🔜 En cours (US-014/015/016 implémentées, US-017-020 à venir)
+> **Statut :** 🔜 En cours (US-014/015/016/017 implémentées, US-018-020 à venir)
 > **Dépendance :** `stockmaster-shared`
 > **Package :** `com.stockmaster.groupe`
 
@@ -27,7 +27,7 @@ Gestion des groupes multi-sites et de leurs filiales.
 | **US-014** | Modifier les informations du groupe | P0 | ✅ Terminé |
 | **US-015** | Consulter les informations du groupe | P0 | ✅ Terminé |
 | **US-016** | Créer une filiale | P0 | ✅ Terminé |
-| **US-017** | Lister les filiales du groupe | P0 | 🔜 Non commencé |
+| **US-017** | Lister les filiales du groupe | P0 | ✅ Terminé |
 | **US-018** | Modifier une filiale | P0 | 🔜 Non commencé |
 | **US-019** | Activer / Désactiver une filiale | P1 | 🔜 Non commencé |
 | **US-020** | Dashboard consolidé groupe | P0 | 🔜 Non commencé |
@@ -55,6 +55,6 @@ Gestion des groupes multi-sites et de leurs filiales.
 
 ## Dépendances inter-modules
 
-- → `stockmaster-shared` (AbstractEntity, ApiResponse, exceptions, `storage.MinioService` pour l'upload du logo — US-014)
+- → `stockmaster-shared` (AbstractEntity, ApiResponse, PageResponse, exceptions, `storage.MinioService` pour l'upload du logo — US-014 ; `UtilisateurRepository` pour le nombre d'employés par filiale — US-017)
 - → `stockmaster-stock` (pour le dashboard : stock consolidé)
 - → `stockmaster-vente` (pour le dashboard : CA)

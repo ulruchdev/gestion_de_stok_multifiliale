@@ -5,6 +5,7 @@ import com.stockmaster.groupe.FilialeTestApplication;
 import com.stockmaster.groupe.dto.request.FilialeCreateRequest;
 import com.stockmaster.groupe.dto.response.FilialeResponse;
 import com.stockmaster.groupe.service.FilialeService;
+import com.stockmaster.shared.dto.response.PageResponse;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
 import com.stockmaster.shared.security.StockMasterPrincipal;
@@ -15,20 +16,27 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * US-016 — POST /api/v1/groupe/filiales : tests contrôleur.
+ * US-017 — GET /api/v1/groupe/filiales : tests contrôleur, pagination + filtres.
  */
 @WebMvcTest(FilialeController.class)
 @ContextConfiguration(classes = FilialeTestApplication.class)
@@ -143,6 +151,62 @@ class FilialeControllerTest {
             mockMvc.perform(post("/api/v1/groupe/filiales")
                             .contentType("application/json")
                             .content(objectMapper.writeValueAsString(validRequest())))
+                    .andExpect(status().is4xxClientError());
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/groupe/filiales")
+    class Lister {
+
+        @Test
+        @DisplayName("✅ ADMIN_GROUPE → 200 avec la page de filiales")
+        void shouldReturn200WhenAdminGroupeLists() throws Exception {
+            FilialeResponse filiale = FilialeResponse.builder()
+                    .id(42L).nom("Boutique Akwa").codeFiliale("DLA01")
+                    .ville("Douala").quartier("Akwa").actif(true).siteOperationnel(true)
+                    .parentId(10L).nombreEmployes(3L)
+                    .build();
+            PageResponse<FilialeResponse> page = PageResponse.<FilialeResponse>builder()
+                    .content(List.of(filiale)).page(0).size(20).totalElements(1).totalPages(1)
+                    .build();
+            when(filialeService.lister(any(StockMasterPrincipal.class), isNull(), isNull(), any(Pageable.class)))
+                    .thenReturn(page);
+
+            mockMvc.perform(get("/api/v1/groupe/filiales")
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("ADMIN_GROUPE", 1L))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.totalElements").value(1))
+                    .andExpect(jsonPath("$.data.content[0].id").value(42))
+                    .andExpect(jsonPath("$.data.content[0].nombreEmployes").value(3));
+        }
+
+        @Test
+        @DisplayName("✅ Filtres actif/ville transmis au service")
+        void shouldForwardFiltersToService() throws Exception {
+            PageResponse<FilialeResponse> page = PageResponse.<FilialeResponse>builder()
+                    .content(List.of()).page(0).size(20).totalElements(0).totalPages(0).build();
+            when(filialeService.lister(any(StockMasterPrincipal.class), eq(true), eq("Douala"), any(Pageable.class)))
+                    .thenReturn(page);
+
+            mockMvc.perform(get("/api/v1/groupe/filiales?actif=true&ville=Douala")
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("ADMIN_GROUPE", 1L))))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("❌ CAISSIER → 403 (@PreAuthorize hasRole ADMIN_GROUPE)")
+        void shouldReturn403WhenRoleNotAllowed() throws Exception {
+            mockMvc.perform(get("/api/v1/groupe/filiales")
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("CAISSIER", 1L))))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("❌ Non authentifié → 401/403 (accès refusé)")
+        void shouldRejectWhenAnonymous() throws Exception {
+            mockMvc.perform(get("/api/v1/groupe/filiales"))
                     .andExpect(status().is4xxClientError());
         }
     }
