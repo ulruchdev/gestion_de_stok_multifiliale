@@ -1,4 +1,4 @@
-package com.stockmaster.notification.service;
+package com.stockmaster.notification.port;
 
 /**
  * Port d'envoi de notifications — {@code DEC-014} : le module notification est

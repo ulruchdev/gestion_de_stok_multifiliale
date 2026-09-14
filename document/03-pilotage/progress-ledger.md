@@ -130,4 +130,17 @@ Pose des fondamentaux module par module (entités alignées V5, repositories sco
 
 ---
 
-*Dernière mise à jour : 14 septembre 2026 — fondamentaux des 9 modules posés, V5 validée en exécution réelle, 125/125 tests verts, branche `feature/GS-085-fail-closed-redis`*
+---
+
+## Backend — Règles d'architecture automatisées (ArchUnit)
+
+`ModuleDependencyArchTest` (dans bootstrap, seul module voyant tout le graphe) exécute 4 règles à chaque build :
+
+1. **Dépendances inter-modules** : seuls `shared` et la couche contrat (`domain.entity`, `domain.enums`, `event`, `port`) de catalogue/tiers/notification sont autorisés — les `service`/`repository`/`controller`/`dto`/`mapper`/`config` d'un autre module sont interdits (les FK de documents → `catalogue.Article`, `tiers.Client`… rendent le contrat inter-modules nécessaire, DEC-002).
+2. **shared est la base du graphe** : ne dépend d'aucun module fonctionnel.
+3. **auth est une feuille** : ne consomme aucun autre module (l'email passe par événements).
+4. **notification.service encapsulé** : les émetteurs passent par `CanalNotification` (`notification.port`, DEC-014).
+
+Ajustements d'accompagnement : `CanalNotification` déplacé `service` → `port` (un port est fait pour être consommé inter-modules) ; `CalculTvaService` (DEC-003) déplacé catalogue → `shared.service` (règle universelle, utile partout) ; `archunit-junit5` (version déjà gérée par le parent) déclaré dans bootstrap ; surefire avec `-Djdk.attach.allowAttachSelf=true` (fixe l'échec intermittent d'auto-attache ByteBuddy/Mockito sur Windows, qui faisait échouer ~50 % des builds locaux).
+
+*Dernière mise à jour : 14 septembre 2026 — fondamentaux 9 modules + V5 validée en exécution réelle + règles ArchUnit (4/4 vertes), branche `feature/GS-085-fail-closed-redis`*

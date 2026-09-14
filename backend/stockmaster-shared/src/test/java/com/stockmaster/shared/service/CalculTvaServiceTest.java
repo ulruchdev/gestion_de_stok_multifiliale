@@ -1,4 +1,4 @@
-package com.stockmaster.catalogue.service;
+package com.stockmaster.shared.service;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

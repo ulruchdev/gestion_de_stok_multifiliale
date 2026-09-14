@@ -261,6 +261,13 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${maven-surefire-plugin.version}</version>
+                    <configuration>
+                        <!-- Mockito inline : attache l'agent ByteBuddy DANS le process
+                             (sinon attache externe = échec intermittent sur Windows,
+                             "Could not self-attach to current VM using external process").
+                             @{argLine} préserve l'agent JaCoCo injecté par prepare-agent. -->
+                        <argLine>@{argLine} -Djdk.attach.allowAttachSelf=true</argLine>
+                    </configuration>
                 </plugin>
 
                 <plugin>
