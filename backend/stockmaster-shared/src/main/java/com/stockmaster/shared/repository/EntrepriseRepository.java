@@ -2,7 +2,11 @@ package com.stockmaster.shared.repository;
 
 import com.stockmaster.shared.domain.entity.Entreprise;
 import com.stockmaster.shared.domain.enums.TypeEntreprise;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
@@ -33,4 +37,16 @@ public interface EntrepriseRepository extends JpaRepository<Entreprise, Long> {
 
     /** US-016 : maison mère du groupe, pour rattacher {@code parent_id} d'une nouvelle filiale. */
     Optional<Entreprise> findFirstByGroupeIdAndTypeEntreprise(Long groupeId, TypeEntreprise typeEntreprise);
+
+    /**
+     * US-017 : filiales du groupe, paginées, avec filtres {@code actif}/{@code ville}
+     * optionnels (motif {@code :param IS NULL OR ...} — un seul paramètre laissé
+     * {@code null} désactive son filtre, évite de multiplier les méthodes dérivées).
+     */
+    @Query("SELECT e FROM Entreprise e WHERE e.groupe.id = :groupeId AND e.typeEntreprise = :type "
+            + "AND e.supprime = false "
+            + "AND (:actif IS NULL OR e.actif = :actif) "
+            + "AND (:ville IS NULL OR e.adresseVille = :ville)")
+    Page<Entreprise> findFilialesDuGroupe(@Param("groupeId") Long groupeId, @Param("type") TypeEntreprise type,
+            @Param("actif") Boolean actif, @Param("ville") String ville, Pageable pageable);
 }
