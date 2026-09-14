@@ -3,6 +3,7 @@ package com.stockmaster.groupe.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stockmaster.groupe.FilialeTestApplication;
 import com.stockmaster.groupe.dto.request.FilialeCreateRequest;
+import com.stockmaster.groupe.dto.request.FilialeUpdateRequest;
 import com.stockmaster.groupe.dto.response.FilialeResponse;
 import com.stockmaster.groupe.service.FilialeService;
 import com.stockmaster.shared.dto.response.PageResponse;
@@ -25,18 +26,21 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * US-016 — POST /api/v1/groupe/filiales : tests contrôleur.
  * US-017 — GET /api/v1/groupe/filiales : tests contrôleur, pagination + filtres.
+ * US-018 — PUT /api/v1/groupe/filiales/{id} : tests contrôleur.
  */
 @WebMvcTest(FilialeController.class)
 @ContextConfiguration(classes = FilialeTestApplication.class)
@@ -207,6 +211,84 @@ class FilialeControllerTest {
         @DisplayName("❌ Non authentifié → 401/403 (accès refusé)")
         void shouldRejectWhenAnonymous() throws Exception {
             mockMvc.perform(get("/api/v1/groupe/filiales"))
+                    .andExpect(status().is4xxClientError());
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/v1/groupe/filiales/{id}")
+    class Modifier {
+
+        private FilialeUpdateRequest validUpdateRequest() {
+            FilialeUpdateRequest request = new FilialeUpdateRequest();
+            request.setNom("Boutique Bonanjo");
+            return request;
+        }
+
+        @Test
+        @DisplayName("✅ ADMIN_GROUPE, payload valide → 200")
+        void shouldReturn200WhenAdminGroupeUpdatesFiliale() throws Exception {
+            FilialeResponse updated = FilialeResponse.builder()
+                    .id(42L).nom("Boutique Bonanjo").codeFiliale("DLA01")
+                    .ville("Douala").quartier("Akwa").actif(true).siteOperationnel(true)
+                    .parentId(10L).nombreEmployes(2L)
+                    .build();
+            when(filialeService.modifier(any(StockMasterPrincipal.class), eq(42L), any(FilialeUpdateRequest.class)))
+                    .thenReturn(updated);
+
+            mockMvc.perform(put("/api/v1/groupe/filiales/42")
+                            .contentType("application/json")
+                            .content(objectMapper.writeValueAsString(validUpdateRequest()))
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("ADMIN_GROUPE", 1L))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.nom").value("Boutique Bonanjo"));
+        }
+
+        @Test
+        @DisplayName("❌ CAISSIER → 403 (@PreAuthorize hasRole ADMIN_GROUPE)")
+        void shouldReturn403WhenRoleNotAllowed() throws Exception {
+            mockMvc.perform(put("/api/v1/groupe/filiales/42")
+                            .contentType("application/json")
+                            .content(objectMapper.writeValueAsString(validUpdateRequest()))
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("CAISSIER", 1L))))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("❌ Filiale introuvable / autre groupe (service) → 404 via GlobalExceptionHandler")
+        void shouldReturn404WhenServiceThrowsNotFound() throws Exception {
+            when(filialeService.modifier(any(StockMasterPrincipal.class), anyLong(), any(FilialeUpdateRequest.class)))
+                    .thenThrow(new BusinessException(ErrorCode.RES_ENTITY_NOT_FOUND));
+
+            mockMvc.perform(put("/api/v1/groupe/filiales/999")
+                            .contentType("application/json")
+                            .content(objectMapper.writeValueAsString(validUpdateRequest()))
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("ADMIN_GROUPE", 1L))))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.errorCode").value("RES_001"));
+        }
+
+        @Test
+        @DisplayName("❌ Code filiale déjà utilisé (service) → 409 via GlobalExceptionHandler")
+        void shouldReturn409WhenCodeFilialeAlreadyExists() throws Exception {
+            when(filialeService.modifier(any(StockMasterPrincipal.class), eq(42L), any(FilialeUpdateRequest.class)))
+                    .thenThrow(new BusinessException(ErrorCode.RES_DUPLICATE_FILIALE_CODE));
+
+            mockMvc.perform(put("/api/v1/groupe/filiales/42")
+                            .contentType("application/json")
+                            .content(objectMapper.writeValueAsString(validUpdateRequest()))
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(asAuthentication("ADMIN_GROUPE", 1L))))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.errorCode").value("RES_004"));
+        }
+
+        @Test
+        @DisplayName("❌ Non authentifié → 401/403 (accès refusé)")
+        void shouldRejectWhenAnonymous() throws Exception {
+            mockMvc.perform(put("/api/v1/groupe/filiales/42")
+                            .contentType("application/json")
+                            .content(objectMapper.writeValueAsString(validUpdateRequest())))
                     .andExpect(status().is4xxClientError());
         }
     }

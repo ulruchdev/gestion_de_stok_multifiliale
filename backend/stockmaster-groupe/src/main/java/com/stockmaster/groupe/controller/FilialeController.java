@@ -1,6 +1,7 @@
 package com.stockmaster.groupe.controller;
 
 import com.stockmaster.groupe.dto.request.FilialeCreateRequest;
+import com.stockmaster.groupe.dto.request.FilialeUpdateRequest;
 import com.stockmaster.groupe.dto.response.FilialeResponse;
 import com.stockmaster.groupe.service.FilialeService;
 import com.stockmaster.shared.dto.response.ApiResponse;
@@ -16,7 +17,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -25,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * US-016 — {@code POST /api/v1/groupe/filiales} : créer une filiale.
  * US-017 — {@code GET /api/v1/groupe/filiales} : lister les filiales, paginé.
+ * US-018 — {@code PUT /api/v1/groupe/filiales/{id}} : modifier une filiale.
  *
  * <p>Accès réservé à l'Admin Groupe. L'isolation multi-tenant est portée par
  * le service (groupId du JWT) — aucun groupId n'est accepté en entrée.</p>
@@ -54,6 +58,16 @@ public class FilialeController {
             @RequestParam(required = false) String ville,
             @PageableDefault(size = 20, sort = "dateCreation", direction = Sort.Direction.DESC) Pageable pageable) {
         PageResponse<FilialeResponse> response = filialeService.lister(principal, actif, ville, pageable);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN_GROUPE')")
+    public ResponseEntity<ApiResponse<FilialeResponse>> modifier(
+            @AuthenticationPrincipal StockMasterPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody FilialeUpdateRequest request) {
+        FilialeResponse response = filialeService.modifier(principal, id, request);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 }

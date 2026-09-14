@@ -1,6 +1,7 @@
 package com.stockmaster.groupe.service;
 
 import com.stockmaster.groupe.dto.request.FilialeCreateRequest;
+import com.stockmaster.groupe.dto.request.FilialeUpdateRequest;
 import com.stockmaster.groupe.dto.response.FilialeResponse;
 import com.stockmaster.shared.config.PaginationProperties;
 import com.stockmaster.shared.domain.entity.Entreprise;
@@ -19,10 +20,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 /**
  * US-016 — Créer une filiale dans le groupe (P0).
  * US-017 — Lister les filiales du groupe, paginé (P0).
+ * US-018 — Modifier une filiale (P0).
  *
  * <p>Isolation multi-tenant structurelle : les filiales manipulées sont toujours
  * celles du groupe du JWT ({@code groupId} du principal) — aucun {@code groupId}
@@ -85,17 +88,7 @@ public class FilialeService {
 
         Entreprise sauvegardee = entrepriseRepository.save(filiale);
 
-        return FilialeResponse.builder()
-                .id(sauvegardee.getId())
-                .nom(sauvegardee.getNom())
-                .codeFiliale(sauvegardee.getCodeFiliale())
-                .ville(sauvegardee.getAdresseVille())
-                .quartier(sauvegardee.getAdresseQuartier())
-                .actif(sauvegardee.getActif())
-                .siteOperationnel(sauvegardee.getSiteOperationnel())
-                .parentId(maisonMere.getId())
-                .nombreEmployes(0L)
-                .build();
+        return toResponse(sauvegardee, maisonMere.getId(), 0L);
     }
 
     /**
@@ -124,7 +117,70 @@ public class FilialeService {
         Page<Entreprise> filiales = entrepriseRepository.findFilialesDuGroupe(
                 groupId, TypeEntreprise.FILIALE, actif, ville, bornerTaillePage(pageable));
 
-        Page<FilialeResponse> reponse = filiales.map(filiale -> FilialeResponse.builder()
+        Page<FilialeResponse> reponse = filiales.map(filiale -> toResponse(filiale, parentId,
+                utilisateurRepository.countByEntrepriseIdAndSupprimeFalse(filiale.getId())));
+
+        return PageResponse.from(reponse);
+    }
+
+    /**
+     * Modifie partiellement (sémantique PATCH) une filiale du groupe du principal connecté.
+     *
+     * @throws BusinessException {@code GRP_CROSS_GROUP_FORBIDDEN} si le principal
+     *         ne porte pas de {@code groupId} ;
+     *         {@code RES_ENTITY_NOT_FOUND} si la filiale n'existe pas, est soft-supprimée,
+     *         n'est pas de type FILIALE, ou appartient à un autre groupe (jamais révéler
+     *         l'existence — critère d'acceptation US-018) ;
+     *         {@code RES_DUPLICATE_FILIALE_CODE} si le nouveau {@code codeFiliale} est
+     *         déjà pris par une autre filiale du groupe.
+     */
+    @Transactional
+    public FilialeResponse modifier(StockMasterPrincipal principal, Long filialeId, FilialeUpdateRequest request) {
+        Long groupId = principal != null ? principal.getGroupId() : null;
+        if (groupId == null) {
+            throw new BusinessException(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
+        }
+
+        Entreprise filiale = entrepriseRepository.findById(filialeId)
+                .filter(e -> !Boolean.TRUE.equals(e.getSupprime()))
+                .filter(e -> e.getTypeEntreprise() == TypeEntreprise.FILIALE)
+                .filter(e -> e.getGroupe().getId().equals(groupId))
+                .orElseThrow(() -> new BusinessException(ErrorCode.RES_ENTITY_NOT_FOUND));
+
+        if (StringUtils.hasText(request.getCodeFiliale())) {
+            if (entrepriseRepository.existsByGroupeIdAndCodeFilialeAndIdNot(groupId, request.getCodeFiliale(), filialeId)) {
+                throw new BusinessException(ErrorCode.RES_DUPLICATE_FILIALE_CODE);
+            }
+            filiale.setCodeFiliale(request.getCodeFiliale());
+        }
+        if (StringUtils.hasText(request.getNom())) {
+            filiale.setNom(request.getNom());
+        }
+        if (StringUtils.hasText(request.getVille())) {
+            filiale.setAdresseVille(request.getVille());
+        }
+        if (StringUtils.hasText(request.getQuartier())) {
+            filiale.setAdresseQuartier(request.getQuartier());
+        }
+
+        Entreprise sauvegardee = entrepriseRepository.save(filiale);
+
+        Long parentId = entrepriseRepository.findFirstByGroupeIdAndTypeEntreprise(groupId, TypeEntreprise.MERE)
+                .map(Entreprise::getId)
+                .orElse(null);
+        long nombreEmployes = utilisateurRepository.countByEntrepriseIdAndSupprimeFalse(sauvegardee.getId());
+
+        return toResponse(sauvegardee, parentId, nombreEmployes);
+    }
+
+    /** Protection contre les abus (DEC absente sur ce point) : jamais plus que {@code stockmaster.pagination.max-page-size}. */
+    private Pageable bornerTaillePage(Pageable pageable) {
+        int taille = Math.min(pageable.getPageSize(), paginationProperties.getMaxPageSize());
+        return PageRequest.of(pageable.getPageNumber(), taille, pageable.getSort());
+    }
+
+    private FilialeResponse toResponse(Entreprise filiale, Long parentId, long nombreEmployes) {
+        return FilialeResponse.builder()
                 .id(filiale.getId())
                 .nom(filiale.getNom())
                 .codeFiliale(filiale.getCodeFiliale())
@@ -133,15 +189,7 @@ public class FilialeService {
                 .actif(filiale.getActif())
                 .siteOperationnel(filiale.getSiteOperationnel())
                 .parentId(parentId)
-                .nombreEmployes(utilisateurRepository.countByEntrepriseIdAndSupprimeFalse(filiale.getId()))
-                .build());
-
-        return PageResponse.from(reponse);
-    }
-
-    /** Protection contre les abus (DEC absente sur ce point) : jamais plus que {@code stockmaster.pagination.max-page-size}. */
-    private Pageable bornerTaillePage(Pageable pageable) {
-        int taille = Math.min(pageable.getPageSize(), paginationProperties.getMaxPageSize());
-        return PageRequest.of(pageable.getPageNumber(), taille, pageable.getSort());
+                .nombreEmployes(nombreEmployes)
+                .build();
     }
 }

@@ -1,6 +1,7 @@
 package com.stockmaster.groupe.service;
 
 import com.stockmaster.groupe.dto.request.FilialeCreateRequest;
+import com.stockmaster.groupe.dto.request.FilialeUpdateRequest;
 import com.stockmaster.groupe.dto.response.FilialeResponse;
 import com.stockmaster.shared.config.PaginationProperties;
 import com.stockmaster.shared.domain.entity.Entreprise;
@@ -294,6 +295,137 @@ class FilialeServiceTest {
             StockMasterPrincipal principal = principalWithGroup(null);
 
             assertThatThrownBy(() -> filialeService.lister(principal, null, null, PageRequest.of(0, 20)))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/v1/groupe/filiales/{id} (US-018)")
+    class Modifier {
+
+        private Entreprise filialeExistante(Long groupeId) {
+            return Entreprise.builder()
+                    .id(42L)
+                    .groupe(TenantGroup.builder().id(groupeId).build())
+                    .typeEntreprise(TypeEntreprise.FILIALE)
+                    .nom("Boutique Akwa")
+                    .codeFiliale("DLA01")
+                    .adresseVille("Douala")
+                    .adresseQuartier("Akwa")
+                    .actif(true)
+                    .siteOperationnel(true)
+                    .supprime(false)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("✅ Nom seul modifié → autres champs inchangés")
+        void shouldUpdateOnlyNomWhenOnlyNameProvided() {
+            StockMasterPrincipal principal = principalWithGroup(1L);
+            when(entrepriseRepository.findById(42L)).thenReturn(Optional.of(filialeExistante(1L)));
+            when(entrepriseRepository.save(any(Entreprise.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(entrepriseRepository.findFirstByGroupeIdAndTypeEntreprise(1L, TypeEntreprise.MERE))
+                    .thenReturn(Optional.of(maisonMere()));
+            when(utilisateurRepository.countByEntrepriseIdAndSupprimeFalse(42L)).thenReturn(2L);
+
+            FilialeUpdateRequest request = new FilialeUpdateRequest();
+            request.setNom("Boutique Bonanjo");
+
+            FilialeResponse response = filialeService.modifier(principal, 42L, request);
+
+            assertThat(response.getNom()).isEqualTo("Boutique Bonanjo");
+            assertThat(response.getCodeFiliale()).isEqualTo("DLA01");
+            assertThat(response.getParentId()).isEqualTo(10L);
+            assertThat(response.getNombreEmployes()).isEqualTo(2L);
+        }
+
+        @Test
+        @DisplayName("✅ Nouveau codeFiliale disponible → mis à jour")
+        void shouldUpdateCodeFilialeWhenAvailable() {
+            StockMasterPrincipal principal = principalWithGroup(1L);
+            when(entrepriseRepository.findById(42L)).thenReturn(Optional.of(filialeExistante(1L)));
+            when(entrepriseRepository.existsByGroupeIdAndCodeFilialeAndIdNot(1L, "DLA02", 42L)).thenReturn(false);
+            when(entrepriseRepository.save(any(Entreprise.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(entrepriseRepository.findFirstByGroupeIdAndTypeEntreprise(1L, TypeEntreprise.MERE))
+                    .thenReturn(Optional.of(maisonMere()));
+            when(utilisateurRepository.countByEntrepriseIdAndSupprimeFalse(42L)).thenReturn(0L);
+
+            FilialeUpdateRequest request = new FilialeUpdateRequest();
+            request.setCodeFiliale("DLA02");
+
+            FilialeResponse response = filialeService.modifier(principal, 42L, request);
+
+            assertThat(response.getCodeFiliale()).isEqualTo("DLA02");
+        }
+
+        @Test
+        @DisplayName("❌ Nouveau codeFiliale déjà pris par une autre filiale → RES_DUPLICATE_FILIALE_CODE (409)")
+        void shouldThrowWhenCodeFilialeAlreadyTakenByAnother() {
+            StockMasterPrincipal principal = principalWithGroup(1L);
+            when(entrepriseRepository.findById(42L)).thenReturn(Optional.of(filialeExistante(1L)));
+            when(entrepriseRepository.existsByGroupeIdAndCodeFilialeAndIdNot(1L, "DEJA", 42L)).thenReturn(true);
+
+            FilialeUpdateRequest request = new FilialeUpdateRequest();
+            request.setCodeFiliale("DEJA");
+
+            assertThatThrownBy(() -> filialeService.modifier(principal, 42L, request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_DUPLICATE_FILIALE_CODE);
+        }
+
+        @Test
+        @DisplayName("❌ Filiale d'un autre groupe → RES_ENTITY_NOT_FOUND (404, jamais révéler l'existence)")
+        void shouldThrowNotFoundWhenFilialeBelongsToAnotherGroup() {
+            StockMasterPrincipal principal = principalWithGroup(1L);
+            when(entrepriseRepository.findById(42L)).thenReturn(Optional.of(filialeExistante(99L)));
+
+            assertThatThrownBy(() -> filialeService.modifier(principal, 42L, new FilialeUpdateRequest()))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("❌ Filiale inexistante → RES_ENTITY_NOT_FOUND (404)")
+        void shouldThrowNotFoundWhenFilialeDoesNotExist() {
+            StockMasterPrincipal principal = principalWithGroup(1L);
+            when(entrepriseRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> filialeService.modifier(principal, 999L, new FilialeUpdateRequest()))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("❌ Filiale soft-supprimée → RES_ENTITY_NOT_FOUND")
+        void shouldThrowNotFoundWhenFilialeSoftDeleted() {
+            StockMasterPrincipal principal = principalWithGroup(1L);
+            Entreprise supprimee = filialeExistante(1L);
+            supprimee.setSupprime(true);
+            when(entrepriseRepository.findById(42L)).thenReturn(Optional.of(supprimee));
+
+            assertThatThrownBy(() -> filialeService.modifier(principal, 42L, new FilialeUpdateRequest()))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("❌ Id référence la maison mère (pas une filiale) → RES_ENTITY_NOT_FOUND")
+        void shouldThrowNotFoundWhenIdIsMaisonMere() {
+            StockMasterPrincipal principal = principalWithGroup(1L);
+            when(entrepriseRepository.findById(10L)).thenReturn(Optional.of(maisonMere()));
+
+            assertThatThrownBy(() -> filialeService.modifier(principal, 10L, new FilialeUpdateRequest()))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("❌ Principal sans groupId → GRP_CROSS_GROUP_FORBIDDEN (403)")
+        void shouldThrowForbiddenWhenPrincipalHasNoGroup() {
+            StockMasterPrincipal principal = principalWithGroup(null);
+
+            assertThatThrownBy(() -> filialeService.modifier(principal, 42L, new FilialeUpdateRequest()))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
         }
