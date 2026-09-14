@@ -514,10 +514,76 @@ pm.test("Message de succès", () => {
 
 ## 2. Groupe — `/api/v1/groupe`
 
-> **Statut :** 🔜 Non implémenté (EPIC 3, US-014 à US-020, Sprint 3-4)
+> **Statut :** 🔜 EPIC 3 en cours (US-014 à US-020, Sprint 3-4) — US-015 ✅ implémentée
 
 ### 2.1 PUT — Modifier le groupe (futur)
-### 2.2 GET — Consulter le groupe (futur)
+
+### 2.2 GET — Consulter le groupe
+
+> **US :** US-015
+> **Statut :** ✅ Implémenté
+> **Authentification :** ✅ Oui — rôle `ADMIN_GROUPE` uniquement (`@PreAuthorize`)
+
+Le groupe consulté est **toujours** celui du JWT (`groupId` du principal) — l'endpoint ne prend aucun identifiant, l'isolation multi-tenant est structurelle (pas de risque de consulter le groupe d'un autre tenant).
+
+#### Requête
+
+```http
+GET {{base_url}}/api/v1/groupe
+Authorization: Bearer {{access_token}}
+```
+
+#### Réponse — Succès (200 OK)
+
+> ⚠️ Contrairement aux endpoints `auth`, cette réponse n'est **pas** enveloppée dans `ApiResponse<T>` — le contrôleur retourne directement le DTO. Point à trancher pour harmoniser avec le reste de l'API avant d'ajouter d'autres endpoints `groupe` (voir note `progress-ledger.md`).
+
+```json
+{
+    "id": 1,
+    "nomGroupe": "Distribo Sarl",
+    "planAbonnement": "PRO",
+    "limiteFiliales": 15,
+    "nombreFiliales": 7,
+    "dateExpirationPlan": "2027-06-30"
+}
+```
+
+#### Réponse — Rôle non autorisé (403 Forbidden)
+
+Tout rôle autre que `ADMIN_GROUPE` (ex. `CAISSIER`) reçoit un `403` via `@PreAuthorize`.
+
+#### Réponse — Groupe introuvable (404 Not Found)
+
+```json
+{
+    "type": "/errors/res-001",
+    "title": "Ressource non trouvée",
+    "status": 404,
+    "detail": "Ressource non trouvée",
+    "instance": "/api/v1/groupe",
+    "errorCode": "RES_001",
+    "timestamp": "2026-09-14T10:00:00Z"
+}
+```
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Informations du groupe présentes", () => {
+    const json = pm.response.json();
+    pm.expect(json.id).to.be.a('number');
+    pm.expect(json.nomGroupe).to.be.a('string');
+    pm.expect(json.planAbonnement).to.be.oneOf(['GRATUIT', 'PRO', 'PERSONNALISE']);
+    pm.expect(json.limiteFiliales).to.be.a('number');
+    pm.expect(json.nombreFiliales).to.be.a('number');
+});
+```
+
+---
+
 ### 2.3 POST — Créer une filiale (futur)
 ### 2.4 GET — Lister les filiales (futur)
 ### 2.5 PUT — Modifier une filiale (futur)

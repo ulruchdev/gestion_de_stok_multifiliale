@@ -52,7 +52,21 @@
 
 > ✅ Les deux durcissements **P0** (US-083 rotation refresh + US-085 fail-closed ciblé Redis) sont terminés → le blocage EPIC 3 au sens du backlog (`BACKLOG_StockMaster_CM.md` : dépendance EPIC 3 = « EPIC 2 complété ») est levé côté P0. Restent US-084 (Argon2id) et US-086 (logs d'audit), tous deux **P1**, non bloquants pour EPIC 3.
 
-## EPIC 3 à 13 — (non commencé)
+## EPIC 3 — Groupe & Filiales (en cours)
+
+| US | Description | Priorité | Statut | Notes |
+|----|-------------|----------|--------|-------|
+| US-015 | GET `/api/v1/groupe` — consulter groupe + plan actif | P0 | ✅ | Terminé (branche `feature/GS-015-consulter-groupe`) — `GroupeService`/`GroupeController`/`GroupeResponse` + 12 tests (4 service + 4 controller + 4 `ControleLimiteFilialesService`) verts. `StockMasterPrincipal` déplacé `auth.config` → `shared.security` (contrat inter-module, référencé par `AuthServiceImpl`/`JwtAuthenticationFilter`) ; nouvelle méthode `EntrepriseRepository.countByGroupeIdAndTypeEntrepriseAndActifTrueAndSupprimeFalse`. **3 bugs corrigés dans le code déjà présent (non commité)** : import `@Bean` manquant dans `GroupeTestApplication`, nom de méthode mocké dans `GroupeServiceTest` désynchronisé du repository réel (`...SupprimeFalse` → `...ActifTrueAndSupprimeFalse`, cohérent avec « filiales actives »), fixture `groupeActif()` sans `.id(1L)` → assertion `getId()` nulle. |
+| US-014 | PUT `/api/v1/groupe` — modifier nom/logo/infos fiscales | P0 | ❌ | Non commencé — nécessite `MinioService` (aucun service MinIO n'existe encore malgré la dépendance `minio` 8.5.x posée dans le parent POM) |
+| US-016 | POST `/api/v1/groupe/filiales` — créer une filiale | P0 | ❌ | Non commencé — réutilisera `ControleLimiteFilialesService` (déjà testé) |
+| US-017 | GET `/api/v1/groupe/filiales` — lister les filiales | P0 | ❌ | Non commencé |
+| US-018 | PUT `/api/v1/groupe/filiales/{id}` — modifier une filiale | P0 | ❌ | Non commencé |
+| US-020 | GET `/api/v1/groupe/dashboard` — dashboard consolidé | P0 | ❌ | Non commencé — dépend des EPICs 5-6 (stock, vente), `@Cacheable` Redis TTL 5 min |
+| US-014b, US-019, US-081 | (P1, hors séquence P0) | P1 | ❌ | Non commencé |
+
+> ⚠️ **Point à trancher — enveloppe `ApiResponse<T>`** : `GroupeController.consulter()` retourne `ResponseEntity<GroupeResponse>` brut (`$.id`, `$.nomGroupe`…), alors que `AuthController` enveloppe systématiquement dans `ApiResponse<T>` (`$.data.id`…) conformément à `IA_CONTEXTE_PROJET.md` §6. Le test contrôleur US-015 (déjà écrit, non modifié) valide la forme brute — donc US-015 reste tel quel, mais **à harmoniser avant d'enchaîner sur US-014/016** (sinon les futurs endpoints `groupe` divergent du reste de l'API et du contrat frontend). Décision utilisateur requise.
+
+## EPIC 4 à 13 — (non commencé)
 
 ---
 
