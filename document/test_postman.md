@@ -514,7 +514,7 @@ pm.test("Message de succès", () => {
 
 ## 2. Groupe — `/api/v1/groupe`
 
-> **Statut :** 🔜 EPIC 3 en cours (US-019 à US-020, Sprint 3-4) — US-014 à US-018 ✅ implémentées
+> **Statut :** 🔜 EPIC 3 en cours (US-020, Sprint 3-4) — US-014 à US-019 ✅ implémentées
 
 ### 2.1 PUT — Modifier le groupe
 
@@ -907,7 +907,70 @@ pm.test("Filiale mise a jour", () => {
 
 ---
 
-### 2.6 PATCH — Activer/Désactiver une filiale (futur)
+### 2.6 PATCH — Activer/Désactiver une filiale
+
+> **US :** US-019
+> **Statut :** ✅ Implémenté
+> **Authentification :** ✅ Oui — rôle `ADMIN_GROUPE` uniquement (`@PreAuthorize`)
+
+Bascule uniquement le champ `actif` — les données de la filiale sont conservées et consultables. La filiale doit appartenir au groupe du JWT.
+
+> ⚠️ Le blocage effectif des mouvements de stock/commandes sur un site désactivé n'est **pas encore appliqué** : les modules stock/vente (EPICs 5-6) n'existent pas encore. Cet endpoint pose uniquement le statut ; l'application de la règle métier viendra avec ces modules.
+
+#### Requête
+
+```http
+PATCH {{base_url}}/api/v1/groupe/filiales/42/statut
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "actif": false
+}
+```
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": 42,
+        "nom": "Boutique Akwa",
+        "codeFiliale": "DLA01",
+        "ville": "Douala",
+        "quartier": "Akwa",
+        "actif": false,
+        "siteOperationnel": true,
+        "parentId": 10,
+        "nombreEmployes": 5
+    }
+}
+```
+
+#### Réponse — Filiale introuvable / autre groupe (404 Not Found)
+
+Même comportement que US-018 : ne révèle jamais l'existence d'une filiale d'un autre groupe.
+
+#### Réponse — Rôle non autorisé (403 Forbidden)
+
+Tout rôle autre que `ADMIN_GROUPE` (ex. `CAISSIER`) reçoit un `403` via `@PreAuthorize`.
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Statut actif mis a jour", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.actif).to.be.a('boolean');
+});
+```
+
+---
+
 ### 2.7 GET — Dashboard consolidé (futur)
 
 ---
