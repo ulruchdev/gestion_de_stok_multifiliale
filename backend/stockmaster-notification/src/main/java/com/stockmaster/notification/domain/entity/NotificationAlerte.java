@@ -1,6 +1,5 @@
 package com.stockmaster.notification.domain.entity;
 
-import com.stockmaster.catalogue.domain.entity.Article;
 import com.stockmaster.shared.domain.entity.Entreprise;
 import com.stockmaster.notification.domain.enums.EtatAlerte;
 import com.stockmaster.shared.entity.AbstractEntity;
@@ -33,9 +32,8 @@ public class NotificationAlerte extends AbstractEntity {
     private com.stockmaster.shared.domain.entity.Utilisateur destinataire;
 
     /** NULL pour les notifications non liées au catalogue (ex. SECURITY_ALERT). */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "article_id")
-    private Article article;
+    @Column(name = "article_id")
+    private Long articleId;
 
     /** SANS CHECK : extensible par convention de code (DEC-004). */
     @Column(name = "type_alerte", nullable = false, length = 30)

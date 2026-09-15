@@ -1,7 +1,6 @@
 package com.stockmaster.utilisateur;
 
 import com.stockmaster.shared.handler.GlobalExceptionHandler;
-import com.stockmaster.utilisateur.controller.UtilisateurAdminController;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
@@ -18,11 +17,13 @@ import org.springframework.security.web.SecurityFilterChain;
  * d'accès est porté par les {@code @PreAuthorize} (méthode), comme en production.
  *
  * <p>{@code @Import} ciblé (pas de {@code @ComponentScan}) — même raison que
- * groupe : plusieurs contrôleurs coexisteront dans {@code utilisateur.controller}
- * au fil de l'EPIC 4 (US-022/023/024/025).</p>
+ * groupe : plusieurs contrôleurs coexistent dans {@code utilisateur.controller}
+ * (US-021/022/023/024/025). <b>Chaque test MVC importe son contrôleur</b> via
+ * {@code @Import} — cette configuration n'en déclare aucun, sinon tout contexte
+ * du module exigerait les dépendances de tous les contrôleurs.</p>
  */
 @SpringBootConfiguration
-@Import({UtilisateurAdminController.class, GlobalExceptionHandler.class})
+@Import(GlobalExceptionHandler.class)
 @ImportAutoConfiguration(JacksonAutoConfiguration.class)
 @EnableMethodSecurity
 public class UtilisateurTestApplication {
