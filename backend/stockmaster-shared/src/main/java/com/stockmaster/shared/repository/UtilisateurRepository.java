@@ -13,6 +13,13 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> 
 
     long countByEntrepriseGroupeIdAndSupprimeFalse(Long groupeId);
 
+    /**
+     * US-101 : décompte pour la limite d'utilisateurs (DEC-015) — actifs et non
+     * supprimés du groupe, toutes filiales confondues (symétrique de
+     * {@code countByGroupeIdAndSiteOperationnelTrueAndActifTrueAndSupprimeFalse}).
+     */
+    long countByEntrepriseGroupeIdAndActifTrueAndSupprimeFalse(Long groupeId);
+
     /** US-017 : nombre d'employés d'une filiale (même convention que le compteur groupe : pas de filtre actif). */
     long countByEntrepriseIdAndSupprimeFalse(Long entrepriseId);
 }

@@ -62,6 +62,9 @@ public enum ErrorCode {
     SYS_BAD_REQUEST("SYS_002", "Requête invalide", 400),
     SYS_METHOD_NOT_ALLOWED("SYS_003", "Méthode non autorisée", 405),
     SYS_MEDIA_TYPE_NOT_SUPPORTED("SYS_004", "Type de média non supporté", 415),
+
+    // ========== USR — Utilisateurs ==========
+    USR_USER_LIMIT_REACHED("USR_001", "Limite d'utilisateurs atteinte pour votre plan d'abonnement", 403),
     SYS_VALIDATION_ERROR("SYS_005", "Erreur de validation des champs", 400),
     SYS_FILE_TOO_LARGE("SYS_006", "Le fichier dépasse la taille maximale autorisée", 413);
 
