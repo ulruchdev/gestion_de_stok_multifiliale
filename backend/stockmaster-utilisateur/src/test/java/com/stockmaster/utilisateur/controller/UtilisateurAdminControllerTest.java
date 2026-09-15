@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.ContextConfiguration;
@@ -31,8 +32,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * US-021 — POST /api/v1/utilisateurs/admin-filiale : tests contrôleur.
  */
-@WebMvcTest(UtilisateurAdminController.class)
+@WebMvcTest
 @ContextConfiguration(classes = UtilisateurTestApplication.class)
+@Import(UtilisateurAdminController.class)
 @DisplayName("UtilisateurAdminController — US-021")
 class UtilisateurAdminControllerTest {
 
