@@ -12,4 +12,7 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> 
     Optional<Utilisateur> findByEmail(String email);
 
     long countByEntrepriseGroupeIdAndSupprimeFalse(Long groupeId);
+
+    /** US-017 : nombre d'employés d'une filiale (même convention que le compteur groupe : pas de filtre actif). */
+    long countByEntrepriseIdAndSupprimeFalse(Long entrepriseId);
 }

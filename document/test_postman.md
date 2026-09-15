@@ -514,7 +514,7 @@ pm.test("Message de succès", () => {
 
 ## 2. Groupe — `/api/v1/groupe`
 
-> **Statut :** 🔜 EPIC 3 en cours (US-017 à US-020, Sprint 3-4) — US-014, US-015 et US-016 ✅ implémentées
+> **Statut :** 🔜 EPIC 3 en cours (US-020, Sprint 3-4) — US-014 à US-019 ✅ implémentées
 
 ### 2.1 PUT — Modifier le groupe
 
@@ -760,9 +760,217 @@ pm.test("Filiale créée avec parentId", () => {
 
 ---
 
-### 2.4 GET — Lister les filiales (futur)
-### 2.5 PUT — Modifier une filiale (futur)
-### 2.6 PATCH — Activer/Désactiver une filiale (futur)
+### 2.4 GET — Lister les filiales
+
+> **US :** US-017
+> **Statut :** ✅ Implémenté
+> **Authentification :** ✅ Oui — rôle `ADMIN_GROUPE` uniquement (`@PreAuthorize`)
+
+Retourne uniquement les filiales du groupe du JWT (`groupId` du principal). Pagination + filtres `actif`/`ville` optionnels.
+
+#### Requête
+
+```http
+GET {{base_url}}/api/v1/groupe/filiales?page=0&size=20&actif=true&ville=Douala
+Authorization: Bearer {{access_token}}
+```
+
+Tous les paramètres sont optionnels : `page` (défaut 0), `size` (défaut 20, borné à `stockmaster.pagination.max-page-size` = 100), `actif`, `ville`.
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": 42,
+                "nom": "Boutique Akwa",
+                "codeFiliale": "DLA01",
+                "ville": "Douala",
+                "quartier": "Akwa",
+                "actif": true,
+                "siteOperationnel": true,
+                "parentId": 10,
+                "nombreEmployes": 3
+            }
+        ],
+        "page": 0,
+        "size": 20,
+        "totalElements": 1,
+        "totalPages": 1
+    }
+}
+```
+
+#### Réponse — Rôle non autorisé (403 Forbidden)
+
+Tout rôle autre que `ADMIN_GROUPE` (ex. `CAISSIER`) reçoit un `403` via `@PreAuthorize`.
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Page de filiales bien formee", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.content).to.be.an('array');
+    pm.expect(json.data.totalElements).to.be.a('number');
+});
+```
+
+---
+
+### 2.5 PUT — Modifier une filiale
+
+> **US :** US-018
+> **Statut :** ✅ Implémenté
+> **Authentification :** ✅ Oui — rôle `ADMIN_GROUPE` uniquement (`@PreAuthorize`)
+
+Modification **partielle** (sémantique PATCH, même contrat que US-014/016) — seuls les champs transmis sont appliqués. La filiale doit appartenir au groupe du JWT.
+
+#### Requête
+
+```http
+PUT {{base_url}}/api/v1/groupe/filiales/42
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "nom": "Boutique Bonanjo",
+    "codeFiliale": "DLA02",
+    "ville": "Douala",
+    "quartier": "Bonanjo"
+}
+```
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": 42,
+        "nom": "Boutique Bonanjo",
+        "codeFiliale": "DLA02",
+        "ville": "Douala",
+        "quartier": "Bonanjo",
+        "actif": true,
+        "siteOperationnel": true,
+        "parentId": 10,
+        "nombreEmployes": 2
+    }
+}
+```
+
+#### Réponse — Filiale introuvable / autre groupe (404 Not Found)
+
+Ne révèle jamais l'existence d'une filiale d'un autre groupe — même code d'erreur que pour un id inexistant.
+
+```json
+{
+    "errorCode": "RES_001",
+    "detail": "Ressource non trouvée",
+    "status": 404
+}
+```
+
+#### Réponse — Code filiale déjà utilisé (409 Conflict)
+
+```json
+{
+    "errorCode": "RES_004",
+    "detail": "Ce code filiale existe déjà dans le groupe",
+    "status": 409
+}
+```
+
+#### Réponse — Rôle non autorisé (403 Forbidden)
+
+Tout rôle autre que `ADMIN_GROUPE` (ex. `CAISSIER`) reçoit un `403` via `@PreAuthorize`.
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Filiale mise a jour", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.id).to.be.a('number');
+});
+```
+
+---
+
+### 2.6 PATCH — Activer/Désactiver une filiale
+
+> **US :** US-019
+> **Statut :** ✅ Implémenté
+> **Authentification :** ✅ Oui — rôle `ADMIN_GROUPE` uniquement (`@PreAuthorize`)
+
+Bascule uniquement le champ `actif` — les données de la filiale sont conservées et consultables. La filiale doit appartenir au groupe du JWT.
+
+> ⚠️ Le blocage effectif des mouvements de stock/commandes sur un site désactivé n'est **pas encore appliqué** : les modules stock/vente (EPICs 5-6) n'existent pas encore. Cet endpoint pose uniquement le statut ; l'application de la règle métier viendra avec ces modules.
+
+#### Requête
+
+```http
+PATCH {{base_url}}/api/v1/groupe/filiales/42/statut
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "actif": false
+}
+```
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": 42,
+        "nom": "Boutique Akwa",
+        "codeFiliale": "DLA01",
+        "ville": "Douala",
+        "quartier": "Akwa",
+        "actif": false,
+        "siteOperationnel": true,
+        "parentId": 10,
+        "nombreEmployes": 5
+    }
+}
+```
+
+#### Réponse — Filiale introuvable / autre groupe (404 Not Found)
+
+Même comportement que US-018 : ne révèle jamais l'existence d'une filiale d'un autre groupe.
+
+#### Réponse — Rôle non autorisé (403 Forbidden)
+
+Tout rôle autre que `ADMIN_GROUPE` (ex. `CAISSIER`) reçoit un `403` via `@PreAuthorize`.
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Statut actif mis a jour", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.actif).to.be.a('boolean');
+});
+```
+
+---
+
 ### 2.7 GET — Dashboard consolidé (futur)
 
 ---

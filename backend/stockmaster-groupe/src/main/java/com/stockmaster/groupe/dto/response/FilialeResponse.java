@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 /**
- * Réponse US-016 — filiale créée dans le groupe.
+ * Réponse US-016 (créer) / US-017 (lister) — filiale du groupe.
  */
 @Getter
 @Builder
@@ -28,4 +28,7 @@ public class FilialeResponse {
 
     /** Id de la maison mère du groupe. */
     private Long parentId;
+
+    /** US-017 : nombre d'employés de la filiale (0 à la création — US-016). */
+    private Long nombreEmployes;
 }
