@@ -1138,6 +1138,57 @@
               ]
             }
           }
+        },
+        {
+          "name": "Lister les utilisateurs (US-023)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/utilisateurs?role=&actif=&filialeId=&page=0&size=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "utilisateurs"
+              ],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "COMMERCIAL",
+                  "description": "Filtre optionnel — ex: COMMERCIAL, CAISSIER, GESTIONNAIRE_STOCK, RESP_ACHATS, ADMIN_FILIALE, ADMIN_GROUPE",
+                  "disabled": true
+                },
+                {
+                  "key": "actif",
+                  "value": "true",
+                  "description": "Filtre optionnel — true/false",
+                  "disabled": true
+                },
+                {
+                  "key": "filialeId",
+                  "value": "11",
+                  "description": "Filtre optionnel — resserre sur une filiale du groupe (Admin Groupe) ; refusé si autre que la sienne (Admin Filiale)",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            }
+          }
         }
       ]
     }
