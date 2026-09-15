@@ -14,6 +14,13 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> 
 
     boolean existsByEmail(String email);
 
+    /**
+     * US-024 : unicité email lors d'une modification, hors l'utilisateur modifié
+     * lui-même — miroir de la contrainte DB unique (DEC-008), même convention
+     * que {@code existsByGroupeIdAndCodeFilialeAndIdNot} (US-018).
+     */
+    boolean existsByEmailAndIdNot(String email, Long id);
+
     Optional<Utilisateur> findByEmail(String email);
 
     long countByEntrepriseGroupeIdAndSupprimeFalse(Long groupeId);
