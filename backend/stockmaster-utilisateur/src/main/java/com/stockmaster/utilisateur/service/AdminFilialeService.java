@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -56,6 +57,9 @@ public class AdminFilialeService {
 
     static final String INVITATION_KEY_PREFIX = "invitation:";
     static final Duration INVITATION_TTL = Duration.ofHours(48);
+
+    /** Générateur partagé (instancier un SecureRandom par appel est coûteux — Sonar S2119). */
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final EntrepriseRepository entrepriseRepository;
     private final TenantGroupRepository groupeRepository;
@@ -122,7 +126,7 @@ public class AdminFilialeService {
 
     private void verifierLimiteUtilisateurs(TenantGroup groupe) {
         boolean planExpire = groupe.getDateExpirationPlan() != null
-                && groupe.getDateExpirationPlan().isBefore(LocalDate.now());
+                && groupe.getDateExpirationPlan().isBefore(LocalDate.now(Clock.systemDefaultZone()));
         Integer limiteEffective = controleLimiteUtilisateurs.limiteUtilisateursEffective(
                 groupe.getLimiteUtilisateurs(), planExpire);
         long utilisateursActifs = utilisateurRepository
@@ -154,9 +158,8 @@ public class AdminFilialeService {
     }
 
     private String motDePasseAleatoire() {
-        SecureRandom random = new SecureRandom();
         byte[] bytes = new byte[24];
-        random.nextBytes(bytes);
+        SECURE_RANDOM.nextBytes(bytes);
         return UUID.nameUUIDFromBytes(bytes).toString();
     }
 

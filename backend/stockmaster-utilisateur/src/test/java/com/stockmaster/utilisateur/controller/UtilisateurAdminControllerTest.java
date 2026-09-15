@@ -1,10 +1,8 @@
 package com.stockmaster.utilisateur.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.stockmaster.shared.dto.response.ApiResponse;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
-import com.stockmaster.shared.handler.GlobalExceptionHandler;
 import com.stockmaster.shared.security.StockMasterPrincipal;
 import com.stockmaster.utilisateur.UtilisateurTestApplication;
 import com.stockmaster.utilisateur.dto.request.AdminFilialeCreateRequest;
@@ -18,8 +16,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.ContextConfiguration;

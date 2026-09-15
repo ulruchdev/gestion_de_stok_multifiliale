@@ -39,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -290,7 +291,7 @@ class AdminFilialeServiceTest {
     @DisplayName("✅ échec d'envoi email → avalé, le compte est créé quand même (US-006)")
     void shouldNotFailWhenEmailSendingFails() {
         aiguillageHappyPath(groupe(50, null), filialeDuGroupe(1L));
-        org.mockito.Mockito.doThrow(new RuntimeException("SMTP down"))
+        doThrow(new RuntimeException("SMTP down"))
                 .when(canalEmail).envoyer(any(), any(), any(), any(), any());
 
         assertThatCode(() -> service.creer(principalWithGroup(1L), requeteValide()))
