@@ -1106,6 +1106,38 @@
               ]
             }
           }
+        },
+        {
+          "name": "Créer un employé (US-022)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"prenom\": \"Claude\",\n    \"nom\": \"Fotso\",\n    \"email\": \"claude.fotso@boutique.cm\",\n    \"role\": \"GESTIONNAIRE_STOCK\",\n    \"motDePasseProvisoire\": \"Prov@2026\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/utilisateurs/employes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "utilisateurs",
+                "employes"
+              ]
+            }
+          }
         }
       ]
     }
