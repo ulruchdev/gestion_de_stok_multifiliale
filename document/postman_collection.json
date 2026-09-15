@@ -1044,6 +1044,70 @@
           }
         }
       ]
+    },
+    {
+      "name": "👥 4. Utilisateurs — EPIC 4",
+      "description": "Gestion des comptes utilisateurs — US-021 : créer un Admin Filiale (réservé Admin Groupe ; compte créé inactif, invitation envoyée par email avec token 48h)",
+      "item": [
+        {
+          "name": "👤 Créer un Admin Filiale (US-021)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status 201 Created\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Compte inactif, role force ADMIN_FILIALE\", () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.role).to.eql('ADMIN_FILIALE');",
+                  "    pm.expect(json.data.actif).to.be.false;",
+                  "    pm.expect(json.data.filialeId).to.eql(5);",
+                  "});",
+                  "",
+                  "pm.test(\"Mot de passe jamais retourne\", () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.motDePasse).to.be.undefined;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"filialeId\": 5,\n    \"prenom\": \"Marie\",\n    \"nom\": \"Ngono\",\n    \"email\": \"marie.ngono@distribo.cm\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/utilisateurs/admin-filiale",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "utilisateurs",
+                "admin-filiale"
+              ]
+            }
+          }
+        }
+      ]
     }
   ]
 }

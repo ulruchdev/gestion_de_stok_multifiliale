@@ -14,5 +14,17 @@
     <name>StockMaster CM — Utilisateur (gestion des utilisateurs)</name>
     <dependencies>
         <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-shared</artifactId></dependency>
+
+        <!-- US-021 : l'invitation part par le port CanalNotification (DEC-014) —
+             dépendance au port uniquement (contrat), pas aux implémentations
+             (règle ArchUnit n°1) -->
+        <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-notification</artifactId></dependency>
+
+        <!-- Tests MockMvc : post-processors security (@WebMvcTest + @PreAuthorize) -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

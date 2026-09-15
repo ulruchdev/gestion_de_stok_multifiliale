@@ -65,6 +65,14 @@
 | US-019 | PATCH `/api/v1/groupe/filiales/{id}/statut` — activer/désactiver une filiale | P1 | ✅ | Terminé (branche `feature/GS-019-statut-filiale`, sur `feature/GS-018-modifier-filiale` non encore mergée). Bascule `actif` uniquement, même isolation groupe que US-018 (404 uniforme, jamais révéler l'existence). Blocage effectif des mouvements de stock/commandes sur un site désactivé **hors périmètre** (EPICs 5-6 non construits) — ce sera aux modules stock/vente de refuser toute écriture sur `actif=false` une fois bâtis ; noté pour ne pas l'oublier. **Refactor DRY supplémentaire** : `groupIdDuPrincipal()` et `chargerFilialeDuGroupe()` extraits en helpers privés partagés par `creer()`/`lister()`/`modifier()`/`changerStatut()` (élimine la 4ᵉ répétition du bloc d'isolation). `FilialeStatutRequest` (`actif` obligatoire). 10 tests verts (5 service + 5 controller). Couverture vérifiée localement : `FilialeController` 100%, `FilialeService` lignes ~97%/instructions ~97,5%. |
 | US-014b, US-081 | (P1, hors séquence P0, restants) | P1 | ❌ | Non commencé |
 
+---
+
+## EPIC 4 — Gestion des Utilisateurs (en cours)
+
+| US | Description | Priorité | Statut | Notes |
+|----|-------------|----------|--------|-------|
+| US-021 | POST `/api/v1/utilisateurs/admin-filiale` — créer un Admin Filiale | P0 | ✅ | Terminé (branche `feature/GS-021-creer-admin-filiale`). Rôle forcé `ADMIN_FILIALE`/scope `FILIALE` (jamais lu de la requête), isolation groupe du JWT → 404 uniforme (inexistante, soft-supprimée, autre groupe, maison mère), 409 `AUTH_008` sur email existant, compte né `actif=false`+`emailVerifie=false` avec mot de passe aléatoire haché (aucune connexion avant activation US-075). **US-101 intégré** : limite lue de `tenant_group.limite_utilisateurs` (jamais en dur), plan expiré traité GRATUIT (10) pour le calcul, dépassement → 403 `USR_001` (nouveau `ErrorCode`). Invitation : token UUID en Redis (`invitation:{token}` → userId, TTL 48h) envoyé via le **canal EMAIL**. **`EmailNotificationService`** (notification module) : première implémentation du port `CanalNotification` (DEC-014) — SMTP optionnel (`ObjectProvider<JavaMailSender>`, no-op journalisé sans config), envoi asynchrone (exécuteur dédié 2 threads), échecs avalés (philosophie US-006), adresse résolue depuis `destinataireId` (aucune adresse en clair dans le port). Sert US-022/US-074/US-075 sans nouvelle infra. `utilisateur` pom : dépendance au port notification (contrat uniquement, règle ArchUnit n°1) + `spring-security-test`. 307/307 tests verts (reactor complet) dont 30 nouveaux ; ArchUnit 4/4 ; intégration Flyway V1→V5 + validate OK (PG16 port 5433), 0 missing column. **Leçons** : ternaire int/Integer auto-unboxe et NPE sur null (limite absente) ; le mock canal étant synchrone, le service avale aussi les échecs synchrones (contrat retry-friendly DEC-014) ; un test compilé par l'IDE avec erreurs (`target` pollué) produit une classe à « Unresolved compilation problem » — purge du `target` du module suffi. |
+
 > ✅ **Enveloppe `ApiResponse<T>` harmonisée** : `GroupeController.consulter()` retournait initialement `ResponseEntity<GroupeResponse>` brut, désynchronisé d'`AuthController` (`ApiResponse<T>` partout, `IA_CONTEXTE_PROJET.md` §6). Corrigé — `ResponseEntity<ApiResponse<GroupeResponse>>` (`$.data.id`…), test contrôleur et docs Postman mis à jour en conséquence. Les futurs endpoints `groupe` (US-014/016-020) doivent suivre ce même pattern.
 
 ## EPIC 4 à 13 — (non commencé)
@@ -183,4 +191,4 @@ La CI (profil dev, `ddl-auto=validate`) a attrapé un drift que les tests locaux
 - reactor : **206/206 tests verts** (13 modules), integration test + 4 règles ArchUnit incluses
 - reste hors couverture : packages déjà exclus par Sonar (`config/**`, `dto/**`), quatre modules sans logique de service encore (interfaces+entités posés, implémentations à venir par US)
 
-*Dernière mise à jour : 14 septembre 2026 — merge main + gate Sonar (lombok.config, 206/206 verts), branche `feature/GS-085-fail-closed-redis`*
+*Dernière mise à jour : 15 septembre 2026 — EPIC 4 démarré (US-021 + canal email DEC-014 + US-101), 307/307 verts, branche `feature/GS-021-creer-admin-filiale`*
