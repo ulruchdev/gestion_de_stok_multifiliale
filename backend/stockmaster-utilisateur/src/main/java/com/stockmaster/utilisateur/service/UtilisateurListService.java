@@ -64,6 +64,7 @@ public class UtilisateurListService {
     private final EntrepriseRepository entrepriseRepository;
     private final TenantGroupRepository groupeRepository;
     private final PaginationProperties paginationProperties;
+    private final PerimetreAdminGuard perimetreAdminGuard;
 
     /**
      * Liste paginée et filtrée des utilisateurs du périmètre.
@@ -82,8 +83,8 @@ public class UtilisateurListService {
             RoleUtilisateur role, Boolean actif, Long filialeId, Pageable pageable) {
 
         // Garde-fous fail-fast — avant toute I/O
-        Long groupId = groupIdDuPrincipal(principal);
-        RoleUtilisateur rolePrincipal = roleDuPrincipal(principal);
+        Long groupId = perimetreAdminGuard.groupIdDuPrincipal(principal);
+        RoleUtilisateur rolePrincipal = perimetreAdminGuard.roleDuPrincipal(principal);
         if (!ROLES_ADMIN_AUTORISES.contains(rolePrincipal)) {
             throw new BusinessException(ErrorCode.SEC_ACCESS_DENIED);
         }
@@ -110,7 +111,7 @@ public class UtilisateurListService {
                         u.getId(), groupId);
                 return null;
             }
-            return toResponse(u);
+            return UtilisateurListResponse.de(u);
         });
         java.util.List<UtilisateurListResponse> contenu = reponse.getContent().stream()
                 .filter(Objects::nonNull)
@@ -139,7 +140,7 @@ public class UtilisateurListService {
     private Long resoudrePerimetre(StockMasterPrincipal principal, Long groupId, Long filialeId) {
         Long entrepriseIdJwt = principal.getEntrepriseId();
 
-        if (RoleUtilisateur.ADMIN_FILIALE == roleDuPrincipal(principal)) {
+        if (RoleUtilisateur.ADMIN_FILIALE == perimetreAdminGuard.roleDuPrincipal(principal)) {
             if (filialeId != null && !filialeId.equals(entrepriseIdJwt)) {
                 // même filiale ≠ même périmètre : refus de contenu sans révéler l'existence des données
                 throw new BusinessException(ErrorCode.SEC_ACCESS_DENIED);
@@ -157,22 +158,6 @@ public class UtilisateurListService {
         return null;
     }
 
-    private Long groupIdDuPrincipal(StockMasterPrincipal principal) {
-        Long groupId = principal != null ? principal.getGroupId() : null;
-        if (groupId == null) {
-            throw new BusinessException(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
-        }
-        return groupId;
-    }
-
-    private RoleUtilisateur roleDuPrincipal(StockMasterPrincipal principal) {
-        String role = principal.getRole();
-        if (role == null || role.isBlank()) {
-            throw new BusinessException(ErrorCode.SEC_ACCESS_DENIED);
-        }
-        return RoleUtilisateur.valueOf(role);
-    }
-
     /** Protection contre les abus : jamais plus que {@code stockmaster.pagination.max-page-size}. */
     private Pageable bornerTaillePage(Pageable pageable) {
         int taille = Math.min(pageable.getPageSize(), paginationProperties.getMaxPageSize());
@@ -180,15 +165,4 @@ public class UtilisateurListService {
                 pageable.getPageNumber(), taille, pageable.getSort());
     }
 
-    private UtilisateurListResponse toResponse(Utilisateur u) {
-        return UtilisateurListResponse.builder()
-                .id(u.getId())
-                .email(u.getEmail())
-                .prenom(u.getPrenom())
-                .nom(u.getNom())
-                .role(u.getRole())
-                .actif(u.getActif())
-                .entrepriseId(u.getEntreprise() != null ? u.getEntreprise().getId() : null)
-                .build();
-    }
 }

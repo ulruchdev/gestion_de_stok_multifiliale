@@ -1,5 +1,6 @@
 package com.stockmaster.utilisateur.dto.response;
 
+import com.stockmaster.shared.domain.entity.Utilisateur;
 import com.stockmaster.shared.domain.enums.RoleUtilisateur;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,4 +23,20 @@ public class UtilisateurListResponse {
     private RoleUtilisateur role;
     private Boolean actif;
     private Long entrepriseId;
+
+    /**
+     * Factory unique (ex-copies privées `toResponse` des services US-023/024/025,
+     * duplication Sonar) — ne projette jamais de champ secret.
+     */
+    public static UtilisateurListResponse de(Utilisateur u) {
+        return builder()
+                .id(u.getId())
+                .email(u.getEmail())
+                .prenom(u.getPrenom())
+                .nom(u.getNom())
+                .role(u.getRole())
+                .actif(u.getActif())
+                .entrepriseId(u.getEntreprise() != null ? u.getEntreprise().getId() : null)
+                .build();
+    }
 }
