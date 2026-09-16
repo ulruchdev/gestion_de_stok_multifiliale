@@ -50,6 +50,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // est injoignable — la signature JWT reste valide localement, bloquer ici ferait
                 // tomber tous les endpoints authentifiés de l'application sur un incident Redis.
                 String jti = claims.get("jti", String.class);
+                boolean redisJoignable = true;
                 if (jti != null) {
                     boolean isBlacklisted;
                     try {
@@ -60,6 +61,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         redisHealthTracker.recordFailure();
                         log.warn("Redis injoignable — vérification blacklist ignorée pour jti={} (fail-open)", jti);
                         isBlacklisted = false;
+                        redisJoignable = false;
                     }
                     if (isBlacklisted) {
                         log.warn("Token blacklisté (jti={})", jti);
@@ -70,6 +72,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
 
                 Long userId = claims.get("userId", Long.class);
+
+                // US-025 : blacklist par utilisateur — quand un admin désactive un compte,
+                // ses sessions sont révoquées immédiatement (port TokenRevocationPort),
+                // sans attendre l'expiration naturelle des tokens. Deuxième round-trip
+                // Redis accepté : la révocation immédiate est un critère d'acceptation.
+                // Fail-open identique à la blacklist jti (US-085) ; si Redis était déjà
+                // injoignable au check jti, on ne reteste pas (même panne probable).
+                if (userId != null && redisJoignable) {
+                    boolean utilisateurRevoque;
+                    try {
+                        utilisateurRevoque = Boolean.TRUE.equals(
+                                redisTemplate.hasKey("blacklist:user:" + userId));
+                    } catch (RedisConnectionFailureException e) {
+                        redisHealthTracker.recordFailure();
+                        log.warn("Redis injoignable — vérification blacklist utilisateur ignorée pour userId={} (fail-open)", userId);
+                        utilisateurRevoque = false;
+                    }
+                    if (utilisateurRevoque) {
+                        log.warn("Sessions utilisateur révoquées (US-025) — userId={}", userId);
+                        response.setStatus(401);
+                        response.getWriter().write("{\"errorCode\":\"AUTH_005\",\"detail\":\"Sessions révoquées\"}");
+                        return;
+                    }
+                }
+
                 String role = claims.get("role", String.class);
 
                 List<SimpleGrantedAuthority> authorities =
