@@ -1221,6 +1221,39 @@
               ]
             }
           }
+        },
+        {
+          "name": "Activer/Désactiver un utilisateur (US-025)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"actif\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/utilisateurs/200/statut",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "utilisateurs",
+                "200",
+                "statut"
+              ]
+            }
+          }
         }
       ]
     }
