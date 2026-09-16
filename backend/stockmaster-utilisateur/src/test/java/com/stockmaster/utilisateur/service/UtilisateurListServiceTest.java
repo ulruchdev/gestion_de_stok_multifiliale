@@ -81,6 +81,9 @@ class UtilisateurListServiceTest {
     /** Vraie instance (POJO @ConfigurationProperties) — pas de stubbing nécessaire. */
     @Spy
     private final PaginationProperties paginationProperties = new PaginationProperties();
+    /** Vraie instance — garde-fous purs, aucun stubbing nécessaire. */
+    @Spy
+    private final PerimetreAdminGuard perimetreAdminGuard = new PerimetreAdminGuard();
     @InjectMocks
     private UtilisateurListService utilisateurListService;
 

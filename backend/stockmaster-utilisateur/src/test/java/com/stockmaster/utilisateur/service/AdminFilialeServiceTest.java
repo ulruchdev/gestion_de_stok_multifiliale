@@ -95,6 +95,9 @@ class AdminFilialeServiceTest {
     @Spy
     private final ControleLimiteUtilisateursService controleLimiteUtilisateurs =
             new ControleLimiteUtilisateursService();
+    /** Vraie instance — garde-fous purs, aucun stubbing nécessaire. */
+    @Spy
+    private final PerimetreAdminGuard perimetreAdminGuard = new PerimetreAdminGuard();
 
     @InjectMocks
     private AdminFilialeService service;

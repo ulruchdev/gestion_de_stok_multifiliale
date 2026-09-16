@@ -21,6 +21,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -46,9 +47,9 @@ class UtilisateurStatutControllerTest {
     private static final Long CIBLE_ID = 200L;
 
     private TestingAuthenticationToken asAuthentication(String role, Long groupId, Long entrepriseId) {
-        Claims claims = org.mockito.Mockito.mock(Claims.class);
-        org.mockito.Mockito.when(claims.get("groupId", Long.class)).thenReturn(groupId);
-        org.mockito.Mockito.when(claims.get("entrepriseId", Long.class)).thenReturn(entrepriseId);
+        Claims claims = mock(Claims.class);
+        when(claims.get("groupId", Long.class)).thenReturn(groupId);
+        when(claims.get("entrepriseId", Long.class)).thenReturn(entrepriseId);
         return new TestingAuthenticationToken(
                 new StockMasterPrincipal(99L, claims), null, "ROLE_" + role);
     }

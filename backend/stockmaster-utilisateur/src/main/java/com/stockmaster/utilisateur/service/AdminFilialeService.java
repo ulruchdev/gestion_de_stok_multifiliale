@@ -68,6 +68,7 @@ public class AdminFilialeService {
     private final StringRedisTemplate redisTemplate;
     private final PasswordEncoder passwordEncoder;
     private final ControleLimiteUtilisateursService controleLimiteUtilisateurs;
+    private final PerimetreAdminGuard perimetreAdminGuard;
 
     /**
      * Crée le compte Admin Filiale et déclenche l'invitation.
@@ -80,7 +81,7 @@ public class AdminFilialeService {
      */
     @Transactional
     public UtilisateurAdminResponse creer(StockMasterPrincipal principal, AdminFilialeCreateRequest request) {
-        Long groupId = groupIdDuPrincipal(principal);
+        Long groupId = perimetreAdminGuard.groupIdDuPrincipal(principal);
         Entreprise filiale = chargerFilialeDuGroupe(groupId, request.getFilialeId());
 
         if (utilisateurRepository.existsByEmail(request.getEmail())) {
@@ -161,14 +162,6 @@ public class AdminFilialeService {
         byte[] bytes = new byte[24];
         SECURE_RANDOM.nextBytes(bytes);
         return UUID.nameUUIDFromBytes(bytes).toString();
-    }
-
-    private Long groupIdDuPrincipal(StockMasterPrincipal principal) {
-        Long groupId = principal != null ? principal.getGroupId() : null;
-        if (groupId == null) {
-            throw new BusinessException(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
-        }
-        return groupId;
     }
 
     /** Isolation : 404 uniforme si hors groupe, supprimée, inexistante ou type != FILIALE. */

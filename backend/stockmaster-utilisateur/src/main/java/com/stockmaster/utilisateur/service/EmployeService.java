@@ -63,6 +63,7 @@ public class EmployeService {
     private final UtilisateurRepository utilisateurRepository;
     private final PasswordEncoder passwordEncoder;
     private final ControleLimiteUtilisateursService controleLimiteUtilisateurs;
+    private final PerimetreAdminGuard perimetreAdminGuard;
 
     /**
      * Crée le compte employé avec un mot de passe provisoire (Option A).
@@ -76,7 +77,7 @@ public class EmployeService {
      */
     @Transactional
     public EmployeResponse creer(StockMasterPrincipal principal, CreerEmployeRequest request) {
-        Long groupId = groupIdDuPrincipal(principal);
+        Long groupId = perimetreAdminGuard.groupIdDuPrincipal(principal);
 
         // Rôle guard — avant toute requête en base (fail-fast, pas d'I/O inutile)
         if (!ROLES_EMPLOYE.contains(request.getRole())) {
@@ -138,14 +139,6 @@ public class EmployeService {
         if (!controleLimiteUtilisateurs.peutAjouterUtilisateur(utilisateursActifs, limiteEffective)) {
             throw new BusinessException(ErrorCode.USR_USER_LIMIT_REACHED);
         }
-    }
-
-    private Long groupIdDuPrincipal(StockMasterPrincipal principal) {
-        Long groupId = principal != null ? principal.getGroupId() : null;
-        if (groupId == null) {
-            throw new BusinessException(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
-        }
-        return groupId;
     }
 
     /**

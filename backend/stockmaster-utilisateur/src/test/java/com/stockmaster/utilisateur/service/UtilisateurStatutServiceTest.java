@@ -27,6 +27,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 
@@ -66,6 +67,9 @@ class UtilisateurStatutServiceTest {
     private UtilisateurRepository utilisateurRepository;
     @Mock
     private TokenRevocationPort tokenRevocationPort;
+    /** Vraie instance — garde-fous purs, aucun stubbing nécessaire. */
+    @Spy
+    private final PerimetreAdminGuard perimetreAdminGuard = new PerimetreAdminGuard();
     @InjectMocks
     private UtilisateurStatutService utilisateurStatutService;
 

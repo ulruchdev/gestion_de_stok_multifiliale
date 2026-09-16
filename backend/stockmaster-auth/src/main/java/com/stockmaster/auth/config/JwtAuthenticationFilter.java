@@ -46,57 +46,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 Claims claims = jwtTokenProvider.validateToken(token);
 
-                // Vérifier si le jti est blacklisté (déconnexion). US-085 : fail-open si Redis
-                // est injoignable — la signature JWT reste valide localement, bloquer ici ferait
-                // tomber tous les endpoints authentifiés de l'application sur un incident Redis.
-                String jti = claims.get("jti", String.class);
-                boolean redisJoignable = true;
-                if (jti != null) {
-                    boolean isBlacklisted;
-                    try {
-                        isBlacklisted = Boolean.TRUE.equals(
-                                redisTemplate.hasKey("blacklist:jti:" + jti));
-                        redisHealthTracker.recordSuccess();
-                    } catch (RedisConnectionFailureException e) {
-                        redisHealthTracker.recordFailure();
-                        log.warn("Redis injoignable — vérification blacklist ignorée pour jti={} (fail-open)", jti);
-                        isBlacklisted = false;
-                        redisJoignable = false;
-                    }
-                    if (isBlacklisted) {
-                        log.warn("Token blacklisté (jti={})", jti);
-                        response.setStatus(401);
-                        response.getWriter().write("{\"errorCode\":\"AUTH_005\",\"detail\":\"Token révoqué\"}");
-                        return;
-                    }
+                if (sessionRevoquee(claims, response)) {
+                    return;
                 }
 
                 Long userId = claims.get("userId", Long.class);
-
-                // US-025 : blacklist par utilisateur — quand un admin désactive un compte,
-                // ses sessions sont révoquées immédiatement (port TokenRevocationPort),
-                // sans attendre l'expiration naturelle des tokens. Deuxième round-trip
-                // Redis accepté : la révocation immédiate est un critère d'acceptation.
-                // Fail-open identique à la blacklist jti (US-085) ; si Redis était déjà
-                // injoignable au check jti, on ne reteste pas (même panne probable).
-                if (userId != null && redisJoignable) {
-                    boolean utilisateurRevoque;
-                    try {
-                        utilisateurRevoque = Boolean.TRUE.equals(
-                                redisTemplate.hasKey("blacklist:user:" + userId));
-                    } catch (RedisConnectionFailureException e) {
-                        redisHealthTracker.recordFailure();
-                        log.warn("Redis injoignable — vérification blacklist utilisateur ignorée pour userId={} (fail-open)", userId);
-                        utilisateurRevoque = false;
-                    }
-                    if (utilisateurRevoque) {
-                        log.warn("Sessions utilisateur révoquées (US-025) — userId={}", userId);
-                        response.setStatus(401);
-                        response.getWriter().write("{\"errorCode\":\"AUTH_005\",\"detail\":\"Sessions révoquées\"}");
-                        return;
-                    }
-                }
-
                 String role = claims.get("role", String.class);
 
                 List<SimpleGrantedAuthority> authorities =
@@ -115,6 +69,65 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * Vérifie les deux blacklists Redis — fail-open US-085 : Redis injoignable →
+     * on laisse passer (la signature JWT reste valide localement, bloquer ici ferait
+     * tomber tous les endpoints authentifiés de l'application sur un incident Redis) ;
+     * l'échec est enregistré au {@link RedisHealthTracker}.
+     *
+     * @return true si la requête doit être interrompue (401 déjà écrit)
+     */
+    private boolean sessionRevoquee(Claims claims, HttpServletResponse response) throws IOException {
+        // 1. Blacklist par jti (déconnexion US-085)
+        String jti = claims.get("jti", String.class);
+        boolean redisJoignable = true;
+        if (jti != null) {
+            Boolean blacklistJti;
+            try {
+                blacklistJti = redisTemplate.hasKey("blacklist:jti:" + jti);
+                redisHealthTracker.recordSuccess();
+            } catch (RedisConnectionFailureException e) {
+                redisHealthTracker.recordFailure();
+                log.warn("Redis injoignable — vérification blacklist ignorée pour jti={} (fail-open)", jti);
+                blacklistJti = false;
+                redisJoignable = false;
+            }
+            if (Boolean.TRUE.equals(blacklistJti)) {
+                log.warn("Token blacklisté (jti={})", jti);
+                ecrire401(response, "Token révoqué");
+                return true;
+            }
+        }
+
+        // 2. Blacklist par utilisateur (US-025) — quand un admin désactive un compte,
+        // ses sessions sont révoquées immédiatement (port TokenRevocationPort), sans
+        // attendre l'expiration naturelle des tokens. Deuxième round-trip Redis accepté :
+        // la révocation immédiate est un critère d'acceptation. Si Redis était déjà
+        // injoignable au check jti, on ne reteste pas (même panne probable).
+        Long userId = claims.get("userId", Long.class);
+        if (userId != null && redisJoignable) {
+            Boolean utilisateurRevoque;
+            try {
+                utilisateurRevoque = redisTemplate.hasKey("blacklist:user:" + userId);
+            } catch (RedisConnectionFailureException e) {
+                redisHealthTracker.recordFailure();
+                log.warn("Redis injoignable — vérification blacklist utilisateur ignorée pour userId={} (fail-open)", userId);
+                utilisateurRevoque = false;
+            }
+            if (Boolean.TRUE.equals(utilisateurRevoque)) {
+                log.warn("Sessions utilisateur révoquées (US-025) — userId={}", userId);
+                ecrire401(response, "Sessions révoquées");
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void ecrire401(HttpServletResponse response, String detail) throws IOException {
+        response.setStatus(401);
+        response.getWriter().write("{\"errorCode\":\"AUTH_005\",\"detail\":\"" + detail + "\"}");
     }
 
     private String extractToken(HttpServletRequest request) {

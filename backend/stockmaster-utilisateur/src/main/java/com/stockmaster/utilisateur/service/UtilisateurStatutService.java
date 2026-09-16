@@ -1,6 +1,5 @@
 package com.stockmaster.utilisateur.service;
 
-import com.stockmaster.shared.domain.entity.Entreprise;
 import com.stockmaster.shared.domain.entity.Utilisateur;
 import com.stockmaster.shared.domain.enums.RoleUtilisateur;
 import com.stockmaster.shared.exception.BusinessException;
@@ -43,6 +42,7 @@ public class UtilisateurStatutService {
 
     private final UtilisateurRepository utilisateurRepository;
     private final TokenRevocationPort tokenRevocationPort;
+    private final PerimetreAdminGuard perimetreAdminGuard;
 
     /**
      * Bascule le statut actif d'un utilisateur du périmètre.
@@ -58,8 +58,8 @@ public class UtilisateurStatutService {
             boolean actif) {
 
         // Garde-fous fail-fast — avant toute I/O (pattern US-023/024)
-        Long groupId = groupIdDuPrincipal(principal);
-        RoleUtilisateur rolePrincipal = roleDuPrincipal(principal);
+        Long groupId = perimetreAdminGuard.groupIdDuPrincipal(principal);
+        RoleUtilisateur rolePrincipal = perimetreAdminGuard.roleDuPrincipal(principal);
         if (RoleUtilisateur.ADMIN_FILIALE != rolePrincipal && RoleUtilisateur.ADMIN_GROUPE != rolePrincipal) {
             throw new BusinessException(ErrorCode.SEC_ACCESS_DENIED);
         }
@@ -68,7 +68,7 @@ public class UtilisateurStatutService {
         Utilisateur cible = utilisateurRepository.findById(cibleId)
                 .filter(u -> !Boolean.TRUE.equals(u.getSupprime()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.RES_ENTITY_NOT_FOUND));
-        verifierPerimetre(cible, groupId, rolePrincipal, principal.getEntrepriseId());
+        perimetreAdminGuard.verifierPerimetre(cible, groupId, rolePrincipal, principal.getEntrepriseId());
         if (RoleUtilisateur.ADMIN_GROUPE == cible.getRole()
                 || RoleUtilisateur.ADMIN_FILIALE == cible.getRole()) {
             throw new BusinessException(ErrorCode.SEC_ACCESS_DENIED);
@@ -87,56 +87,6 @@ public class UtilisateurStatutService {
                 modifie.getId(), Boolean.TRUE.equals(actif) ? "réactivé" : "désactivé",
                 principal.getUserId());
 
-        return toResponse(modifie);
-    }
-
-    // ─── helpers privés (miroir US-024) ─────────────────────────────────────
-
-    /**
-     * Vérifie que la cible est dans le périmètre de l'admin connecté :
-     * Admin Filiale → entreprise du JWT ; Admin Groupe → filiale de SON groupe.
-     * Sinon → 404 uniforme (jamais révéler l'existence).
-     */
-    private void verifierPerimetre(Utilisateur cible, Long groupId,
-            RoleUtilisateur rolePrincipal, Long entrepriseIdJwt) {
-        Entreprise entrepriseCible = cible.getEntreprise();
-        boolean dansPerimetre;
-        if (RoleUtilisateur.ADMIN_FILIALE == rolePrincipal) {
-            dansPerimetre = entrepriseCible != null && entrepriseIdJwt.equals(entrepriseCible.getId());
-        } else {
-            dansPerimetre = entrepriseCible != null && entrepriseCible.getGroupe() != null
-                    && groupId.equals(entrepriseCible.getGroupe().getId());
-        }
-        if (!dansPerimetre) {
-            throw new BusinessException(ErrorCode.RES_ENTITY_NOT_FOUND);
-        }
-    }
-
-    private Long groupIdDuPrincipal(StockMasterPrincipal principal) {
-        Long groupId = principal != null ? principal.getGroupId() : null;
-        if (groupId == null) {
-            throw new BusinessException(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
-        }
-        return groupId;
-    }
-
-    private RoleUtilisateur roleDuPrincipal(StockMasterPrincipal principal) {
-        String role = principal.getRole();
-        if (role == null || role.isBlank()) {
-            throw new BusinessException(ErrorCode.SEC_ACCESS_DENIED);
-        }
-        return RoleUtilisateur.valueOf(role);
-    }
-
-    private UtilisateurListResponse toResponse(Utilisateur u) {
-        return UtilisateurListResponse.builder()
-                .id(u.getId())
-                .email(u.getEmail())
-                .prenom(u.getPrenom())
-                .nom(u.getNom())
-                .role(u.getRole())
-                .actif(u.getActif())
-                .entrepriseId(u.getEntreprise() != null ? u.getEntreprise().getId() : null)
-                .build();
+        return UtilisateurListResponse.de(modifie);
     }
 }
