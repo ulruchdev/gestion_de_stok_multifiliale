@@ -1254,6 +1254,73 @@
               ]
             }
           }
+        },
+        {
+          "name": "👁️ Consulter mon profil (US-026)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/utilisateurs/profil",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "utilisateurs",
+                "profil"
+              ]
+            },
+            "description": "US-026 — l'utilisateur connecté consulte son propre profil (prenom, nom, adresseVille, photo, email, rôle). Email/rôle non modifiables ici."
+          }
+        },
+        {
+          "name": "✏️ Modifier mon profil (US-026)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "type": "text",
+                  "key": "profil",
+                  "value": "{\"prenom\":\"Jean\",\"nom\":\"Dupont\",\"adresseVille\":\"Douala\"}",
+                  "contentType": "application/json"
+                },
+                {
+                  "type": "file",
+                  "key": "photo",
+                  "src": "",
+                  "description": "Optionnel — image ≤ 2 Mo (JPEG/PNG/WebP)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/utilisateurs/profil",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "utilisateurs",
+                "profil"
+              ]
+            },
+            "description": "US-026 — sémantique PATCH : champs JSON absents = inchangés. Part JSON obligatoire, photo optionnelle (upload MinIO, préfixe utilisateur/<id>)."
+          }
         }
       ]
     }
