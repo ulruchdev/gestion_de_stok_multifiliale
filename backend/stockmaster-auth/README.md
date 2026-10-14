@@ -4,6 +4,7 @@
 > **Statut :** ✅ Actif (code implémenté)
 > **Dépendance :** `stockmaster-shared`
 > **Package :** `com.stockmaster.auth`
+> **Swagger :** activé en profil dev — voir section « Documentation API »
 
 ---
 
@@ -15,9 +16,7 @@ Module d'authentification et de gestion des accès. Il gère :
 - ✅ Connexion JWT avec access + refresh tokens (US-008)
 - ✅ Rate limiting sur `/login` (Redis)
 - 🔜 Inscription groupe multi-sites (US-007)
-- 🔜 Refresh token / Déconnexion (US-009, US-010)
-- 🔜 Mot de passe oublié / Réinitialisation (US-011, US-012)
-- 🔜 Changement de mot de passe (US-013)
+- 🔜 Refresh token / Déconnexion / Mot de passe oublié / Réinitialisation / Changement de mot de passe (US-009 → US-013)
 
 ---
 
@@ -73,6 +72,8 @@ com.stockmaster.auth/
 | `/api/v1/auth/inscription/entreprise-unique` | POST | ❌ Non | Crée TenantGroup + Entreprise + Utilisateur |
 | `/api/v1/auth/login` | POST | ❌ Non | Connecte et retourne JWT |
 
+> Pour l'ensemble des endpoints, voir la collection Postman (`document/test_postman.md`) et Swagger.
+
 ### Inscription — Requête
 ```json
 {
@@ -120,6 +121,17 @@ com.stockmaster.auth/
 
 ---
 
+## Documentation API (Swagger / OpenAPI)
+
+- **Profil dev :** `mvn spring-boot:run -pl stockmaster-bootstrap` (ou JAR équivalent)
+- **Interface Swagger UI :** `http://localhost:8080/swagger-ui/index.html`
+- **Contrat OpenAPI 3.0 :** `http://localhost:8080/v3/api-docs`
+- **Règle projet :** `/swagger-ui/**`, `/v3/api-docs` et les ressources Swagger sont explicitement autorisés dans `SecurityConfig` (voir `stockmaster-auth/src/main/java/com/stockmaster/auth/config/SecurityConfig.java`)
+
+> Swagger UI est accessible en dev sans authentification JWT.
+
+---
+
 ## Tests
 
-Aucun test unitaire pour l'instant (à implémenter avec US-009 à US-012).
+Aucun test unitaire pour l'instant (à implémenter avec US-009 → US-013).

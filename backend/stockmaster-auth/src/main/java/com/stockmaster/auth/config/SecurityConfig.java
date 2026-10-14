@@ -35,7 +35,20 @@ public class SecurityConfig {
                     "/api/v1/auth/reset-password",
                     "/api/v1/auth/activer-compte",
                     "/actuator/health",
-                    "/actuator/info"
+                    "/actuator/info",
+                    "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/swagger-ui/index.html",
+                    "/v3/api-docs/**",
+                    "/v3/api-docs",
+                    "/v3/api-docs.yaml",
+                    "/swagger-resources/**",
+                    "/swagger-resources",
+                    "/configuration/ui",
+                    "/configuration/security",
+                    "/webjars/**",
+                    "/favicon.ico",
+                    "/error"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
