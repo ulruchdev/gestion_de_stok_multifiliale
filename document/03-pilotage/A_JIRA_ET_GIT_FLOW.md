@@ -135,7 +135,9 @@ Avant toute implémentation, ces éléments DOIVENT être vérifiés :
 | Document | Utilité |
 |---|---|
 | `document/02-backlogs/BACKLOG_StockMaster_CM.md` | Critères d'acceptation, endpoint, priorité |
-| `document/03-pilotage/progress-ledger.md` | Journal unique des statuts US (remplace implementation.md) |
+| `document/referentiel/00-INDEX.md` | **Index de la norme** `GS-REF-2026-01` — en cas de conflit, **le référentiel a raison** |
+| `document/referentiel/12-journal-decisions.md` | Journal des `DEC-nnn` — **lire la/les décisions concernées par la US** |
+| `document/03-pilotage/progress-ledger.md` | Journal unique des statuts US (remplace implementation.md — supprimé le 7 sept. 2026) |
 | `document/03-pilotage/A_JIRA_ET_GIT_FLOW.md` | Workflow à suivre (ce document) |
 | `document/03-pilotage/strategie_test.md` | Stratégie et comptes de tests |
 | `document/test_postman.md` | Endpoints documentés |
@@ -203,7 +205,9 @@ Toute modification d'API ou de comportement DOIT être répercutée dans ces doc
 | `document/03-pilotage/strategie_test.md` | ✅ Si comptes de tests changent |
 | `document/postman_collection.json` | ✅ Si nouvel endpoint ou modification d'endpoint |
 | `document/test_postman.md` | ✅ Si nouvel endpoint ou modification d'endpoint |
+| `document/referentiel/06-modele-donnees.md` | ✅ **Si migration Flyway — dans la même PR** (règle `REF §14.3`) |
 | `document/03-pilotage/A_JIRA_ET_GIT_FLOW.md` | ✅ Si le workflow évolue |
+| `document/referentiel/12-journal-decisions.md` | ✅ Seulement si une **nouvelle décision** est prise — jamais amendée, nouvelle entrée |
 
 ---
 
@@ -262,17 +266,17 @@ Une US est considérée comme DONE quand :
 ## 📎 Résumé visuel du workflow
 
 ```
-1. ANALYSE des docs + codebase
+1. ANALYSE des docs (référentiel + backlog + ledger) + codebase
 2. QUESTIONNEMENT si ambiguïté
 3. PLAN présenté → VALIDATION utilisateur
-4. git checkout main && git pull
-5. git checkout -b feature/GS-XXX
-6. TDD : TESTS d'abord (RED)
-7. IMPLÉMENTATION (GREEN)
-8. TESTS finaux
-9. DOCUMENTS mis à jour
-10. COMMIT final
-11. TESTS MANUELS fournis → VALIDATION push
-12. git push (après validation)
-13. PR créée par l'utilisateur
+4. BRANCHE : git checkout main && git pull && git checkout -b feature/GS-XXX
+5. TDD : TESTS d'abord (RED)
+6. IMPLÉMENTATION (GREEN)
+7. TESTS finaux (mvn test -pl <module> -am)
+8. DOCUMENTS mis à jour (ledger, strategie_test, postman, référentiel si migration)
+9. COMMIT final (conventionnel)
+10. TESTS MANUELS fournis → VALIDATION push
+11. git push (après validation) → l'utilisateur crée la PR vers main
 ```
+
+> **Ce résumé reprend exactement les 11 étapes du schéma en tête de document** — une US = 11 étapes, pas 13.

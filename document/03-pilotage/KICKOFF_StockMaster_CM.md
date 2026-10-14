@@ -2,6 +2,22 @@
 ### Équipe : Ulrich (Fullstack + DevOps) · Stephan (Fullstack) · Siko (Frontend + Design)
 ### Démarrage : demain | Repo : github.com/ulruchdev/gestion_de_stok_multifiliale (monorepo)
 
+> ### Statut : 📦 **Document fondateur — daté du Sprint 0 (juin 2026), non maintenu.**
+>
+> ⚠️ **Ses §3 (« État réel du projet ») et §4 (planning) sont périmés** : ils décrivent un instantané
+> de juin 2026 (« 7 US mergées sur 80 », « Design 0 % », « Frontend 0 % », « ~16 sprints ≈ 7-8 mois »)
+> qui n'est plus celui du dépôt.
+>
+> **Autorités actuelles :**
+> - état réel des US → `document/03-pilotage/progress-ledger.md`
+> - périmètre et ordre de livraison → `document/referentiel/13-perimetre-planning.md` + `GS-PLAN-2026-01`
+> - règles → `document/referentiel/` (`GS-REF-2026-01`)
+> - décisions → `document/referentiel/12-journal-decisions.md` (41 `DEC-nnn`)
+>
+> Voir aussi la contradiction d'équipe relevée par l'audit (**M4 / C-13**) : `GS-RACI §2` déclare
+> « aucun designer ni développeur frontend identifié » alors que ce document nomme Stephan et Siko.
+> **Point à trancher par le porteur** — non corrigé ici pour ne pas inventer une décision.
+
 ---
 
 ## 1. Décision d'organisation (finale, pas de débat)
@@ -109,6 +125,12 @@ gestion_de_stok_multifiliale/
 ---
 
 ## 3. État réel du projet (audit du repo, pas une estimation)
+
+> 📦 **Instantané du Sprint 0 (juin 2026) — ne plus utiliser comme état courant.**
+> Chiffres ci-dessous conservés pour trace : 7 US mergées / 27 SP · 2 modules sur 11 avec du code ·
+> 5 PR en attente · Design 0 % · Frontend 0 %.
+> **État au 9 oct. 2026 :** 29 US sur 108 · 184 commits · 421 tests · 4 modules avec services ·
+> 7 modules en fondations · frontend 63/246 SP · design 25/160 SP → **voir `progress-ledger.md`**.
 
 - **7 US mergées sur `main`** (US-001 à 006, 008) sur 80 — fondations techniques + inscription entreprise unique + login. 27 SP faits sur 285.
 - **2 modules sur 11 ont du code** (`stockmaster-shared`, `stockmaster-auth`). Les 9 autres sont des stubs vides.

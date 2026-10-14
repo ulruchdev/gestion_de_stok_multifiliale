@@ -45,7 +45,9 @@ Ce guide est destiné à tout **QA** ou **développeur** travaillant sur StockMa
 
 ### 1.2 Services requis pour les tests
 
-Les tests d'intégration nécessitent **PostgreSQL 16** et **Redis 7** :
+La **suite unitaire** (la grande majorité des tests) est **100 % mocks** : elle passe **sans aucun service démarré**.
+
+Seuls les **futurs tests d'intégration** — et en pratique `StockMasterApplicationTest` (profil `integration`, démarrage complet de l'application) — nécessitent **PostgreSQL 16** et **Redis 7** :
 
 ```bash
 # Lancer les services
@@ -114,7 +116,7 @@ mvn verify
 
 # Ouvrir le rapport HTML
 # Windows :
-start stockmaster-shared/target/site/jacoco/index.html
+start stockmaster-shared/target/site/jacoco/index.html   # couverture du module shared
 
 # Linux :
 xdg-open stockmaster-shared/target/site/jacoco/index.html
@@ -141,7 +143,11 @@ mvn install -DskipTests sonar:sonar \
 mvn package -DskipTests -q
 
 # Le JAR se trouve dans :
-# stockmaster-shared/target/stockmaster-shared-1.0.0-SNAPSHOT.jar
+# stockmaster-bootstrap/target/stockmaster-bootstrap-1.0.0-SNAPSHOT.jar
+#
+# ⚠️ stockmaster-shared est une LIBRARY module
+#    (<skip>true</skip> sur spring-boot-maven-plugin) : il ne produit
+#    PAS de JAR exécutable. Le main() vit dans stockmaster-bootstrap.
 ```
 
 ### 2.8 OWASP Dependency Check (optionnel)
@@ -175,7 +181,12 @@ mvn compile -q
 mvn verify
 ```
 
-**Résultat attendu :** `BUILD SUCCESS` + `90 tests (18 shared + 72 auth)` + `Coverage ≥ 80%`
+**Résultat attendu :** `BUILD SUCCESS` + **421 tests, 0 failure, 0 error**
+
+> **Compteur réel (vérifié le 9 oct. 2026) :** shared 71 · auth 96 · groupe 67 · catalogue 2 · notification 8 · utilisateur 132 · tiers 2 · achat 3 · stock 20 · vente 8 · reporting 5 · bootstrap 7 (dont 4 ArchUnit) = **421**.
+> Les 3 tests de `bootstrap` (`StockMasterApplicationTest`) échouent **sans PostgreSQL** — c'est environnemental, pas un bug : `docker compose up -d postgres redis` les rend verts.
+>
+> ⚠️ **Le gate « Coverage ≥ 80 % » n'est PAS actif dans le build** (item **C-14** de la checklist `DEC-031` ouvert : le pom parent ne contient que `prepare-agent` + `report`, aucune exécution `jacoco:check`). Ne prétendez pas qu'il bloque la CI.
 
 ### ✅ Étape 3 — Build JAR
 
@@ -183,7 +194,7 @@ mvn verify
 mvn package -DskipTests -q
 ```
 
-**Résultat attendu :** `BUILD SUCCESS` + JAR dans `stockmaster-shared/target/`
+**Résultat attendu :** `BUILD SUCCESS` + JAR dans `stockmaster-bootstrap/target/`
 
 ### ✅ Étape 4 (optionnelle locale, automatique dans le CI) — Vérifier que l'application démarre
 
@@ -203,16 +214,10 @@ curl http://localhost:8080/actuator/health
 git push origin ma-branche
 ```
 
-### ✅ Étape 4 — Push et CI
-
-```bash
-git push origin ma-branche
-```
-
 **Résultat attendu :** Le pipeline CI sur GitHub Actions doit passer :
 - ✅ Compilation (12/12 modules)
-- ✅ Tests unitaires (18 shared + 72 auth = 90 tests)
-- ✅ JaCoCo coverage ≥ 80%
+- ✅ Tests unitaires (421 tests, 0 failure, 0 error)
+- ✅ JaCoCo — *rapport généré ; le `jacoco:check` ≥ 80 % reste à activer (C-14)*
 - ✅ SonarCloud analysis
 - ✅ Build JAR
 
@@ -221,7 +226,7 @@ git push origin ma-branche
 ```
 Avant push :
   1. mvn compile -q                     → SUCCESS (12 modules)
-  2. mvn verify                          → SUCCESS (90 tests : 18 shared + 72 auth + ≥80% coverage)
+  2. mvn verify                          → SUCCESS (421 tests, 0 échec — dont 4 ArchUnit)
   3. mvn package -DskipTests             → SUCCESS (JAR généré)
   4. java -jar .../target/*.jar          → Vérifier /actuator/health = UP (optionnel)
   5. git push                             → CI pipeline vert
@@ -239,7 +244,7 @@ Pipeline CI (automatique après push) :
 
 ### 4.1 Jobs du pipeline
 
-Le pipeline CI (`.github/workflows/ci.yml`) exécute **2 jobs** :
+Le pipeline CI (`.github/workflows/ci-backend.yml`) exécute **2 jobs** :
 
 #### Job 1 : `Build & Test`
 
@@ -307,7 +312,7 @@ La branche `main` est protégée :
 docker compose up -d
 
 # 2. Lancer l'application (profil dev)
-mvn spring-boot:run -pl stockmaster-shared
+mvn spring-boot:run -pl stockmaster-bootstrap
 
 # 3. Ouvrir Swagger UI dans le navigateur
 # → http://localhost:8080/swagger-ui.html
@@ -342,15 +347,17 @@ mvn spring-boot:run -pl stockmaster-shared
 
 ```json
 {
-  "nomBoutique": "Épicerie Centrale",
-  "ville": "Douala",
-  "quartier": "Akwa",
-  "prenom": "Jean",
-  "nom": "Kamga",
+  "nomEntreprise": "Épicerie Centrale",
+  "nif": "M071234567890Z",
   "email": "jean.kamga@test.cm",
+  "telephone": "+237691234567",
+  "adminNom": "Kamga",
+  "adminPrenom": "Jean",
   "motDePasse": "Test@2026"
 }
 ```
+
+> ⚠️ Contraintes : `telephone` **E.164 obligatoire** · `nif` optionnel · `ville`/`quartier` **n'existent plus** (retraits du DTO en juillet 2026).
 
 **Réponse attendue :** `201 CREATED`
 ```json
@@ -458,7 +465,7 @@ class AuthServiceTest {
 | Ne pas tester Spring Boot en intégration si inutile | `@ExtendWith(MockitoExtension.class)` est + rapide |
 | Tester les cas d'erreur autant que les cas heureux | Couverture des chemins d'échec |
 | Utiliser `@DisplayName` en français lisible | Les QA doivent comprendre les tests |
-| Coverage ≥ 80% sur chaque module | Règle JaCoCo dans le pom.xml |
+| Coverage ≥ 80% sur chaque module | Cible actée ; **le `jacoco:check` n'est pas encore branché dans le build** (checklist `DEC-031` C-14) |
 | Tester l'isolation multi-tenant | Filtre `entreprise_id` systématique |
 
 ### 6.4 Ce qui doit être testé (par priorité)
