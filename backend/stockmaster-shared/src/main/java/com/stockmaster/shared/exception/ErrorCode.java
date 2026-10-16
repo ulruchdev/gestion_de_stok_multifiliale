@@ -3,13 +3,7 @@ package com.stockmaster.shared.exception;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-/**
- * Catalogue centralisé des codes d'erreur métier de StockMaster CM.
- *
- * <p>Chaque enum définit un code unique, un titre lisible et un code HTTP associé.
- * Utilisé par {@link BusinessException} et {@code GlobalExceptionHandler}
- * pour produire des réponses RFC 7807 cohérentes.</p>
- */
+/** ... */
 @Getter
 @RequiredArgsConstructor
 public enum ErrorCode {
@@ -26,6 +20,7 @@ public enum ErrorCode {
     AUTH_EMAIL_ALREADY_EXISTS("AUTH_008", "Cet email est déjà utilisé", 409),
     AUTH_RESET_TOKEN_INVALID("AUTH_009", "Token de réinitialisation invalide ou expiré", 400),
     AUTH_RESET_TOKEN_EXPIRED("AUTH_010", "Token de réinitialisation expiré", 400),
+    AUTH_UNAUTHORIZED("AUTH_011", "Authentification requise", 401),
 
     // ========== RES — Ressources ==========
     RES_ENTITY_NOT_FOUND("RES_001", "Ressource non trouvée", 404),
@@ -46,6 +41,9 @@ public enum ErrorCode {
     GRP_CROSS_GROUP_FORBIDDEN("GRP_002", "Opération interdite entre des groupes différents", 403),
     GRP_SAME_SOURCE_AND_TARGET("GRP_003", "La filiale source et la filiale cible doivent être différentes", 400),
     GRP_DUPLICATE_NOM_GROUPE("GRP_004", "Ce nom de groupe est déjà utilisé", 409),
+
+    // ========== CAT — Catalogue ==========
+    CAT_TAUX_TVA_INVALIDE("CAT_001", "Taux de TVA non supporté", 400),
 
     // ========== STK — Stock ==========
     STK_INSUFFICIENT_STOCK("STK_001", "Stock insuffisant pour réaliser cette opération", 409),

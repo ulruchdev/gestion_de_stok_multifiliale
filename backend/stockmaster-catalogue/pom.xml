@@ -14,5 +14,12 @@
     <name>StockMaster CM — Catalogue (catégories &amp; articles)</name>
     <dependencies>
         <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-shared</artifactId></dependency>
+
+        <!-- Tests MockMvc : post-processors security (@WebMvcTest + @PreAuthorize) -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

@@ -12,4 +12,7 @@ public interface TenantGroupRepository extends JpaRepository<TenantGroup, Long> 
 
     /** US-014 : unicité du NIF parmi les groupes non supprimés, hors le groupe modifié lui-même. */
     boolean existsByNifAndSupprimeFalseAndIdNot(String nif, Long id);
+
+    /** US-027 : charge un groupe existant et non soft-supprimé (catalogue group-scoped, DEC-002). */
+    java.util.Optional<TenantGroup> findByIdAndSupprimeFalse(Long id);
 }
