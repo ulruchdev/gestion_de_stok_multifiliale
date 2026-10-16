@@ -6,8 +6,11 @@ import lombok.Getter;
 import java.math.BigDecimal;
 
 /**
- * US-027 — réponse de création de catégorie. Aucun champ secret : tout est
- * public dans le périmètre du groupe.
+ * US-027 — réponse de création de catégorie.
+ * US-028/029/030 — réponse commune aux opérations catalogue (lecture, modification,
+ * suppression logique).
+ *
+ * <p>Aucun champ secret : tout est public dans le périmètre du groupe.</p>
  */
 @Getter
 @Builder
