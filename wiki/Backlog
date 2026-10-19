@@ -1,0 +1,41 @@
+# Backlog StockMaster CM
+
+## US Backend (104)
+- US-001 à US-012 : Fondations (Spring Boot, Flyway, CI/CD, Docker, Auth)
+- US-013 à US-026 : Utilisateurs & Groupe (rôles, filiales, profils)
+- US-027 à US-035 : Catalogue (catégories, articles, CRUD)
+- US-036 à US-043 : Tiers (fournisseurs, clients)
+- US-044 à US-058 : Stock (mouvements, seuils, transferts)
+- US-059 à US-072 : Ventes & Achats (B2B, commandes)
+- US-073 à US-080 : Caisse (ouverture, vente, clôture, rapprochement)
+- US-081 à US-104 : Reporting, Notifications, Alerts, CSV, Idempotence
+
+## US Frontend (91)
+- US-F010 à US-F019 : Interface de base (login, dashboard, navigation, formulaires)
+- US-F020 à US-F034 : Dashboards & Catalogue
+- US-F035 à US-F105 : Modules avancés (caisse, transferts, inventaire, reporting, logs, config)
+
+## Épics
+| Epic | Description | US Backend | US Frontend |
+|------|-------------|------------|-------------|
+| EPIC-1 | Fondations | US-001 à US-012 | US-F010 à US-F019 |
+| EPIC-2 | Auth | US-008 à US-013 | — |
+| EPIC-3 | Groupe & Filiales | US-014 à US-020 | — |
+| EPIC-4 | Utilisateurs | US-021 à US-026 | — |
+| EPIC-5 | Catalogue | US-027 à US-035 | US-F030 à US-F034 |
+| EPIC-6 | Tiers | US-036 à US-043 | US-F040 à US-F044 |
+| EPIC-7 | Achats | US-044 à US-053 | US-F050 à US-F054 |
+| EPIC-8 | Stock | US-054 à US-063 | US-F030, US-F031 |
+| EPIC-9 | Ventes B2B | US-064 à US-072 | US-F060 à US-F062 |
+| EPIC-10 | Caisse | US-073 à US-080 | US-F063 à US-F066 |
+| EPIC-11 | Transferts | US-081 à US-084 | US-F070 |
+| EPIC-12 | Notifications | US-085 à US-094 | — |
+| EPIC-13 | Reporting | US-095 à US-104 | US-F072, US-F083 |
+| EPIC-14 | Caisse frontend | — | US-F063 à US-F066 |
+| EPIC-15 | Inventaire | US-092, US-093, US-094 | US-F073, US-F074 |
+| EPIC-16 | Import CSV | US-096 à US-100 | — |
+| EPIC-17 | Qualité API | US-101 à US-104 | — |
+| EPIC-F01 | UI de base | — | US-F010 à US-F019 |
+| EPIC-F02 | Dashboards | — | US-F020 à US-F022 |
+| EPIC-F03 | Catalogue FE | — | US-F030 à US-F034 |
+| EPIC-F04 | Tiers FE | — | US-F040 à US-F044 |
