@@ -1,0 +1,26 @@
+# Plan de projet
+
+## Objectifs
+
+Délivrer une application de gestion de stock multifiliale complète avec :
+- Gestion des utilisateurs et rôles (multi-tenant)
+- Gestion du catalogue (catégories, articles)
+- Gestion des fournisseurs et clients
+- Gestion des achats et ventes
+- Gestion du stock et des transferts inter-filiales
+- Caisse et rapprochement
+- Dashboards et reporting
+- Notifications et alertes
+
+## Équipe
+
+- **Product Owner** : Ange-Clément
+- **DevOps** : Ange-Clément
+
+## Livrables
+
+### Backend (104 US)
+- US-001 à US-104 : Fondations, Auth, Utilisateurs, Groupe, Catalogue, Tiers, Stock, Ventes, Achats, Caisse, Transferts, Reporting, Notifications
+
+### Frontend (91 US)
+- US-F010 à US-F105 : Interface utilisateur complète couvrant tous les modules
