@@ -181,6 +181,20 @@ mvn compile -q
 mvn verify
 ```
 
+**Résultat attendu :** `BUILD SUCCESS` + compte de tests par module réel +
+`Coverage ≥ 80%` sur nouveau code.
+
+Exemple récent (module catalogue, branche `feature/GS-027-creer-categorie`) :
+
+```bash
+cd backend && mvn -q test -pl stockmaster-catalogue \
+  -Dtest=CategorieServiceTest,CategorieControllerTest,ArticleDefaultsTest \
+  -DfailIfNoTests=false
+```
+
+**Résultat observé en local :** `BUILD SUCCESS` —
+`CategorieServiceTest` 39 tests (2 ignorés dans `TauxTva`), `CategorieControllerTest`
+20 tests, `ArticleDefaultsTest` 2 tests — aucun échec, aucune erreur.
 **Résultat attendu :** `BUILD SUCCESS` + **421 tests, 0 failure, 0 error**
 
 > **Compteur réel (vérifié le 9 oct. 2026) :** shared 71 · auth 96 · groupe 67 · catalogue 2 · notification 8 · utilisateur 132 · tiers 2 · achat 3 · stock 20 · vente 8 · reporting 5 · bootstrap 7 (dont 4 ArchUnit) = **421**.
@@ -216,6 +230,9 @@ git push origin ma-branche
 
 **Résultat attendu :** Le pipeline CI sur GitHub Actions doit passer :
 - ✅ Compilation (12/12 modules)
+- ✅ Tests unitaires par module (ex. catalogue : `CategorieServiceTest` +
+  `CategorieControllerTest` + `ArticleDefaultsTest` verts en local)
+- ✅ JaCoCo coverage ≥ 80% sur nouveau code
 - ✅ Tests unitaires (421 tests, 0 failure, 0 error)
 - ✅ JaCoCo — *rapport généré ; le `jacoco:check` ≥ 80 % reste à activer (C-14)*
 - ✅ SonarCloud analysis
@@ -244,7 +261,8 @@ Pipeline CI (automatique après push) :
 
 ### 4.1 Jobs du pipeline
 
-Le pipeline CI (`.github/workflows/ci-backend.yml`) exécute **2 jobs** :
+Le pipeline CI du backend (`.github/workflows/ci-backend.yml`) exécute les jobs de build + tests Maven ;
+le pipeline frontend (`.github/workflows/ci-frontend.yml`) exécute le build Vite + TypeScript typecheck.
 
 #### Job 1 : `Build & Test`
 
@@ -555,7 +573,7 @@ curl http://localhost:8080/actuator/health
 | Date | Auteur | Changement | Raison |
 |---|---|---|---|
 | Juin 2026 | Codebuff | Création initiale | Guide stratégie de test |
-| | | | |
+| 2026-10-19 | clement ange | Mise à jour compte de tests catalogue et CI | Ajout exemple réel `CategorieServiceTest`/`CategorieControllerTest`/`ArticleDefaultsTest` (39 + 20 + 2 tests, 2 ignorés) et alignement workflow pré-push sur `ci-backend.yml`/`ci-frontend.yml` |
 
 ---
 
