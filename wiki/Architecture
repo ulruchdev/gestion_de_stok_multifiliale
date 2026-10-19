@@ -1,0 +1,18 @@
+# Architecture
+
+## Stack technique
+
+| Couche | Technologie |
+|--------|-------------|
+| Backend framework | Spring Boot 3.3 + Java 21 |
+| ORM / DB | Hibernate 6.5 + PostgreSQL 16 |
+| Authentification | JWT (access + refresh) + Argon2id |
+| Cache / Sessions | Redis |
+| Docs API | SpringDoc OpenAPI 3 |
+| Frontend framework | React 19 + TypeScript 5 |
+| Build tool frontend | Vite 6 |
+| Styles | TailwindCSS 4 |
+| State management | React Context + useReducer |
+| Testing backend | JUnit 5 + Mockito + Testcontainers |
+| Testing frontend | Vitest + React Testing Library |
+| CI/CD | GitHub Actions |
