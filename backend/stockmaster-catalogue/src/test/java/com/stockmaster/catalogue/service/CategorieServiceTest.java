@@ -4,6 +4,7 @@ import com.stockmaster.catalogue.domain.entity.Article;
 import com.stockmaster.catalogue.domain.entity.Categorie;
 import com.stockmaster.catalogue.dto.request.CategorieCreateRequest;
 import com.stockmaster.catalogue.dto.request.CategorieUpdateRequest;
+import com.stockmaster.catalogue.repository.ArticleRepository;
 import com.stockmaster.catalogue.repository.CategorieRepository;
 import com.stockmaster.shared.domain.entity.TenantGroup;
 import com.stockmaster.shared.exception.BusinessException;
@@ -63,6 +64,7 @@ class CategorieServiceTest {
     @Mock
     private TenantGroupRepository tenantGroupRepository;
 
+    private ArticleRepository articleRepository;
     private PerimetreCatalogueGuard perimetreCatalogueGuard;
 
     private TauxTvaAutorises tauxTvaAutorises;
@@ -80,8 +82,9 @@ class CategorieServiceTest {
                 new BigDecimal("19.25"), new BigDecimal("0"));
         tauxTvaAutorises = new TauxTvaAutorises(tauxAutorises);
         perimetreCatalogueGuard = spy(new PerimetreCatalogueGuard());
+        articleRepository = mock(ArticleRepository.class);
         categorieService = new CategorieService(
-                categorieRepository, tenantGroupRepository,
+                categorieRepository, articleRepository, tenantGroupRepository,
                 tauxTvaAutorises, perimetreCatalogueGuard);
     }
 
@@ -380,8 +383,9 @@ class CategorieServiceTest {
             Set<BigDecimal> tauxAutorises = Set.of(
                     new BigDecimal("19.25"), new BigDecimal("0"),
                     new BigDecimal("6.6"));
+            articleRepository = mock(ArticleRepository.class);
             CategorieService service = new CategorieService(
-                    categorieRepository, tenantGroupRepository,
+                    categorieRepository, articleRepository, tenantGroupRepository,
                     new TauxTvaAutorises(tauxAutorises),
                     perimetreCatalogueGuard);
 
@@ -646,8 +650,9 @@ class CategorieServiceTest {
             Set<BigDecimal> tauxAutorises = Set.of(
                     new BigDecimal("19.25"), new BigDecimal("0"),
                     new BigDecimal("6.6"));
+            articleRepository = mock(ArticleRepository.class);
             CategorieService service = new CategorieService(
-                    categorieRepository, tenantGroupRepository,
+                    categorieRepository, articleRepository, tenantGroupRepository,
                     new TauxTvaAutorises(tauxAutorises),
                     perimetreCatalogueGuard);
 
@@ -823,7 +828,7 @@ class CategorieServiceTest {
                     .thenReturn(Optional.of(groupeActif()));
             lenient().when(categorieRepository.findByIdAndSupprimeFalse(42L))
                     .thenReturn(Optional.of(categorie));
-            lenient().when(categorieRepository.existsArticleByCategorieIdAndGroupeIdAndSupprimeFalse(42L, GROUP_ID))
+            lenient().when(articleRepository.existsByGroupeIdAndCategorieIdAndSupprimeFalse(GROUP_ID, 42L))
                     .thenReturn(false);
             lenient().when(categorieRepository.save(any(Categorie.class)))
                     .thenAnswer(inv -> inv.getArgument(0));
@@ -871,7 +876,7 @@ class CategorieServiceTest {
                     .thenReturn(Optional.of(groupeActif()));
             lenient().when(categorieRepository.findByIdAndSupprimeFalse(42L))
                     .thenReturn(Optional.of(categorie));
-            lenient().when(categorieRepository.existsArticleByCategorieIdAndGroupeIdAndSupprimeFalse(42L, GROUP_ID))
+            lenient().when(articleRepository.existsByGroupeIdAndCategorieIdAndSupprimeFalse(GROUP_ID, 42L))
                     .thenReturn(true);
 
             var ex = catchThrowableOfType(
@@ -903,7 +908,7 @@ class CategorieServiceTest {
                     .thenReturn(Optional.of(groupeActif()));
             lenient().when(categorieRepository.findByIdAndSupprimeFalse(42L))
                     .thenReturn(Optional.of(categorie));
-            lenient().when(categorieRepository.existsArticleByCategorieIdAndGroupeIdAndSupprimeFalse(42L, GROUP_ID))
+            lenient().when(articleRepository.existsByGroupeIdAndCategorieIdAndSupprimeFalse(GROUP_ID, 42L))
                     .thenReturn(false);
 
             var ex = catchThrowableOfType(
@@ -923,7 +928,7 @@ class CategorieServiceTest {
                     .thenReturn(Optional.of(groupeActif()));
             lenient().when(categorieRepository.findByIdAndSupprimeFalse(42L))
                     .thenReturn(Optional.of(categorie));
-            lenient().when(categorieRepository.existsArticleByCategorieIdAndGroupeIdAndSupprimeFalse(42L, GROUP_ID))
+            lenient().when(articleRepository.existsByGroupeIdAndCategorieIdAndSupprimeFalse(GROUP_ID, 42L))
                     .thenReturn(false);
 
             var ex = catchThrowableOfType(
@@ -980,7 +985,7 @@ class CategorieServiceTest {
                     .thenReturn(Optional.of(groupeActif()));
             lenient().when(categorieRepository.findByIdAndSupprimeFalse(42L))
                     .thenReturn(Optional.of(categorie));
-            lenient().when(categorieRepository.existsArticleByCategorieIdAndGroupeIdAndSupprimeFalse(42L, GROUP_ID))
+            lenient().when(articleRepository.existsByGroupeIdAndCategorieIdAndSupprimeFalse(GROUP_ID, 42L))
                     .thenReturn(false);
             lenient().when(categorieRepository.save(any(Categorie.class)))
                     .thenAnswer(inv -> inv.getArgument(0));

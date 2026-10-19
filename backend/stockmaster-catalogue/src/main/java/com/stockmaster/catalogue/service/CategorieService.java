@@ -5,6 +5,7 @@ import com.stockmaster.catalogue.dto.request.CategorieCreateRequest;
 import com.stockmaster.catalogue.dto.request.CategorieUpdateRequest;
 import com.stockmaster.catalogue.dto.response.CategorieListResponse;
 import com.stockmaster.catalogue.dto.response.CategorieResponse;
+import com.stockmaster.catalogue.repository.ArticleRepository;
 import com.stockmaster.catalogue.repository.CategorieRepository;
 import com.stockmaster.shared.domain.entity.TenantGroup;
 import com.stockmaster.shared.exception.BusinessException;
@@ -60,6 +61,7 @@ import java.util.Set;
 public class CategorieService {
 
     private final CategorieRepository categorieRepository;
+    private final ArticleRepository articleRepository;
     private final TenantGroupRepository tenantGroupRepository;
     private final TauxTvaAutorises tauxTvaAutorises;
     private final PerimetreCatalogueGuard perimetreCatalogueGuard;
@@ -244,7 +246,7 @@ public class CategorieService {
 
         // DEC-028 : bloquer la suppression si des articles sont attachés
         // dans cette catégorie pour le groupe.
-        if (categorieRepository.existsArticleByCategorieIdAndGroupeIdAndSupprimeFalse(id, groupId)) {
+        if (articleRepository.existsByGroupeIdAndCategorieIdAndSupprimeFalse(groupId, id)) {
             throw new BusinessException(ErrorCode.RES_ENTITY_HAS_DEPENDENCIES);
         }
 

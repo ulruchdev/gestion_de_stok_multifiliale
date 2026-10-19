@@ -22,9 +22,4 @@ public interface CategorieRepository extends JpaRepository<Categorie, Long> {
     boolean existsByGroupeIdAndCodeAndIdNotAndSupprimeFalse(
             Long groupeId, String code, Long id);
 
-    /**
-     * DEC-028 — existence d'articles attachés à cette catégorie dans le groupe
-     * (pour bloquer la suppression logique).
-     */
-    boolean existsArticleByCategorieIdAndGroupeIdAndSupprimeFalse(Long categorieId, Long groupeId);
 }

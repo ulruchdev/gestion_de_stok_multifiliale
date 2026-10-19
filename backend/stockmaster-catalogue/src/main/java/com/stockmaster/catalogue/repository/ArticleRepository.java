@@ -27,4 +27,10 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     List<Article> findAllByIdInAndGroupeIdAndSupprimeFalse(Collection<Long> ids, Long groupeId);
 
     boolean existsByGroupeIdAndCodeArticleAndSupprimeFalse(Long groupeId, String codeArticle);
+
+    /**
+     * DEC-028 — existence d'articles attachés à cette catégorie dans le groupe
+     * (pour bloquer la suppression logique).
+     */
+    boolean existsByGroupeIdAndCategorieIdAndSupprimeFalse(Long groupeId, Long categorieId);
 }
