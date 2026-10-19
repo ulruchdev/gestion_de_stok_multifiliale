@@ -1,0 +1,31 @@
+# StockMaster CM — Wiki Projet
+
+## Vue d'ensemble
+
+**StockMaster CM** est une application de gestion de stock multifiliale développée avec Spring Boot 3.3 et React 19.
+
+## Architecture
+
+- **Backend** : Spring Boot 3.3 (Java 21) — monolithe modulaire multi-modules Maven
+- **Frontend** : React 19 + TypeScript + Vite + TailwindCSS
+- **Base de données** : PostgreSQL 16
+- **Cache/Sessions** : Redis
+
+## Démarrage rapide
+
+```bash
+# Backend
+cd backend && ./mvnw clean install -DskipTests
+./mvnw spring-boot:run -pl stockmaster-bootstrap
+
+# Frontend
+cd frontend && npm install && npm run dev
+```
+
+## Documentation
+
+- [Plan de projet](Plan-de-projet)
+- [Architecture](Architecture)
+- [API Reference](API-Reference)
+- [Backlog](Backlog)
+- [Conventions](Conventions)
