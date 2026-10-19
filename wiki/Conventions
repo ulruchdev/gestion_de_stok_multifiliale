@@ -1,0 +1,23 @@
+# Conventions
+
+## Branching
+- feature/US-XXX-description → fonctionnalité
+- fix/issue-xxx → correction bug
+- hotfix/xxx → fix urgent
+
+## Commit messages
+US-XXX: description courte
+
+## Backend (Java 21 + Spring Boot 3.3)
+- Tests : JUnit 5, Mockito, Testcontainers
+- Validation : Jakarta Bean Validation sur les DTOs
+- DTOs : Request/Response séparés des entités JPA
+- Nommage : camelCase variables, PascalCase classes
+
+## Frontend (React 19 + TypeScript + Vite 6 + TailwindCSS 4)
+- Tests : Vitest + React Testing Library
+- Nommage : PascalCase composants, camelCase hooks/fonctions
+
+## Qualité
+- Backend : `./mvnw verify` doit passer
+- Frontend : `npm run build` doit réussir
