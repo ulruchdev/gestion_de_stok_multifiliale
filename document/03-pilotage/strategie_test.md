@@ -175,7 +175,20 @@ mvn compile -q
 mvn verify
 ```
 
-**Résultat attendu :** `BUILD SUCCESS` + `90 tests (18 shared + 72 auth)` + `Coverage ≥ 80%`
+**Résultat attendu :** `BUILD SUCCESS` + compte de tests par module réel +
+`Coverage ≥ 80%` sur nouveau code.
+
+Exemple récent (module catalogue, branche `feature/GS-027-creer-categorie`) :
+
+```bash
+cd backend && mvn -q test -pl stockmaster-catalogue \
+  -Dtest=CategorieServiceTest,CategorieControllerTest,ArticleDefaultsTest \
+  -DfailIfNoTests=false
+```
+
+**Résultat observé en local :** `BUILD SUCCESS` —
+`CategorieServiceTest` 39 tests (2 ignorés dans `TauxTva`), `CategorieControllerTest`
+20 tests, `ArticleDefaultsTest` 2 tests — aucun échec, aucune erreur.
 
 ### ✅ Étape 3 — Build JAR
 
@@ -203,16 +216,11 @@ curl http://localhost:8080/actuator/health
 git push origin ma-branche
 ```
 
-### ✅ Étape 4 — Push et CI
-
-```bash
-git push origin ma-branche
-```
-
 **Résultat attendu :** Le pipeline CI sur GitHub Actions doit passer :
 - ✅ Compilation (12/12 modules)
-- ✅ Tests unitaires (18 shared + 72 auth = 90 tests)
-- ✅ JaCoCo coverage ≥ 80%
+- ✅ Tests unitaires par module (ex. catalogue : `CategorieServiceTest` +
+  `CategorieControllerTest` + `ArticleDefaultsTest` verts en local)
+- ✅ JaCoCo coverage ≥ 80% sur nouveau code
 - ✅ SonarCloud analysis
 - ✅ Build JAR
 
@@ -221,7 +229,7 @@ git push origin ma-branche
 ```
 Avant push :
   1. mvn compile -q                     → SUCCESS (12 modules)
-  2. mvn verify                          → SUCCESS (90 tests : 18 shared + 72 auth + ≥80% coverage)
+  2. mvn verify                          → SUCCESS (compte de tests réel par module + ≥80% coverage)
   3. mvn package -DskipTests             → SUCCESS (JAR généré)
   4. java -jar .../target/*.jar          → Vérifier /actuator/health = UP (optionnel)
   5. git push                             → CI pipeline vert
@@ -239,7 +247,8 @@ Pipeline CI (automatique après push) :
 
 ### 4.1 Jobs du pipeline
 
-Le pipeline CI (`.github/workflows/ci.yml`) exécute **2 jobs** :
+Le pipeline CI du backend (`.github/workflows/ci-backend.yml`) exécute les jobs de build + tests Maven ;
+le pipeline frontend (`.github/workflows/ci-frontend.yml`) exécute le build Vite + TypeScript typecheck.
 
 #### Job 1 : `Build & Test`
 
@@ -548,7 +557,7 @@ curl http://localhost:8080/actuator/health
 | Date | Auteur | Changement | Raison |
 |---|---|---|---|
 | Juin 2026 | Codebuff | Création initiale | Guide stratégie de test |
-| | | | |
+| 2026-10-19 | clement ange | Mise à jour compte de tests catalogue et CI | Ajout exemple réel `CategorieServiceTest`/`CategorieControllerTest`/`ArticleDefaultsTest` (39 + 20 + 2 tests, 2 ignorés) et alignement workflow pré-push sur `ci-backend.yml`/`ci-frontend.yml` |
 
 ---
 

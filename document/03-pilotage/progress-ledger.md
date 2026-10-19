@@ -80,7 +80,20 @@
 
 > ✅ **Enveloppe `ApiResponse<T>` harmonisée** : `GroupeController.consulter()` retournait initialement `ResponseEntity<GroupeResponse>` brut, désynchronisé d'`AuthController` (`ApiResponse<T>` partout, `IA_CONTEXTE_PROJET.md` §6). Corrigé — `ResponseEntity<ApiResponse<GroupeResponse>>` (`$.data.id`…), test contrôleur et docs Postman mis à jour en conséquence. Les futurs endpoints `groupe` (US-014/016-020) doivent suivre ce même pattern.
 
-## EPIC 4 à 13 — (non commencé)
+## EPIC 5 — Catalogue (Catégories & Articles)
+
+| US | Description | Priorité | Statut | Notes |
+|----|-------------|----------|--------|-------|
+| US-027 | POST `/api/v1/categories` — créer une catégorie | P0 | ✅ | Terminé (branche `feature/GS-027-creer-categorie`, commit `0a594d7`). RBAC : GESTIONNAIRE_STOCK / ADMIN_FILIALE / ADMIN_GROUPE autorisés, refus 403 SEC_001 pour CAISSIER / RESP_ACHATS avant toute I/O. Isolation tenant : groupId extrait du JWT (jamais du corps), groupe inexistant ou inactif → 403 GRP_002, principal non groupé → 403 GRP_002. Unicité (groupe, code) → 409 RES_002 (short-circuit avant charge groupe). Taux TVA restreints `TauxTvaAutorises` → 400 CAT_001, avec refus complémentaire taux < 0 et taux > 100%. Création group-scoped : catégorie attachée au groupe du JWT. |
+| US-028 | GET `/api/v1/categories` — lister les catégories | P0 | ✅ | Terminé (branche `feature/GS-027-creer-categorie`, commit `0a594d7`). Pagination + tri designation ASC/DESC, recherche partielle insensible à la casse sur la désignation (absent = pas de filtre). Isolation tenant identique à US-027 : 403 GRP_002 groupe inexistant / principal non groupé, 403 SEC_001 pour rôle non autorisé. |
+| US-029 | PUT `/api/v1/categories/{id}` — modifier une catégorie | P0 | ✅ | Terminé (branche `feature/GS-027-creer-categorie`, commit `0a594d7`). PATCH sémantique sur PUT : désignation + taux TVA, code non renégociable par cette route (DTO `CategorieUpdateRequest` ne l'expose pas). 404 RES_001 catégorie inconnue, 403 GRP_002 si catégorie hors groupe / groupe inexistant / principal non groupé, 400 CAT_001 si taux non supporté. |
+| US-030 | DELETE `/api/v1/categories/{id}` — supprimer une catégorie | P0 | ✅ | Terminé (branche `feature/GS-027-creer-categorie`, commit `0a594d7` + correction DEC-028). Soft delete (`supprime = true`). 404 RES_001 catégorie inconnue, 403 GRP_002 si catégorie hors groupe / groupe inexistant / principal non groupé, 409 RES_005 si des articles sont attachés dans cette catégorie pour le groupe (DEC-028). Gestion des dépendances corrigée : la vérification d'articles attachés a été déplacée de `CategorieRepository` vers `ArticleRepository` (`existsByGroupeIdAndCategorieIdAndSupprimeFalse`) car la relation article → catégorie est gérée par `ArticleRepository`. |
+
+> ✅ EPICs 1 à 5 partiellement livrés : EPIC 5 a au moins ses 4 premières US (catégories) réalisées sur la branche `feature/GS-027-creer-categorie`, non encore mergée ni poussée.
+
+---
+
+## EPIC 6 à 13 — (non commencé)
 
 ---
 
