@@ -15,7 +15,7 @@ Ce fichier constitue la **collection Postman officielle** du projet StockMaster 
 **Trois façons d'obtenir la collection :**
 1. **Ce fichier Markdown** — source de vérité, lisible directement, versionné avec le code
 2. **Import automatique depuis Swagger/OpenAPI** (recommandé) :
-   - Lancer l'application (`mvn spring-boot:run -pl stockmaster-shared`)
+   - Lancer l'application (`mvn spring-boot:run -pl stockmaster-bootstrap`)
    - Aller sur `http://localhost:8080/v3/api-docs` → Copier le JSON
    - Postman → **Import** → **Raw text** → Coller le JSON → **Import**
    - Tous les endpoints sont automatiquement créés avec leurs paramètres
@@ -52,17 +52,18 @@ Ce fichier constitue la **collection Postman officielle** du projet StockMaster 
 
 ## Environnement Postman
 
-### Variables d'environnement
+### Variables de collection
 
-Créer un environnement Postman avec les variables suivantes :
+> ⚠️ **Convention : `pm.collectionVariables`** (variables déclarées au niveau **Collection**, pas dans un Environnement Postman séparé). C'est ce que `postman_collection.json` utilise réellement (18 occurrences). `pm.environment.*` ne fonctionne pas avec cette collection — voir item C-04 de la checklist `DEC-031`.
+
+Déclarer les variables suivantes dans **Collection → Variables** :
 
 | Variable | Valeur initiale (dev) | Description |
 |---|---|---|
 | `base_url` | `http://localhost:8080` | URL de base de l'API |
 | `access_token` | *(vide)* | Token JWT récupéré après login |
 | `refresh_token` | *(vide)* | Token de rafraîchissement |
-| `entreprise_id` | *(vide)* | ID de l'entreprise connectée |
-| `group_id` | *(vide)* | ID du groupe connecté |
+| `current_group_id` | *(vide)* | ID du groupe — renseigné par l'inscription |
 | `article_id` | *(vide)* | ID d'article pour les tests |
 | `categorie_id` | *(vide)* | ID de catégorie pour les tests |
 | `client_id` | *(vide)* | ID de client pour les tests |
@@ -77,8 +78,8 @@ Créer un environnement Postman avec les variables suivantes :
 Dans Postman, ajouter ce script dans **Collection → Pre-request Script** pour injecter automatiquement le token :
 
 ```javascript
-// Récupérer le token depuis la variable d'environnement
-const token = pm.environment.get("access_token");
+// Récupérer le token depuis les variables de collection
+const token = pm.collectionVariables.get("access_token");
 if (token) {
     pm.request.headers.add({
         key: "Authorization",
@@ -92,11 +93,12 @@ Et ce script dans la requête **Login (POST)** → **Tests** pour sauvegarder au
 ```javascript
 if (pm.response.code === 200) {
     const json = pm.response.json();
-    pm.environment.set("access_token", json.data.accessToken);
-    pm.environment.set("refresh_token", json.data.refreshToken);
-    pm.environment.set("entreprise_id", json.data.entrepriseId);
+    pm.collectionVariables.set("access_token", json.data.accessToken);
+    pm.collectionVariables.set("refresh_token", json.data.refreshToken);
 }
 ```
+
+> **Note :** `LoginResponse` ne contient que `accessToken`, `refreshToken`, `expiresIn`, `role`, `scope` — il n'y a **pas** de `entrepriseId` ni `groupId` dans la réponse de connexion (ils sont dans le JWT). Le `groupId` est récupéré à l'inscription (`InscriptionResponse`).
 
 ---
 
@@ -119,15 +121,17 @@ POST {{base_url}}/api/v1/auth/inscription/entreprise-unique
 Content-Type: application/json
 
 {
-    "nomBoutique": "Épicerie Centrale",
-    "ville": "Douala",
-    "quartier": "Akwa",
-    "prenom": "Jean",
-    "nom": "Kamga",
+    "nomEntreprise": "Épicerie Centrale",
+    "nif": "M071234567890Z",
     "email": "jean.kamga@test.cm",
+    "telephone": "+237691234567",
+    "adminNom": "Kamga",
+    "adminPrenom": "Jean",
     "motDePasse": "Test@2026"
 }
 ```
+
+> **Contraintes (`InscriptionEntrepriseUniqueRequest`) :** `nif` **optionnel** (max 20) · `telephone` **obligatoire**, format E.164 `^\+[1-9]\d{1,14}$` · `adminNom`/`adminPrenom` obligatoires · mot de passe : 8-50 caractères, 1 minuscule + 1 majuscule + 1 chiffre + 1 caractère spécial. `ville` et `quartier` **n'existent plus** (rattachés au profil, US-026).
 
 #### Réponse — Succès (201 Created)
 
@@ -249,9 +253,9 @@ Content-Type: application/json
 
 {
     "nomGroupe": "Distribo Sarl",
-    "villesiege": "Yaoundé",
+    "villeSiege": "Yaoundé",
     "nif": "M123456789",
-    "telephone": "699000001",
+    "telephone": "+237699000001",
     "emailEntreprise": "contact@distribo.cm",
     "prenom": "Paul",
     "nom": "Biya Jr",
@@ -259,6 +263,8 @@ Content-Type: application/json
     "motDePasse": "MotDePasse@2026"
 }
 ```
+
+> **Contraintes (`InscriptionGroupeRequest`) :** `villeSiege` (et non `villesiege` — Jackson est sensible à la casse) · `telephone` **au format E.164** `^\+[1-9]\d{1,14}$`, un numéro nu comme `699000001` est **refusé en 422** · `nif` optionnel (format `[A-Za-z0-9/-]`).
 
 #### Réponse — Succès (201 Created)
 
@@ -977,14 +983,136 @@ pm.test("Statut actif mis a jour", () => {
 
 ## 3. Utilisateurs — `/api/v1/utilisateurs`
 
-> **Statut :** 🔜 Non implémenté (EPIC 4, US-021 à US-026, Sprint 3-4)
+> **Statut :** ✅ **Implémenté** (EPIC 4 — US-021 à US-026 livrées, PR #23 à #29)
+> **Enveloppe :** `ApiResponse<T>` sur tous les endpoints · `PageResponse<T>` pour la liste
+> **Identité :** `entreprise_id` / `group_id` **toujours issus du JWT**, jamais du corps
 
-### 3.1 POST — Créer un Admin Filiale (futur)
-### 3.2 POST — Créer un employé (futur)
-### 3.3 GET — Lister les utilisateurs (futur)
-### 3.4 PUT — Modifier un utilisateur (futur)
-### 3.5 PATCH — Désactiver un utilisateur (futur)
-### 3.6 GET/PUT — Profil utilisateur (futur)
+### 3.1 POST — Créer un Admin Filiale (US-021)
+
+> `@PreAuthorize("hasRole('ADMIN_GROUPE')")` · **201 Created**
+
+```http
+POST {{base_url}}/api/v1/utilisateurs/admin-filiale
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "filialeId": 3,
+    "prenom": "Aïcha",
+    "nom": "Nguemo",
+    "email": "aicha.nguemo@distribo.cm"
+}
+```
+
+> Rôle **forcé `ADMIN_FILIALE`** / scope `FILIALE` côté serveur — jamais lu de la requête. Le compte naît `actif=false` + `emailVerifie=false`, mot de passe aléatoire haché, invitation envoyée par e-mail (token Redis 48 h). Hors groupe → **404 uniforme** ; email déjà pris → **409 `AUTH_008`** ; plan dépassé → **403 `USR_001`**.
+
+### 3.2 POST — Créer un employé (US-022)
+
+> `@PreAuthorize("hasAnyRole('ADMIN_FILIALE','ADMIN_GROUPE')")` · **201 Created**
+
+```http
+POST {{base_url}}/api/v1/utilisateurs/employes
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "prenom": "Blaise",
+    "nom": "Mballa",
+    "email": "blaise.mballa@distribo.cm",
+    "role": "GESTIONNAIRE_STOCK",
+    "motDePasseProvisoire": "Bienvenue@2026"
+}
+```
+
+> `role` ∈ `GESTIONNAIRE_STOCK` \| `RESP_ACHATS` \| `COMMERCIAL` \| `CAISSIER` — tout rôle `ADMIN_*` → **403 `SEC_001`** (contrôle fail-fast avant toute I/O). Compte né `actif=true` + `emailVerifie=true` : connexion immédiate (DEC-016 ne s'applique qu'à l'inscription publique). `motDePasseProvisoire` : ≥ 8 car, 1 majuscule, 1 chiffre, 1 spécial.
+
+### 3.3 GET — Lister les utilisateurs du périmètre (US-023)
+
+> `@PreAuthorize("hasAnyRole('ADMIN_FILIALE','ADMIN_GROUPE')")` · **200 OK**
+
+```http
+GET {{base_url}}/api/v1/utilisateurs?role=CAISSIER&actif=true&filialeId=3&page=0&size=20
+Authorization: Bearer {{access_token}}
+```
+
+| Paramètre | Type | Obligatoire | Remarque |
+|---|---|---|---|
+| `role` | enum | ❌ | filtre `(:x IS NULL OR …)` |
+| `actif` | boolean | ❌ | idem |
+| `filialeId` | long | ❌ | **Admin Groupe uniquement** ; hors de son groupe → **403 `SEC_001`** |
+| `page` / `size` | int | ❌ | `size` borné par `stockmaster.pagination.max-page-size` |
+
+```json
+{
+  "success": true,
+  "data": {
+    "content": [{ "id": 12, "prenom": "Blaise", "nom": "Mballa", "email": "blaise.mballa@distribo.cm", "role": "GESTIONNAIRE_STOCK", "actif": true, "filialeId": 3 }],
+    "page": 0, "size": 20, "totalElements": 7, "totalPages": 1
+  }
+}
+```
+
+> ⚠️ Un Admin Filiale qui passe le `filialeId` d'une **autre** filiale reçoit **403**, jamais 404. Le champ `motDePasse` **n'apparaît jamais** dans la réponse.
+
+### 3.4 PUT — Modifier un utilisateur (US-024)
+
+> `@PreAuthorize("hasAnyRole('ADMIN_FILIALE','ADMIN_GROUPE')")` · **200 OK** · sémantique **PATCH** (champ absent = inchangé)
+
+```http
+PUT {{base_url}}/api/v1/utilisateurs/12
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "prenom": "Blaise",
+    "nom": "Mballa",
+    "email": "blaise.mballa@distribo.cm",
+    "role": "COMMERCIAL"
+}
+```
+
+> Tous les champs **optionnels**. **Mot de passe jamais modifiable ici** (flux US-011/012). Cible hors périmètre / inexistante / soft-supprimée → **404 `RES_001` uniforme** ; cible ou nouveau rôle `ADMIN_*` → **403 `SEC_001`** (pas d'auto-promotion) ; email déjà pris → **409 `AUTH_008`**.
+
+### 3.5 PATCH — Activer / Désactiver un utilisateur (US-025)
+
+> `@PreAuthorize("hasAnyRole('ADMIN_FILIALE','ADMIN_GROUPE')")` · **200 OK**
+
+```http
+PATCH {{base_url}}/api/v1/utilisateurs/12/statut
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "actif": false
+}
+```
+
+> `actif` **obligatoire** (aucune bascule implicite). Désactivation = **révocation immédiate** : blacklist Redis `blacklist:user:{id}` + suppression de `refresh:{id}` → les tokens en cours sont refusés à la requête suivante. Réactivation → aucune révocation. Cible `ADMIN_*` → **403 `SEC_001`** (cycle de vie admin distinct).
+
+### 3.6 GET / PUT — Profil utilisateur (US-026)
+
+```http
+GET {{base_url}}/api/v1/utilisateurs/profil
+Authorization: Bearer {{access_token}}
+```
+
+**Modification — `multipart/form-data`** (les deux parts sont optionnels, sémantique PATCH) :
+
+| Part | Type | Contenu |
+|---|---|---|
+| `profil` | JSON | `{"prenom":…, "nom":…, "adresseVille":…}` |
+| `photo` | fichier | image PNG/JPEG/WebP, **2 Mo max** → upload MinIO (`utilisateur/{id}`) |
+
+```http
+PUT {{base_url}}/api/v1/utilisateurs/profil
+Authorization: Bearer {{access_token}}
+Content-Type: multipart/form-data
+
+profil  = {"prenom":"Blaise","adresseVille":"Douala"}
+photo   = (fichier)
+```
+
+> `email` et `role` **absents du DTO** → non modifiables (passe par US-024). Le profil est résolu **depuis le JWT**, jamais depuis un id passé en paramètre.
 
 ---
 
@@ -1173,7 +1301,7 @@ pm.test("Erreur au format ProblemResponse (RFC 7807)", () => {
 if (pm.response.code === 201) {
     const json = pm.response.json();
     if (json.data && json.data.id) {
-        pm.environment.set("article_id", json.data.id);
+        pm.collectionVariables.set("article_id", json.data.id);
     }
 }
 ```

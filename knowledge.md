@@ -8,7 +8,7 @@ Ce fichier ne contient que des **règles et une architecture cible** — pas l'�
 
 1. Vérifie l'état réel par lecture/commande effective : `git log -15 --oneline`, `git status`, la structure réelle des dossiers `stockmaster-*/src` et `frontend/src`, et `document/03-pilotage/progress-ledger.md`.
 2. **Ne jamais affirmer qu'une US ou un module est « fait » sur la seule base du backlog ou d'une session précédente** — un backlog décrit une intention, pas un état constaté. Le repo réel (code + git log) est la seule source de vérité.
-3. Sous Freebuff : si `@task-architect`, `@spring-module-guardian` ou `@react-frontend-guardian` est invoqué et qu'aucun rapport `session-bootstrap` n'existe encore dans la session, ces agents le spawnent automatiquement (déjà configuré dans `.agents/`).
+3. Sous Freebuff : si `@task-architect`, `@spring-module-guardian` ou `@react-frontend-guardian` est invoqué et qu'aucun rapport `session-bootstrap` n'existe encore dans la session, ces agents le spawnent automatiquement (**les définitions vivent côté client Freebuff — le dossier `.agents/` n'existe PAS dans ce dépôt**).
 4. Sous Claude Code (pas d'agents `.agents/*.ts`, ce sont des définitions propriétaires Freebuff) : fais toi-même la vérification du point 1 avant de proposer un plan.
 
 ---
@@ -36,34 +36,39 @@ Ce fichier ne contient que des **règles et une architecture cible** — pas l'�
 
 | Chemin | Contenu | État réel |
 |---|---|---|
-| `stockmaster-shared/` | `AbstractEntity`, `ApiResponse<T>`, `ProblemResponse` (RFC 7807), `ErrorCode`, `BusinessException`, `GlobalExceptionHandler`, migrations Flyway V1-V4 | ✅ Implémenté |
-| `stockmaster-auth/` | JWT (jjwt 0.12.6, HS256), inscription (entreprise unique + groupe), login, refresh, logout, forgot/reset/change password, rate limiting configurable | ✅ Implémenté |
-| `stockmaster-bootstrap/` | Point d'entrée `@SpringBootApplication`, seul module avec `spring-boot-maven-plugin`, `application.yml` (3 profils dev/test/prod) | ✅ Implémenté |
-| `stockmaster-groupe/` | Groupe & filiales | 🔜 Stub vide (0 fichier .java) |
-| `stockmaster-utilisateur/` | Gestion des utilisateurs | 🔜 Stub vide |
-| `stockmaster-catalogue/` | Catalogue articles | 🔜 Stub vide |
-| `stockmaster-tiers/` | Clients & fournisseurs | 🔜 Stub vide |
-| `stockmaster-achat/` | Commandes fournisseur | 🔜 Stub vide |
-| `stockmaster-stock/` | Mouvements de stock, transferts | 🔜 Stub vide |
-| `stockmaster-vente/` | Ventes B2B & caisse | 🔜 Stub vide |
-| `stockmaster-notification/` | Notifications & alertes | 🔜 Stub vide |
-| `stockmaster-reporting/` | Statistiques & reporting | 🔜 Stub vide |
+| `stockmaster-shared/` | `AbstractEntity`, `ApiResponse<T>`, `ProblemResponse` (RFC 7807), `ErrorCode`, `BusinessException`, `GlobalExceptionHandler`, agrégats tenant (`TenantGroup`/`Entreprise`/`Utilisateur`), `MinioService`, `RedisHealthTracker`, migrations Flyway **V1-V6** | ✅ Implémenté |
+| `stockmaster-auth/` | JWT (jjwt 0.12.6, HS256), inscription, login, refresh (rotation + détection de rejeu), logout, forgot/reset/change password, rate limiting configurable | ✅ Implémenté |
+| `stockmaster-bootstrap/` | Point d'entrée `@SpringBootApplication`, seul module avec `spring-boot-maven-plugin`, `application.yml` (profils dev/test/prod/integration), tests d'intégration + **ArchUnit (4 règles)** | ✅ Implémenté |
+| `stockmaster-groupe/` | Groupe & filiales — `GroupeController`/`FilialeController` + services (US-014 → US-019) | ✅ Services + contrôleurs livrés |
+| `stockmaster-utilisateur/` | Gestion des utilisateurs — 6 contrôleurs (US-021 → US-026) | ✅ Services + contrôleurs livrés |
+| `stockmaster-catalogue/` | `Categorie`, `Article` (rattachés au groupe) + repositories | 🟡 Fondations — EPIC 5 à implémenter |
+| `stockmaster-tiers/` | `Client`, `Fournisseur` + repositories | 🟡 Fondations — EPIC 6 à implémenter |
+| `stockmaster-achat/` | `CommandeFournisseur`(+lignes), machine d'états `DEC-006` | 🟡 Fondations — EPIC 7 à implémenter |
+| `stockmaster-stock/` | `MouvementStock`, `TransfertStock`, `SessionInventaire`, `CleIdempotence` + `CalculStockService` | 🟡 Fondations — EPIC 8/11/15/17 à implémenter |
+| `stockmaster-vente/` | `Vente`, `CommandeClient`, `SessionCaisse`, `Paiement` + enums d'état | 🟡 Fondations — EPIC 9/10/14 à implémenter |
+| `stockmaster-notification/` | `NotificationAlerte`, port `CanalNotification`, `EmailNotificationService` | 🟡 Partiel — EPIC 12 à finir |
+| `stockmaster-reporting/` | `CalculCaService` (DEC-020) | 🟡 Fondations — EPIC 13 à implémenter |
 | `document/` | Specs, backlog, CDCT, workflow, stratégie de test, collection Postman | — |
 | `design/` | Design system propriétaire (tokens, composants), références d'inspiration | — |
+
+> ⚠️ **Vérifier l'état réel avant de conclure** : ce tableau est un instantané (9 oct. 2026). Les « fondations » des 7 modules ont été livrées le 14/09/2026 en dehors de toute US — `progress-ledger.md` en fait foi.
 
 ## Commandes utiles
 
 ```bash
+# ⚠️ mvnw n'a pas le bit d'exécution dans ce dépôt → chmod +x, ou passer par sh mvnw
+
 # Compiler (tous les modules)
 mvn compile -q
 
-# Lancer les tests d'un module précis (auth = le plus actif)
-mvn test -pl stockmaster-auth
+# Lancer les tests d'un module précis
+# IMPORTANT : -am est OBLIGATOIRE sinon Maven ne résout pas les dépendances inter-modules
+mvn test -pl stockmaster-auth -am
 
 # Lancer une classe de test précise
-mvn test -pl stockmaster-auth -Dtest=AuthServiceImplTest
+mvn test -pl stockmaster-auth -am -Dtest=AuthServiceImplTest
 
-# Lancer tous les tests
+# Lancer tous les tests (421 exécutions)
 mvn test
 
 # Build sans les tests
@@ -78,6 +83,11 @@ mvn spring-boot:run -pl stockmaster-bootstrap
 # Vérifier le démarrage
 curl http://localhost:8080/actuator/health
 ```
+
+**Pièges de build (constatés) :**
+- `mvn test -pl <module>` **sans `-am`** échoue : `Could not find artifact com.stockmaster:<module>`.
+- Sans PostgreSQL, 3 tests de `stockmaster-bootstrap` (`StockMasterApplicationTest`, profil `integration`) échouent — **c'est environnemental**, `docker compose up -d postgres redis` les rend verts.
+- `stockmaster-shared` est une **library** : elle ne produit pas de JAR exécutable, le main est dans `stockmaster-bootstrap`.
 
 ## Architecture imposée — Backend
 - Couches strictes : `controller/` → `service/` (interface + impl) → `repository/` → `domain/`
@@ -114,8 +124,8 @@ curl http://localhost:8080/actuator/health
 - `stockmaster-shared` est une **library module** — `<skip>true</skip>` sur `spring-boot-maven-plugin` pour éviter que le repackage fat-JAR masque ses classes aux modules dépendants.
 - `AuthTestApplication` (dans `stockmaster-auth/src/test/`) fournit sa propre `SecurityFilterChain` — les tests contrôleur ne chargent pas le vrai `JwtAuthenticationFilter`.
 - Redis doit tourner pour les tests auth (`StringRedisTemplate`). La CI le fournit via un service docker.
-- JaCoCo n'est activement mesuré que sur `stockmaster-shared` et `stockmaster-auth` — le job Sonar de la CI est volontairement scopé à `-pl stockmaster-shared,stockmaster-auth,stockmaster-bootstrap` (voir `document/implementation.md`). **Tout nouveau module qui reçoit du code doit être ajouté à ce `-pl` dans `.github/workflows/ci-backend.yml`, sinon il passera la CI sans jamais être scanné.**
-- `document/implementation.md` est la source de vérité pour le suivi des US — à mettre à jour à chaque merge.
+- JaCoCo n'est activement mesuré que sur `stockmaster-shared` et `stockmaster-auth` — le job Sonar de la CI est volontairement scopé à `-pl stockmaster-shared,stockmaster-auth,stockmaster-bootstrap` (voir `.github/workflows/ci-backend.yml`). **Tout nouveau module qui reçoit du code doit être ajouté à ce `-pl` dans `.github/workflows/ci-backend.yml`, sinon il passera la CI sans jamais être scanné.** ⚠️ Le gate `jacoco:check ≥ 80 %` annoncé dans la doc **n'est pas encore branché** (checklist `DEC-031` C-14).
+- `document/03-pilotage/progress-ledger.md` est la **source de vérité pour le suivi des US** — à mettre à jour à chaque merge. (`document/implementation.md` **n'existe plus** : supprimé le 7 sept. 2026, item C-12 de la checklist `DEC-031`.)
 
 ## Conventions Git
 - `main` (intégration) ← `feature/GS-XXX-nom-court` / `fix/...` / `docs/...` / `refactor/...`. Pas de branche `develop`.
@@ -142,7 +152,9 @@ MAIL_PORT=1025
 CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
 
-## Agents Freebuff (dans `.agents/`)
+## Agents Freebuff (définitions côté client — pas dans ce dépôt)
+
+> ⚠️ Le dossier `.agents/` **n'existe pas** dans ce dépôt : les définitions d'agents sont propriétaires Freebuff et vivent côté client. Ce tableau décrit le **workflow attendu**, pas un fichier présent dans le repo.
 
 | Agent | Rôle | Workflow |
 |-------|------|----------|
@@ -150,7 +162,7 @@ CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 | `task-architect` | Architecte de ticket : analyse la US, les dépendances, les portes G1-G7, propose un plan → attend « GO » avant de dévérouiller | Induit le cycle : plan → GO → implémentation |
 | `spring-module-guardian` | Gardien backend : `mvn test`, vérifie isolation multi-tenant, `@Transactional`, DTO, sécurité | Après implémentation backend |
 | `react-frontend-guardian` | Gardien frontend : lint, test, vérifie TTC serveur, RBAC strict, mock MSW, gestion réseau dégradée | Après implémentation frontend |
-| `doc-writer` | Documentation duale : `implementation.md` (technique) + `HUMAN_CHANGELOG.md` (métier) + `progress-ledger.md` (statut) | Après audit vert |
+| `doc-writer` | Documentation duale : `HUMAN_CHANGELOG.md` (métier) + `progress-ledger.md` (statut) | Après audit vert |
 | `git-committer` | Prépare le commit conventionnel (`feat(GS-XXX): desc`), vérifie l'absence de secrets, **jamais de push automatique** | Dernière étape, après `doc-writer` |
 
 **Workflow type (backend) :** `@task-architect GS-XXX` → implémentation → `@spring-module-guardian` → `@doc-writer` → `@git-committer`
