@@ -1323,6 +1323,48 @@
           }
         }
       ]
+    },
+    {
+      "name": "🏪 5. Catalogue — EPIC 5",
+      "item": [
+        {
+          "name": "US-031 — Créer un article",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeArticle\": \"RIZ50KG\",\n  \"designation\": \"Riz parfumé 50 kg\",\n  \"categorieId\": 3,\n  \"prixAchatHt\": 15000,\n  \"prixVenteHt\": 18500,\n  \"tauxTva\": 19.25,\n  \"seuilAlerte\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/articles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "articles"
+              ]
+            },
+            "description": "US-031 (P0) — POST /api/v1/articles. Rôles : GESTIONNAIRE_STOCK / ADMIN_FILIALE / ADMIN_GROUPE. tauxTva nullable (hérité de la catégorie). Le TTC est calculé côté serveur (DEC-003) — jamais envoyé dans le corps. Réponses : 201 (prixVenteTtc + margeBrutePct calculés), 400 CAT_001, 403 SEC_001/GRP_002, 404 RES_001, 409 RES_002."
+          }
+        }
+      ]
     }
   ]
 }
