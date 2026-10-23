@@ -3,6 +3,8 @@ package com.stockmaster.catalogue.service;
 import com.stockmaster.catalogue.domain.entity.Article;
 import com.stockmaster.catalogue.domain.entity.Categorie;
 import com.stockmaster.catalogue.dto.request.ArticleCreateRequest;
+import com.stockmaster.catalogue.dto.request.ArticleUpdateRequest;
+import com.stockmaster.catalogue.dto.response.ArticleListResponse;
 import com.stockmaster.catalogue.dto.response.ArticleResponse;
 import com.stockmaster.catalogue.repository.ArticleRepository;
 import com.stockmaster.catalogue.repository.CategorieRepository;
@@ -23,12 +25,19 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -115,6 +124,31 @@ class ArticleServiceTest {
                 "RIZ50KG", "Riz parfumé 50 kg", CATEGORIE_ID,
                 15000, 18500, new BigDecimal("19.25"), new BigDecimal("10"));
     }
+
+    /** Article comme persisté : TTC calculé côté serveur (DEC-003). */
+    private Article articleExistant(TenantGroup groupe, Categorie categorie) {
+        Article article = Article.builder()
+                .groupe(groupe)
+                .categorie(categorie)
+                .codeArticle("RIZ50KG")
+                .designation("Riz parfumé 50 kg")
+                .prixAchatHt(15000)
+                .prixVenteHt(18500)
+                .tauxTva(new BigDecimal("19.25"))
+                .prixVenteTtc(22061)
+                .seuilAlerte(new BigDecimal("10"))
+                .actif(true)
+                .build();
+        article.setId(ARTICLE_ID);
+        return article;
+    }
+
+    private void stubArticleDansGroupe(Article article) {
+        when(articleRepository.findByIdAndSupprimeFalse(ARTICLE_ID))
+                .thenReturn(Optional.of(article));
+    }
+
+    private static final Long ARTICLE_ID = 7L;
 
     // ─── cas nominaux ───────────────────────────────────────────────────────
 
@@ -378,6 +412,306 @@ class ArticleServiceTest {
                     () -> articleService.creer(principal, request), BusinessException.class);
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
+        }
+    }
+
+    // ─── US-032 — lister ════════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("US-032 — GET /api/v1/articles (liste paginée)")
+    class Lister {
+
+        @Test
+        @DisplayName("✅ Liste paginée group-scopée (supprime=false), metadata complètes")
+        void shouldListerPaginatedGroupScoped() {
+            TenantGroup groupe = groupeActif();
+            Categorie categorie = categorieDuGroupe(groupe);
+            Article article = articleExistant(groupe, categorie);
+            when(articleRepository.findAllByGroupeIdAndSupprimeFalse(eq(GROUP_ID), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(article), PageRequest.of(0, 20), 1));
+
+            StockMasterPrincipal principal = principal("CAISSIER", GROUP_ID);
+            ArticleListResponse reponse = articleService.lister(principal, 0, 20, "designation", "ASC", null);
+
+            assertThat(reponse.getTotalElements()).isEqualTo(1);
+            assertThat(reponse.getContent()).hasSize(1);
+            assertThat(reponse.getContent().get(0).getCodeArticle()).isEqualTo("RIZ50KG");
+            // US-033 : TTC et marge reflètent les valeurs calculées
+            assertThat(reponse.getContent().get(0).getPrixVenteTtc()).isEqualTo(22061);
+            assertThat(reponse.getContent().get(0).getMargeBrutePct()).isEqualByComparingTo("23.33");
+        }
+
+        @Test
+        @DisplayName("✅ Recherche plein-texte : route vers le repo de recherche (designation OU code)")
+        void shouldRouteSearchToRepository() {
+            TenantGroup groupe = groupeActif();
+            when(articleRepository.rechercherParGroupeEtTexte(eq(GROUP_ID), eq("riz"), any(Pageable.class)))
+                    .thenReturn(Page.empty(PageRequest.of(0, 20)));
+
+            StockMasterPrincipal principal = principal("CAISSIER", GROUP_ID);
+            ArticleListResponse reponse = articleService.lister(principal, 0, 20, "designation", "ASC", "riz");
+
+            assertThat(reponse.getContent()).isEmpty();
+            verify(articleRepository).rechercherParGroupeEtTexte(eq(GROUP_ID), eq("riz"), any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("✅ Pagination disciplinée : size > 100 est bornée à 100 (critère AC)")
+        void shouldClampSizeTo100() {
+            TenantGroup groupe = groupeActif();
+            when(articleRepository.findAllByGroupeIdAndSupprimeFalse(eq(GROUP_ID), any(Pageable.class)))
+                    .thenReturn(Page.empty(PageRequest.of(0, 100)));
+
+            StockMasterPrincipal principal = principal("CAISSIER", GROUP_ID);
+            articleService.lister(principal, 0, 500, "designation", "ASC", null);
+
+            ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+            verify(articleRepository).findAllByGroupeIdAndSupprimeFalse(eq(GROUP_ID), captor.capture());
+            assertThat(captor.getValue().getPageSize()).isEqualTo(100);
+        }
+
+        @Test
+        @DisplayName("❌ 403 GRP_002 si principal non groupé")
+        void shouldThrowWhenPrincipalNotGrouped() {
+            StockMasterPrincipal principal = principal("CAISSIER", null);
+            BusinessException ex = catchThrowableOfType(
+                    () -> articleService.lister(principal, 0, 20, null, null, null), BusinessException.class);
+
+            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
+            verifyNoInteractions(articleRepository);
+        }
+    }
+
+    // ─── US-033 — consulter ═════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("US-033 — GET /api/v1/articles/{id}")
+    class Consulter {
+
+        @Test
+        @DisplayName("✅ Fiche article du groupe : TTC, marge, statut de groupe")
+        void shouldConsulterArticle() {
+            TenantGroup groupe = groupeActif();
+            Categorie categorie = categorieDuGroupe(groupe);
+            Article article = articleExistant(groupe, categorie);
+            stubArticleDansGroupe(article);
+
+            StockMasterPrincipal principal = principal("CAISSIER", GROUP_ID);
+            ArticleResponse reponse = articleService.consulter(principal, ARTICLE_ID);
+
+            assertThat(reponse.getId()).isEqualTo(ARTICLE_ID);
+            assertThat(reponse.getPrixVenteTtc()).isEqualTo(22061);
+            assertThat(reponse.getGroupId()).isEqualTo(GROUP_ID);
+            assertThat(reponse.getActif()).isTrue();
+        }
+
+        @Test
+        @DisplayName("❌ 404 RES_001 si article hors groupe — jamais révélé")
+        void shouldThrow404WhenArticleOutsideGroup() {
+            TenantGroup autreGroupe = groupeActif();
+            autreGroupe.setId(999L);
+            Categorie categorieAutre = categorieDuGroupe(autreGroupe);
+            Article articleAutre = articleExistant(autreGroupe, categorieAutre);
+            stubArticleDansGroupe(articleAutre);
+
+            StockMasterPrincipal principal = principal("CAISSIER", GROUP_ID);
+            BusinessException ex = catchThrowableOfType(
+                    () -> articleService.consulter(principal, ARTICLE_ID), BusinessException.class);
+
+            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.RES_ENTITY_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("❌ 404 RES_001 si article inconnu")
+        void shouldThrow404WhenArticleNotFound() {
+            when(articleRepository.findByIdAndSupprimeFalse(ARTICLE_ID)).thenReturn(Optional.empty());
+
+            StockMasterPrincipal principal = principal("CAISSIER", GROUP_ID);
+            BusinessException ex = catchThrowableOfType(
+                    () -> articleService.consulter(principal, ARTICLE_ID), BusinessException.class);
+
+            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.RES_ENTITY_NOT_FOUND);
+        }
+    }
+
+    // ─── US-034 — modifier ══════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("US-034 — PUT /api/v1/articles/{id}")
+    class Modifier {
+
+        private ArticleUpdateRequest updateValide() {
+            return new ArticleUpdateRequest(
+                    "RIZ50KG", "Riz parfumé 50 kg", CATEGORIE_ID,
+                    15000, 20000, null /* taux hérité catégorie */, new BigDecimal("15"));
+        }
+
+        @Test
+        @DisplayName("✅ Modifie prix / seuil : TTC recalculé DEC-003 (20000 × 1.1925 = 23850), marge mise à jour")
+        void shouldModifierArticleAndRecalculateTtc() {
+            TenantGroup groupe = groupeActif();
+            Categorie categorie = categorieDuGroupe(groupe);
+            Article article = articleExistant(groupe, categorie);
+            stubArticleDansGroupe(article);
+            when(articleRepository.existsByGroupeIdAndCodeArticleAndSupprimeFalse(GROUP_ID, "RIZ50KG"))
+                    .thenReturn(true); // lui-même
+            when(categorieRepository.findByIdAndSupprimeFalse(CATEGORIE_ID)).thenReturn(Optional.of(categorie));
+            when(articleRepository.save(any(Article.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            StockMasterPrincipal principal = principal("GESTIONNAIRE_STOCK", GROUP_ID);
+            ArticleResponse reponse = articleService.modifier(principal, ARTICLE_ID, updateValide());
+
+            assertThat(reponse.getPrixVenteHt()).isEqualTo(20000);
+            assertThat(reponse.getPrixVenteTtc()).isEqualTo(23850);
+            assertThat(reponse.getMargeBrutePct()).isEqualByComparingTo("33.33");
+            ArgumentCaptor<Article> captor = ArgumentCaptor.forClass(Article.class);
+            verify(articleRepository).save(captor.capture());
+            assertThat(captor.getValue().getSeuilAlerte()).isEqualByComparingTo("15");
+        }
+
+        @Test
+        @DisplayName("✅ Taux TVA non fourni à la modif : hérite de la catégorie")
+        void shouldInheritTauxFromCategorieOnModify() {
+            TenantGroup groupe = groupeActif();
+            Categorie categorie = categorieDuGroupe(groupe); // 19.25
+            Article article = articleExistant(groupe, categorie);
+            stubArticleDansGroupe(article);
+            when(articleRepository.existsByGroupeIdAndCodeArticleAndSupprimeFalse(GROUP_ID, "RIZ50KG"))
+                    .thenReturn(true);
+            when(categorieRepository.findByIdAndSupprimeFalse(CATEGORIE_ID)).thenReturn(Optional.of(categorie));
+            when(articleRepository.save(any(Article.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            StockMasterPrincipal principal = principal("ADMIN_FILIALE", GROUP_ID);
+            ArticleResponse reponse = articleService.modifier(principal, ARTICLE_ID, updateValide());
+
+            assertThat(reponse.getTauxTva()).isEqualByComparingTo("19.25");
+            assertThat(reponse.getPrixVenteTtc()).isEqualTo(23850);
+        }
+
+        @Test
+        @DisplayName("❌ 409 RES_002 si code modifié vers un code déjà pris par un autre article")
+        void shouldThrow409WhenCodeTakenByOtherArticle() {
+            TenantGroup groupe = groupeActif();
+            Categorie categorie = categorieDuGroupe(groupe);
+            Article article = articleExistant(groupe, categorie);
+            stubArticleDansGroupe(article);
+            when(articleRepository.existsByGroupeIdAndCodeArticleAndSupprimeFalse(GROUP_ID, "SUCRE1KG"))
+                    .thenReturn(true);
+
+            ArticleUpdateRequest miss = new ArticleUpdateRequest(
+                    "SUCRE1KG", "Riz parfumé 50 kg", CATEGORIE_ID,
+                    15000, 18500, null, new BigDecimal("10"));
+            StockMasterPrincipal principal = principal("GESTIONNAIRE_STOCK", GROUP_ID);
+            BusinessException ex = catchThrowableOfType(
+                    () -> articleService.modifier(principal, ARTICLE_ID, miss), BusinessException.class);
+
+            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.RES_DUPLICATE_CODE);
+            verify(articleRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("❌ 404 RES_001 si nouvelle catégorie hors groupe")
+        void shouldThrow404WhenNewCategorieOutsideGroup() {
+            TenantGroup groupe = groupeActif();
+            Categorie categorie = categorieDuGroupe(groupe);
+            Article article = articleExistant(groupe, categorie);
+            stubArticleDansGroupe(article);
+            when(articleRepository.existsByGroupeIdAndCodeArticleAndSupprimeFalse(GROUP_ID, "RIZ50KG"))
+                    .thenReturn(true); // lui-même
+            when(categorieRepository.findByIdAndSupprimeFalse(CATEGORIE_ID)).thenReturn(Optional.empty());
+
+            StockMasterPrincipal principal = principal("GESTIONNAIRE_STOCK", GROUP_ID);
+            BusinessException ex = catchThrowableOfType(
+                    () -> articleService.modifier(principal, ARTICLE_ID, updateValide()), BusinessException.class);
+
+            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.RES_ENTITY_NOT_FOUND);
+            verify(articleRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("❌ 400 CAT_001 si taux surchargé non supporté")
+        void shouldThrow400WhenTauxSurchargedNotSupported() {
+            TenantGroup groupe = groupeActif();
+            Categorie categorie = categorieDuGroupe(groupe);
+            Article article = articleExistant(groupe, categorie);
+            stubArticleDansGroupe(article);
+            when(articleRepository.existsByGroupeIdAndCodeArticleAndSupprimeFalse(GROUP_ID, "RIZ50KG"))
+                    .thenReturn(true);
+            when(categorieRepository.findByIdAndSupprimeFalse(CATEGORIE_ID)).thenReturn(Optional.of(categorie));
+
+            ArticleUpdateRequest mauvais = new ArticleUpdateRequest(
+                    "RIZ50KG", "Riz parfumé 50 kg", CATEGORIE_ID,
+                    15000, 18500, new BigDecimal("5.5"), new BigDecimal("10"));
+            StockMasterPrincipal principal = principal("GESTIONNAIRE_STOCK", GROUP_ID);
+            BusinessException ex = catchThrowableOfType(
+                    () -> articleService.modifier(principal, ARTICLE_ID, mauvais), BusinessException.class);
+
+            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CAT_TAUX_TVA_INVALIDE);
+        }
+
+        @Test
+        @DisplayName("❌ 403 SEC_001 pour un rôle non autorisé (avant toute I/O)")
+        void shouldThrow403WhenRoleNotAuthorized() {
+            StockMasterPrincipal principal = principal("CAISSIER", GROUP_ID);
+            BusinessException ex = catchThrowableOfType(
+                    () -> articleService.modifier(principal, ARTICLE_ID, updateValide()), BusinessException.class);
+
+            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.SEC_ACCESS_DENIED);
+            verifyNoInteractions(articleRepository);
+        }
+    }
+
+    // ─── US-035 — supprimer ═════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("US-035 — DELETE /api/v1/articles/{id}")
+    class Supprimer {
+
+        @Test
+        @DisplayName("✅ Suppression logique : supprime=true + actif=false")
+        void shouldSoftDeleteArticle() {
+            TenantGroup groupe = groupeActif();
+            Categorie categorie = categorieDuGroupe(groupe);
+            Article article = articleExistant(groupe, categorie);
+            stubArticleDansGroupe(article);
+            when(articleRepository.save(any(Article.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            StockMasterPrincipal principal = principal("GESTIONNAIRE_STOCK", GROUP_ID);
+            ArticleResponse reponse = articleService.supprimer(principal, ARTICLE_ID);
+
+            ArgumentCaptor<Article> captor = ArgumentCaptor.forClass(Article.class);
+            verify(articleRepository).save(captor.capture());
+            assertThat(captor.getValue().getSupprime()).isTrue();
+            assertThat(captor.getValue().getActif()).isFalse();
+            assertThat(reponse.getActif()).isFalse();
+        }
+
+        @Test
+        @DisplayName("❌ 404 RES_001 si article hors groupe — jamais révélé")
+        void shouldThrow404WhenArticleOutsideGroup() {
+            TenantGroup autreGroupe = groupeActif();
+            autreGroupe.setId(999L);
+            Categorie categorieAutre = categorieDuGroupe(autreGroupe);
+            Article articleAutre = articleExistant(autreGroupe, categorieAutre);
+            stubArticleDansGroupe(articleAutre);
+
+            StockMasterPrincipal principal = principal("GESTIONNAIRE_STOCK", GROUP_ID);
+            BusinessException ex = catchThrowableOfType(
+                    () -> articleService.supprimer(principal, ARTICLE_ID), BusinessException.class);
+
+            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.RES_ENTITY_NOT_FOUND);
+            verify(articleRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("❌ 403 SEC_001 pour un rôle non autorisé (avant toute I/O)")
+        void shouldThrow403WhenRoleNotAuthorized() {
+            StockMasterPrincipal principal = principal("CAISSIER", GROUP_ID);
+            BusinessException ex = catchThrowableOfType(
+                    () -> articleService.supprimer(principal, ARTICLE_ID), BusinessException.class);
+
+            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.SEC_ACCESS_DENIED);
+            verifyNoInteractions(articleRepository);
         }
     }
 
