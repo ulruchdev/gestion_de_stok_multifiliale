@@ -1266,6 +1266,19 @@ photo   = (fichier)
 
 ---
 
+## 15. Catalogue — `/api/v1/articles`
+
+> **Statut :** ✅ Implémenté (EPIC 5, US-031 — livré le 21 oct. 2026)
+
+### 15.1 POST — Créer un article
+
+- **Rôles :** `GESTIONNAIRE_STOCK` / `ADMIN_FILIALE` / `ADMIN_GROUPE`
+- **Corps :** `codeArticle` (unique par groupe), `designation`, `categorieId`, `prixAchatHt`, `prixVenteHt`, `tauxTva` (nullable = hérité de la catégorie), `seuilAlerte` (nullable = 0, alerte désactivée — DEC-023)
+- **Calculs serveur :** `prixVenteTtc` (DEC-003, jamais saisi) + `margeBrutePct` (à la volée, non persistée)
+- **Réponses :** `201` · `400` CAT_001 (taux non supporté / hors [0;100]) · `403` SEC_001 / GRP_002 · `404` RES_001 (catégorie absente/hors groupe) · `409` RES_002 (code article dupliqué)
+
+---
+
 ## Scripts de test Postman
 
 ### Scripts de test génériques (à ajouter à chaque requête)
@@ -1315,6 +1328,7 @@ if (pm.response.code === 201) {
 | Juin 2026 | Codebuff | Création initiale | Documenter les endpoints pour Postman |
 | Juin 2026 | Codebuff | Ajout fichier JSON collection v2.1 + maintenance workflow | Création de `postman_collection.json` importable directement |
 | 8 sept. 2026 | Claude Code | Sections 12-14 (caisse, inventaire, imports) + règle `Idempotency-Key` ; §10.2 aligné sur `etat` | Rédaction des US `US-087` à `US-106` couvrant `DEC-009/010/027/036/038` |
+| 21 oct. 2026 | Codebuff | Section 15 (`POST /api/v1/articles`) + requête dans `postman_collection.json` | Livraison US-031 (EPIC 5) |
 
 ---
 
