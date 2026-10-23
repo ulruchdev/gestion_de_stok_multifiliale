@@ -151,7 +151,7 @@ public class ArticleService {
         if (prixAchatHt == null || prixAchatHt == 0 || prixVenteHt == null) {
             return null;
         }
-        return BigDecimal.valueOf(prixVenteHt - prixAchatHt)
+        return BigDecimal.valueOf((long) prixVenteHt - prixAchatHt)
                 .multiply(BigDecimal.valueOf(100))
                 .divide(BigDecimal.valueOf(prixAchatHt), 2, RoundingMode.HALF_UP);
     }

@@ -249,8 +249,10 @@ class ArticleServiceTest {
         @Test
         @DisplayName("❌ 403 SEC_001 pour un rôle non autorisé (avant toute I/O)")
         void shouldThrow403WhenRoleNotAuthorized() {
+            StockMasterPrincipal principal = principal("CAISSIER", GROUP_ID);
+            ArticleCreateRequest request = requeteValide();
             BusinessException ex = catchThrowableOfType(
-                    () -> articleService.creer(principal("CAISSIER", GROUP_ID), requeteValide()), BusinessException.class);
+                    () -> articleService.creer(principal, request), BusinessException.class);
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.SEC_ACCESS_DENIED);
             verifyNoInteractions(articleRepository, categorieRepository, tenantGroupRepository);
@@ -259,8 +261,10 @@ class ArticleServiceTest {
         @Test
         @DisplayName("❌ 403 GRP_002 si principal non groupé (groupId absent)")
         void shouldThrow403WhenPrincipalNotGrouped() {
+            StockMasterPrincipal principal = principal("GESTIONNAIRE_STOCK", null);
+            ArticleCreateRequest request = requeteValide();
             BusinessException ex = catchThrowableOfType(
-                    () -> articleService.creer(principal("GESTIONNAIRE_STOCK", null), requeteValide()), BusinessException.class);
+                    () -> articleService.creer(principal, request), BusinessException.class);
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
             verifyNoInteractions(articleRepository, categorieRepository, tenantGroupRepository);
@@ -271,8 +275,10 @@ class ArticleServiceTest {
         void shouldThrow409WhenCodeArticleDuplicate() {
             when(articleRepository.existsByGroupeIdAndCodeArticleAndSupprimeFalse(GROUP_ID, "RIZ50KG")).thenReturn(true);
 
+            StockMasterPrincipal principal = principal("GESTIONNAIRE_STOCK", GROUP_ID);
+            ArticleCreateRequest request = requeteValide();
             BusinessException ex = catchThrowableOfType(
-                    () -> articleService.creer(principal("GESTIONNAIRE_STOCK", GROUP_ID), requeteValide()), BusinessException.class);
+                    () -> articleService.creer(principal, request), BusinessException.class);
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.RES_DUPLICATE_CODE);
             verify(articleRepository, never()).save(any());
@@ -284,8 +290,10 @@ class ArticleServiceTest {
             when(articleRepository.existsByGroupeIdAndCodeArticleAndSupprimeFalse(GROUP_ID, "RIZ50KG")).thenReturn(false);
             when(categorieRepository.findByIdAndSupprimeFalse(CATEGORIE_ID)).thenReturn(Optional.empty());
 
+            StockMasterPrincipal principal = principal("GESTIONNAIRE_STOCK", GROUP_ID);
+            ArticleCreateRequest request = requeteValide();
             BusinessException ex = catchThrowableOfType(
-                    () -> articleService.creer(principal("GESTIONNAIRE_STOCK", GROUP_ID), requeteValide()), BusinessException.class);
+                    () -> articleService.creer(principal, request), BusinessException.class);
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.RES_ENTITY_NOT_FOUND);
         }
@@ -299,8 +307,10 @@ class ArticleServiceTest {
             when(categorieRepository.findByIdAndSupprimeFalse(CATEGORIE_ID))
                     .thenReturn(Optional.of(categorieDuGroupe(autreGroupe)));
 
+            StockMasterPrincipal principal = principal("GESTIONNAIRE_STOCK", GROUP_ID);
+            ArticleCreateRequest request = requeteValide();
             BusinessException ex = catchThrowableOfType(
-                    () -> articleService.creer(principal("GESTIONNAIRE_STOCK", GROUP_ID), requeteValide()), BusinessException.class);
+                    () -> articleService.creer(principal, request), BusinessException.class);
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.RES_ENTITY_NOT_FOUND);
         }
@@ -314,8 +324,9 @@ class ArticleServiceTest {
 
             ArticleCreateRequest taux5 = requeteValide();
             taux5.setTauxTva(new BigDecimal("5.5"));
+            StockMasterPrincipal principal = principal("GESTIONNAIRE_STOCK", GROUP_ID);
             BusinessException ex = catchThrowableOfType(
-                    () -> articleService.creer(principal("GESTIONNAIRE_STOCK", GROUP_ID), taux5), BusinessException.class);
+                    () -> articleService.creer(principal, taux5), BusinessException.class);
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CAT_TAUX_TVA_INVALIDE);
         }
@@ -329,8 +340,9 @@ class ArticleServiceTest {
 
             ArticleCreateRequest tauxNeg = requeteValide();
             tauxNeg.setTauxTva(new BigDecimal("-1"));
+            StockMasterPrincipal principal = principal("GESTIONNAIRE_STOCK", GROUP_ID);
             BusinessException ex = catchThrowableOfType(
-                    () -> articleService.creer(principal("GESTIONNAIRE_STOCK", GROUP_ID), tauxNeg), BusinessException.class);
+                    () -> articleService.creer(principal, tauxNeg), BusinessException.class);
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CAT_TAUX_TVA_INVALIDE);
         }
@@ -344,8 +356,9 @@ class ArticleServiceTest {
 
             ArticleCreateRequest tauxHaut = requeteValide();
             tauxHaut.setTauxTva(new BigDecimal("150"));
+            StockMasterPrincipal principal = principal("GESTIONNAIRE_STOCK", GROUP_ID);
             BusinessException ex = catchThrowableOfType(
-                    () -> articleService.creer(principal("GESTIONNAIRE_STOCK", GROUP_ID), tauxHaut), BusinessException.class);
+                    () -> articleService.creer(principal, tauxHaut), BusinessException.class);
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.CAT_TAUX_TVA_INVALIDE);
         }
@@ -359,8 +372,10 @@ class ArticleServiceTest {
             when(categorieRepository.findByIdAndSupprimeFalse(CATEGORIE_ID)).thenReturn(Optional.of(categorieDuGroupe(groupe)));
             when(tenantGroupRepository.findByIdAndSupprimeFalse(GROUP_ID)).thenReturn(Optional.of(groupe));
 
+            StockMasterPrincipal principal = principal("GESTIONNAIRE_STOCK", GROUP_ID);
+            ArticleCreateRequest request = requeteValide();
             BusinessException ex = catchThrowableOfType(
-                    () -> articleService.creer(principal("GESTIONNAIRE_STOCK", GROUP_ID), requeteValide()), BusinessException.class);
+                    () -> articleService.creer(principal, request), BusinessException.class);
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
         }
