@@ -118,6 +118,7 @@ class FournisseurControllerTest {
             mockMvc.perform(post("/api/v1/fournisseurs")
                             .with(SecurityMockMvcRequestPostProcessors.authentication(
                                     asAuthentication(role, GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(corpsValide()))
                     .andExpect(status().isCreated())
@@ -143,6 +144,7 @@ class FournisseurControllerTest {
             mockMvc.perform(post("/api/v1/fournisseurs")
                             .with(SecurityMockMvcRequestPostProcessors.authentication(
                                     asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(corpsAvecAutreTenant))
                     .andExpect(status().isCreated());
@@ -168,6 +170,7 @@ class FournisseurControllerTest {
             mockMvc.perform(post("/api/v1/fournisseurs")
                             .with(SecurityMockMvcRequestPostProcessors.authentication(
                                     asAuthentication(role, GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(corpsValide()))
                     .andExpect(status().isForbidden());
@@ -179,6 +182,7 @@ class FournisseurControllerTest {
         @DisplayName("❌ 4xx — non authentifié")
         void shouldRefuserSansAuthentification() throws Exception {
             mockMvc.perform(post("/api/v1/fournisseurs")
+                            .with(SecurityMockMvcRequestPostProcessors.csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(corpsValide()))
                     .andExpect(status().is4xxClientError());
@@ -199,6 +203,7 @@ class FournisseurControllerTest {
             mockMvc.perform(post("/api/v1/fournisseurs")
                             .with(SecurityMockMvcRequestPostProcessors.authentication(
                                     asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"raisonSociale\":\"   \"}"))
                     .andExpect(status().isBadRequest())
@@ -213,6 +218,7 @@ class FournisseurControllerTest {
             mockMvc.perform(post("/api/v1/fournisseurs")
                             .with(SecurityMockMvcRequestPostProcessors.authentication(
                                     asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"raisonSociale\":\"SARL Import Golfe\","
                                     + "\"telephone\":\"691234567\"}"))
