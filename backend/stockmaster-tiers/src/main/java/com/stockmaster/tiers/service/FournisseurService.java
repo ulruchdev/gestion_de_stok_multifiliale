@@ -1,6 +1,8 @@
 package com.stockmaster.tiers.service;
 
+import com.stockmaster.shared.config.PaginationProperties;
 import com.stockmaster.shared.domain.entity.Entreprise;
+import com.stockmaster.shared.dto.response.PageResponse;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
 import com.stockmaster.shared.repository.EntrepriseRepository;
@@ -12,6 +14,10 @@ import com.stockmaster.tiers.mapper.FournisseurMapper;
 import com.stockmaster.tiers.repository.FournisseurRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +42,9 @@ import java.util.Set;
  * {@link CreerFournisseurRequest} (raisonSociale obligatoire ; telephone au
  * format E.164 si fourni) → {@code 400 SYS_005} via le
  * {@code GlobalExceptionHandler} de {@code stockmaster-shared}.</p>
+ *
+ * <p><b>US-037</b> — {@link #lister} : listing paginé + recherche par nom ou
+ * ville, strictement rattaché à l'entreprise du JWT.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -49,6 +58,7 @@ public class FournisseurService {
     private final FournisseurRepository fournisseurRepository;
     private final EntrepriseRepository entrepriseRepository;
     private final FournisseurMapper fournisseurMapper;
+    private final PaginationProperties paginationProperties;
 
     /**
      * Crée un fournisseur dans l'entreprise du JWT.
@@ -72,6 +82,55 @@ public class FournisseurService {
                 cree.getId(), cree.getRaisonSociale(), entreprise.getId(), principal.getUserId());
 
         return fournisseurMapper.toResponse(cree);
+    }
+
+    // ─── US-037 — lister / rechercher ─────────────────────────────
+
+    /**
+     * US-037 — liste paginée des fournisseurs de l'entreprise du JWT,
+     * avec recherche optionnelle par nom ou ville.
+     *
+     * <p><b>Isolation tenant (règle n°1)</b> : aucun identifiant de tenant en
+     * entrée — l'{@code entreprise_id} vient du JWT et porte la requête
+     * repository ; l'agrégat {@code Entreprise} est d'abord validé (miroir
+     * US-036) : introuvable, soft-supprimée ou hors groupe → {@code 404 RES_001}.
+     * Un {@code entrepriseId} ajouté à la query string est ignoré.</p>
+     *
+     * <p><b>Arbitrages validés</b> : tri fixe {@code raisonSociale ASC} (pas de
+     * tri dynamique) ; {@code size} borné à
+     * {@code stockmaster.pagination.max-page-size} (100) côté service — le repo
+     * borne silencieusement, jamais de 400 (convention {@code FilialeService}/
+     * {@code ArticleService}) ; {@code search} vide ou blanc → listing complet.</p>
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<FournisseurResponse> lister(StockMasterPrincipal principal,
+                                                    String search, int page, int size) {
+        verifierRole(principal);
+        Entreprise entreprise = chargerEntrepriseDuPrincipal(principal);
+        Long entrepriseId = entreprise.getId();
+
+        Pageable pageable = PageRequest.of(Math.max(0, page), borneTaille(size),
+                Sort.by(Sort.Direction.ASC, "raisonSociale"));
+
+        Page<Fournisseur> fournisseurs = (search == null || search.isBlank())
+                ? fournisseurRepository.findAllByEntrepriseIdAndSupprimeFalse(entrepriseId, pageable)
+                : fournisseurRepository.rechercherParEntrepriseEtTexte(
+                        entrepriseId, search.trim(), pageable);
+
+        PageResponse<FournisseurResponse> reponse =
+                PageResponse.from(fournisseurs.map(fournisseurMapper::toResponse));
+
+        log.info("US-037 : {} fournisseur(s) sur entreprise {} (page {}/{}, search={})",
+                reponse.getTotalElements(), entrepriseId, reponse.getPage() + 1,
+                Math.max(reponse.getTotalPages(), 1),
+                (search == null || search.isBlank()) ? "<absent>" : search.trim());
+
+        return reponse;
+    }
+
+    /** Bornes de pagination — convention repo : clamp silencieux, pas de 400. */
+    private int borneTaille(int size) {
+        return Math.min(Math.max(1, size), paginationProperties.getMaxPageSize());
     }
 
     // ─── helpers privés ──────────────────────────────────────────────────────
