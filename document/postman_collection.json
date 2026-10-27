@@ -1365,6 +1365,48 @@
           }
         }
       ]
+    },
+    {
+      "name": "🏪 6. Tiers — EPIC 6",
+      "item": [
+        {
+          "name": "US-036 — Créer un fournisseur",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"raisonSociale\": \"SARL Import Golfe\",\n  \"telephone\": \"+237691234567\",\n  \"nif\": \"M0126000001\",\n  \"contact\": \"Jean Etoundi\",\n  \"email\": \"achats@importgolfe.cm\",\n  \"adresseVille\": \"Douala\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/fournisseurs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "fournisseurs"
+              ]
+            },
+            "description": "US-036 (P0) — POST /api/v1/fournisseurs. Rôles : RESP_ACHATS / ADMIN_FILIALE / ADMIN_GROUPE. entreprise_id extrait du JWT, jamais du corps (un entrepriseId forcé dans le payload est ignoré). raisonSociale obligatoire (max 200), telephone optionnel mais E.164 si fourni. Réponses : 201, 400 SYS_005 (validation), 403 SEC_001 / GRP_002, 404 RES_001 (entreprise hors groupe)."
+          }
+        }
+      ]
     }
   ]
 }

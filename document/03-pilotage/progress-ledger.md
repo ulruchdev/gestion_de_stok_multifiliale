@@ -98,7 +98,16 @@
 
 ---
 
-## EPIC 6 à 13 — (non commencé)
+## EPIC 6 — Tiers (Clients & Fournisseurs)
+
+| US | Description | Priorité | Statut | Notes |
+|----|-------------|--------|-------|-------|
+| US-036 | POST `/api/v1/fournisseurs` — créer un fournisseur | P0 | ✅ | Terminé (branche `feature/GS-036-creer-fournisseur`). **RBAC** : `@PreAuthorize("hasAnyRole('RESP_ACHATS','ADMIN_FILIALE','ADMIN_GROUPE')")` sur la méthode contrôleur (convention `CategorieController`/`ArticleController`) + garde rôle fail-fast côté service (403 `SEC_001` avant toute I/O). **Isolation tenant** : `entreprise_id` extrait du JWT via `StockMasterPrincipal`, agrégat `shared` `Entreprise` + `EntrepriseRepository` (aucune nouvelle entité), entreprise introuvable/soft-supprimée/hors groupe → 404 `RES_001` uniforme ; le DTO `CreerFournisseurRequest` ne porte **aucun champ tenant** — un `entrepriseId` forcé dans le payload est ignoré (test dédié). **Validation CA3** : `raisonSociale` `@NotBlank` + `@Size(max=200)` (colonne V1), `telephone` optionnel en E.164 (regex identique à `InscriptionEntrepriseUniqueRequest`, validée par l'utilisateur le 27 oct. 2026) → 400 `SYS_005`. **Mapping** : MapStruct (`FournisseurMapper`, `componentModel=spring`) — `entreprise` ignoré à l'entrée, `entreprise.id` lu à la sortie. **Aucune migration** : la table `fournisseur` existe depuis `V1__init_schema.sql`. 30 tests verts (18 service + 10 contrôleur + 2 fondamentaux préexistants) ; `spring-security-test` ajouté au pom tiers (scope test, déjà présent sur catalogue/utilisateur). |
+| US-037 → US-043 | Lister / modifier / supprimer fournisseurs et CRUD clients | P0 | ❌ | Non commencé (hors périmètre US-036) |
+
+---
+
+## EPIC 7 à 13 — (non commencé)
 
 ---
 
