@@ -153,6 +153,7 @@ class FournisseurControllerTest {
             assertThat(Arrays.stream(CreerFournisseurRequest.class.getDeclaredFields())
                     .map(Field::getName)
                     .collect(Collectors.toSet()))
+                    .isNotEmpty()
                     .doesNotContain("entrepriseId", "entreprise", "groupId");
         }
     }

@@ -16,8 +16,9 @@ import com.stockmaster.tiers.mapper.FournisseurMapper;
 import com.stockmaster.tiers.mapper.FournisseurMapperImpl;
 import com.stockmaster.tiers.repository.FournisseurRepository;
 import io.jsonwebtoken.Claims;
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
-import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -89,7 +90,17 @@ class FournisseurServiceTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+
+    /**
+     * Valide le corps avec une {@code ValidatorFactory} ouverte en
+     * try-with-resources : la fabrique est fermée à chaque appel (jamais de
+     * ressource laissée ouverte par le test).
+     */
+    private Set<ConstraintViolation<CreerFournisseurRequest>> valider(CreerFournisseurRequest request) {
+        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+            return factory.getValidator().validate(request);
+        }
+    }
 
     // ─── fixtures ────────────────────────────────────────────────────────────
 
@@ -177,8 +188,11 @@ class FournisseurServiceTest {
         @ValueSource(strings = {"CAISSIER", "COMMERCIAL", "GESTIONNAIRE_STOCK"})
         @DisplayName("❌ 403 SEC_001 — rôle hors périmètre achats, avant toute I/O")
         void shouldThrowWhenRoleNonAutorise(String role) {
-            assertThatThrownBy(() -> fournisseurService.creer(
-                    principal(role, GROUP_ID, ENTREPRISE_ID), requeteValide()))
+            StockMasterPrincipal acteur = principal(role, GROUP_ID, ENTREPRISE_ID);
+            CreerFournisseurRequest requete = requeteValide();
+
+            // S5778 : une seule invocation dans le lambda d'assertThatThrownBy
+            assertThatThrownBy(() -> fournisseurService.creer(acteur, requete))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SEC_ACCESS_DENIED);
 
@@ -189,8 +203,10 @@ class FournisseurServiceTest {
         @Test
         @DisplayName("❌ 403 SEC_001 — principal sans rôle")
         void shouldThrowWhenRoleAbsent() {
-            assertThatThrownBy(() -> fournisseurService.creer(
-                    principal(null, GROUP_ID, ENTREPRISE_ID), requeteValide()))
+            StockMasterPrincipal acteur = principal(null, GROUP_ID, ENTREPRISE_ID);
+            CreerFournisseurRequest requete = requeteValide();
+
+            assertThatThrownBy(() -> fournisseurService.creer(acteur, requete))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SEC_ACCESS_DENIED);
         }
@@ -216,7 +232,8 @@ class FournisseurServiceTest {
             Set<String> champs = Arrays.stream(CreerFournisseurRequest.class.getDeclaredFields())
                     .map(Field::getName)
                     .collect(Collectors.toSet());
-            assertThat(champs).doesNotContain("entrepriseId", "entreprise", "groupId");
+            assertThat(champs).isNotEmpty()
+                    .doesNotContain("entrepriseId", "entreprise", "groupId");
 
             when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
             stubSauvegarde();
@@ -236,7 +253,10 @@ class FournisseurServiceTest {
             horsGroupe.getGroupe().setId(999L);
             when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(horsGroupe));
 
-            assertThatThrownBy(() -> fournisseurService.creer(principalAchats(), requeteValide()))
+            StockMasterPrincipal acteur = principalAchats();
+            CreerFournisseurRequest requete = requeteValide();
+
+            assertThatThrownBy(() -> fournisseurService.creer(acteur, requete))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
 
@@ -248,7 +268,10 @@ class FournisseurServiceTest {
         void shouldThrow404WhenEntrepriseIntrouvable() {
             when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> fournisseurService.creer(principalAchats(), requeteValide()))
+            StockMasterPrincipal acteur = principalAchats();
+            CreerFournisseurRequest requete = requeteValide();
+
+            assertThatThrownBy(() -> fournisseurService.creer(acteur, requete))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
 
@@ -262,7 +285,10 @@ class FournisseurServiceTest {
             supprimee.setSupprime(true);
             when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(supprimee));
 
-            assertThatThrownBy(() -> fournisseurService.creer(principalAchats(), requeteValide()))
+            StockMasterPrincipal acteur = principalAchats();
+            CreerFournisseurRequest requete = requeteValide();
+
+            assertThatThrownBy(() -> fournisseurService.creer(acteur, requete))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
         }
@@ -270,8 +296,10 @@ class FournisseurServiceTest {
         @Test
         @DisplayName("❌ 403 GRP_002 — principal sans groupId (JWT incomplet)")
         void shouldThrow403WhenPrincipalSansGroupId() {
-            assertThatThrownBy(() -> fournisseurService.creer(
-                    principal("RESP_ACHATS", null, ENTREPRISE_ID), requeteValide()))
+            StockMasterPrincipal acteur = principal("RESP_ACHATS", null, ENTREPRISE_ID);
+            CreerFournisseurRequest requete = requeteValide();
+
+            assertThatThrownBy(() -> fournisseurService.creer(acteur, requete))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
 
@@ -281,8 +309,10 @@ class FournisseurServiceTest {
         @Test
         @DisplayName("❌ 403 SEC_001 — principal sans entrepriseId (JWT incomplet)")
         void shouldThrow403WhenPrincipalSansEntrepriseId() {
-            assertThatThrownBy(() -> fournisseurService.creer(
-                    principal("RESP_ACHATS", GROUP_ID, null), requeteValide()))
+            StockMasterPrincipal acteur = principal("RESP_ACHATS", GROUP_ID, null);
+            CreerFournisseurRequest requete = requeteValide();
+
+            assertThatThrownBy(() -> fournisseurService.creer(acteur, requete))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SEC_ACCESS_DENIED);
 
@@ -329,7 +359,7 @@ class FournisseurServiceTest {
             CreerFournisseurRequest r = requeteValide();
             r.setTelephone("+237691234567");
 
-            assertThat(validator.validate(r)).isEmpty();
+            assertThat(valider(r)).isEmpty();
         }
 
         @Test
@@ -338,12 +368,12 @@ class FournisseurServiceTest {
             CreerFournisseurRequest r = requeteValide();
             r.setTelephone(null);
 
-            assertThat(validator.validate(r)).isEmpty();
+            assertThat(valider(r)).isEmpty();
         }
     }
 
     private Set<String> champsEnErreur(CreerFournisseurRequest request) {
-        return validator.validate(request).stream()
+        return valider(request).stream()
                 .map(v -> v.getPropertyPath().toString())
                 .collect(Collectors.toSet());
     }
