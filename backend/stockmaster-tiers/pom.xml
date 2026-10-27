@@ -14,5 +14,14 @@
     <name>StockMaster CM — Tiers (clients &amp; fournisseurs)</name>
     <dependencies>
         <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-shared</artifactId></dependency>
+
+        <!-- Tests MockMvc : post-processors security (@WebMvcTest + @PreAuthorize) —
+             même dépendance (scope test) que catalogue / utilisateur, version
+             portée par le BOM Spring Boot -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
