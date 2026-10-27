@@ -1365,6 +1365,106 @@
           }
         }
       ]
+    },
+    {
+      "name": "📦 6. Stock — EPIC 8",
+      "item": [
+        {
+          "name": "US-051 — Consulter le stock réel",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/stock",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stock"
+              ],
+              "query": [
+                {
+                  "key": "statutAlerte",
+                  "value": "BAS"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "US-051 — GET /api/v1/stock : stock réel par article, paginé. Aucun rôle restreint (tout utilisateur authentifié). Paramètres : statutAlerte (NORMAL|BAS|RUPTURE|ANOMALIE, filtré EN SQL pour préserver la pagination), page (défaut 0), size (défaut 20, borné à 100). Stock = Σ entrées − Σ sorties en SQL (REF §4.2, DEC-023) ; un article sans mouvement remonte RUPTURE (stock 0). Réponses : 200 ApiResponse<PageResponse<StockArticleResponse>>, 400 SYS_002, 403 GRP_002 / SEC_001."
+          },
+          "response": []
+        },
+        {
+          "name": "US-052 — Historique des mouvements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/stock/articles/:articleId/mouvements",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stock",
+                "articles",
+                ":articleId",
+                "mouvements"
+              ],
+              "query": [
+                {
+                  "key": "typeMouvement",
+                  "value": "ENTREE"
+                },
+                {
+                  "key": "dateDebut",
+                  "value": "2026-10-01"
+                },
+                {
+                  "key": "dateFin",
+                  "value": "2026-10-31"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "articleId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "US-052 — GET /api/v1/stock/articles/{articleId}/mouvements : historique paginé, tri date DESC. Rôles : GESTIONNAIRE_STOCK / ADMIN_FILIALE / ADMIN_GROUPE (@PreAuthorize). Paramètres : typeMouvement, dateDebut/dateFin (YYYY-MM-DD, inclusives), page, size (borné 100). Réponses : 200 PageResponse<MouvementStockResponse> (id, type, quantité, date, utilisateur, origine, motif), 400 SYS_002, 403 SEC_001 / GRP_002, 404 RES_001 (article hors groupe — 404 uniforme)."
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

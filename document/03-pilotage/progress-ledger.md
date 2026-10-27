@@ -98,7 +98,20 @@
 
 ---
 
-## EPIC 6 à 13 — (non commencé)
+## EPIC 8 — Gestion du Stock (en cours)
+
+| US | Description | Priorité | Statut | Notes |
+|----|-------------|----------|--------|-------|
+| US-051 | GET `/api/v1/stock` — consulter le stock réel par article | P0 | ✅ | Terminé (branche `feature/GS-051-consultation-stock`). **`StockController` + `StockService`** (premiers du module) : `GET /api/v1/stock?statutAlerte=&page=&size=` → `ApiResponse<PageResponse<StockArticleResponse>>`. **Aucun `@PreAuthorize`** (CA « tout utilisateur authentifié », comme US-032) + garde service fail-fast (groupId absent → 403 GRP_002, entrepriseId absent → 403 SEC_001, groupe absent/inactif → 403 GRP_002 — pattern catalogue). Requête native `MouvementStockRepository.listerStockParArticle` : articles du groupe **LEFT JOIN** agrégat signé des mouvements de l'entreprise (même CASE que `calculerStockReel` — 8 types REF §4.2) ; le **`statutAlerte` est dérivé en SQL** (miroir de `StatutAlerte.de`) sinon le filtre `?statutAlerte=BAS` aurait cassé la pagination (filtrage après coup). Nouvel enum **`StatutAlerte`** (NORMAL/BAS/RUPTURE/ANOMALIE) + `StatutAlerteTest` (8 tests). **Décision GO utilisateur** : stock 0 (article sans mouvement) → `RUPTURE`, lecture littérale REF §4.2. Taille bornée à `stockmaster.pagination.max-page-size`. 11 tests service + 5 tests contrôleur. Validation : reactor **545 tests verts**, ArchUnit 4/4, intégration 3/3, **et test manuel réel contre l'app lancée** : stock 0 → RUPTURE, entrée de 5 (seuil 10) → BAS, filtres SQL conformes, `?statutAlerte=XYZ` → 400 SYS_002, CAISSIER → 200 sur US-051. |
+| US-052 | GET `/api/v1/stock/articles/{id}/mouvements` — historique des mouvements | P0 | ✅ | Terminé (même branche). `@PreAuthorize('GESTIONNAIRE_STOCK','ADMIN_FILIALE','ADMIN_GROUPE')` + garde rôle en défense en profondeur (RESP_ACHATS/CAISSIER → 403 SEC_001 avant toute I/O). **404 uniforme `RES_001`** si l'article est inconnu ou hors du groupe du JWT, via `articleExisteDansGroupe` (requête native sur la couche **contrat** `catalogue.domain.entity` — ArchUnit n°1 respectée, `ArticleRepository` jamais référencé). Historique paginé `listerMouvementsParArticle` trié **`date_mouvement DESC, id DESC` en SQL** (Pageable sans tri pour éviter un double ORDER BY), filtres `typeMouvement`/`dateDebut`/`dateFin` (dates inclusives, n bornes en UTC) via **sentinelles non nulles** (`""`, `EPOCH`, `2100-01-01`) — aucun paramètre NULL côté JDBC. `LEFT JOIN utilisateur` pour retourner `utilisateurNom` (« prénom nom ») sans charger l'entité ; mapping `Timestamp → Instant`. 13 tests service + 6 tests contrôleur. Validé en réel : 200 avec jointure, `typeMouvement=SORTIE` → vide, plage du jour → 1 ligne, plage 2020 → vide, `dateDebut > dateFin` → 400, sans token → 401/403, CAISSIER → 403 SEC_001. |
+
+> ⚠️ **Reste à livrer dans l'EPIC 8** : US-053/US-054 (corrections), US-055 (stock consolidé). Le **port d'écriture `EcritureStockPort`** (contrat pour achat/vente, whitelist ArchUnit) est délibérément **reporté au ticket suivant** — décision GO du 27 oct. 2026.
+>
+> **Prérequis de données** : l'EPIC 7 (US-048) n'est pas encore livrée — les mouvements réels n'existeront qu'à la réception des commandes fournisseur. Le module est testable dès aujourd'hui (tests + données de test).
+
+> *Dernière mise à jour : 27 octobre 2026 — EPIC 8 : US-051/US-052 livrées (contrôleurs stock + service + requêtes natives), 545 tests verts (stock 20 → 63), branche `feature/GS-051-consultation-stock`*
+
+## EPIC 6, 7, 9 à 17 — (non commencé)
 
 ---
 

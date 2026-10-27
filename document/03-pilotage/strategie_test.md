@@ -195,9 +195,9 @@ cd backend && mvn -q test -pl stockmaster-catalogue \
 **Résultat observé en local :** `BUILD SUCCESS` —
 `CategorieServiceTest` 39 tests (2 ignorés dans `TauxTva`), `CategorieControllerTest`
 20 tests, `ArticleDefaultsTest` 2 tests — aucun échec, aucune erreur.
-**Résultat attendu :** `BUILD SUCCESS` + **421 tests, 0 failure, 0 error**
+**Résultat attendu :** `BUILD SUCCESS` + **545 tests, 0 failure, 0 error**
 
-> **Compteur réel (catalogue revérifié le 21 oct. 2026 ; autres modules inchangés depuis le 9 oct.) :** shared 71 · auth 96 · groupe 67 · catalogue 83 (dont 2 skippés — US-027→031 + defaults) · notification 8 · utilisateur 132 · tiers 2 · achat 3 · stock 20 · vente 8 · reporting 5 · bootstrap 7 (dont 4 ArchUnit) = **502**.
+> **Compteur réel (reactor complet revérifié le 27 oct. 2026 avec `mvn test`) :** shared 71 · auth 96 · groupe 67 · catalogue 83 (dont 2 skippés — US-027→031 + defaults) · notification 8 · utilisateur 132 · tiers 2 · achat 3 · **stock 63** (20 → 63 : +43 avec US-051/US-052 — `StockServiceTest` 24, `StockControllerTest` 11, `StatutAlerteTest` 8) · vente 8 · reporting 5 · bootstrap 7 (dont 4 ArchUnit) = **545**.
 > Les 3 tests de `bootstrap` (`StockMasterApplicationTest`) échouent **sans PostgreSQL** — c'est environnemental, pas un bug : `docker compose up -d postgres redis` les rend verts.
 >
 > ⚠️ **Le gate « Coverage ≥ 80 % » n'est PAS actif dans le build** (item **C-14** de la checklist `DEC-031` ouvert : le pom parent ne contient que `prepare-agent` + `report`, aucune exécution `jacoco:check`). Ne prétendez pas qu'il bloque la CI.
@@ -574,6 +574,7 @@ curl http://localhost:8080/actuator/health
 |---|---|---|---|
 | Juin 2026 | Codebuff | Création initiale | Guide stratégie de test |
 | 2026-10-19 | clement ange | Mise à jour compte de tests catalogue et CI | Ajout exemple réel `CategorieServiceTest`/`CategorieControllerTest`/`ArticleDefaultsTest` (39 + 20 + 2 tests, 2 ignorés) et alignement workflow pré-push sur `ci-backend.yml`/`ci-frontend.yml` |
+| 2026-10-27 | Codebuff | Compte 502 → **545** (stock 20 → 63) | Livraison US-051/US-052 (EPIC 8) — 43 tests ajoutés (`StockServiceTest`, `StockControllerTest`, `StatutAlerteTest`). **Piège constaté** : si `docker-proxy` de l'hôte ne relaie plus les ports 5432/6379, `StockMasterApplicationTest` échoue en `EOFException` SSL → workaround `DB_HOST=<IP conteneur> REDIS_HOST=<IP conteneur> mvn test` (le conteneur lui-même répond normalement) |
 
 ---
 
