@@ -17,6 +17,7 @@ import com.stockmaster.tiers.dto.request.ModifierFournisseurRequest;
 import com.stockmaster.tiers.dto.response.FournisseurResponse;
 import com.stockmaster.tiers.mapper.FournisseurMapper;
 import com.stockmaster.tiers.mapper.FournisseurMapperImpl;
+import com.stockmaster.tiers.port.CommandesFournisseurPort;
 import com.stockmaster.tiers.repository.FournisseurRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.validation.ConstraintViolation;
@@ -86,6 +87,9 @@ class FournisseurServiceTest {
     private FournisseurRepository fournisseurRepository;
     @Mock
     private EntrepriseRepository entrepriseRepository;
+    /** US-039 — port inter-module (implémenté dans stockmaster-achat, DEC-019). */
+    @Mock
+    private CommandesFournisseurPort commandesFournisseurPort;
     /** Vraie instance — valeurs par défaut du repo (maxPageSize = 100). */
     @Spy
     private final PaginationProperties paginationProperties = new PaginationProperties();
@@ -836,5 +840,186 @@ class FournisseurServiceTest {
         return valider(request).stream()
                 .map(v -> v.getPropertyPath().toString())
                 .collect(Collectors.toSet());
+    }
+
+    // ─── US-039 — supprimer (archiver) un fournisseur ──────────────────
+
+    /**
+     * US-039 — {@code DELETE /api/v1/fournisseurs/{id}}. Contrats verrouillés
+     * (arbitrages validés le 28 oct. 2026) :
+     *
+     * <ul>
+     *   <li><b>Contradiction A — option (c)</b> : 409 {@code RES_005} si une
+     *       commande est <b>active</b> ({@code COMMANDEE} | {@code PARTIELLEMENT_RECUE}) ;
+     *       archivage autorisé si les commandes sont closes
+     *       ({@code RECEPTIONNEE} | {@code ANNULEE}) — CA5 et CA7 réconciliés ;</li>
+     *   <li><b>Contradiction B</b> : CA3 ({@code ligne.receptionne=true})
+     *       abandonné — la colonne n'existe pas ; le critère est dérivé de l'état ;</li>
+     *   <li><b>Soft delete uniquement</b> : aucune ligne n'est supprimée
+     *       physiquement ({@code delete*} jamais appelé) ;</li>
+     *   <li><b>1.c</b> : 200 + {@code FournisseurResponse} (convention US-029/035) ;</li>
+     *   <li><b>1.e/1.f/1.g</b> : 404 {@code RES_001} uniforme — id inconnu, autre
+     *       tenant, ou déjà archivé (idempotence).</li>
+     * </ul>
+     */
+    @Nested
+    @DisplayName("US-039 — supprimer (archiver) un fournisseur")
+    class SupprimerFournisseur {
+
+        private static final Long ID_CIBLE = 400L;
+
+        private Fournisseur fournisseurActif() {
+            Fournisseur f = new Fournisseur();
+            f.setId(ID_CIBLE);
+            f.setEntreprise(entrepriseA());
+            f.setRaisonSociale("SOMIREF Distribution");
+            f.setAdresseVille("Douala");
+            f.setSupprime(false);
+            return f;
+        }
+
+        @Test
+        @DisplayName("✅ 200 — aucune commande : supprime=true, ligne conservée en base")
+        void shouldArchiverQuandAucuneCommande() {
+            Fournisseur existant = fournisseurActif();
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.findByIdAndSupprimeFalse(ID_CIBLE))
+                    .thenReturn(Optional.of(existant));
+            when(commandesFournisseurPort.aDesCommandesActives(ID_CIBLE)).thenReturn(false);
+            when(fournisseurRepository.save(any(Fournisseur.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+
+            FournisseurResponse reponse = fournisseurService.supprimer(principalAchats(), ID_CIBLE);
+
+            assertThat(reponse.getId()).isEqualTo(ID_CIBLE);
+            assertThat(reponse.getSupprime()).isTrue();
+            assertThat(reponse.getRaisonSociale()).isEqualTo("SOMIREF Distribution");
+            assertThat(reponse.getEntrepriseId()).isEqualTo(ENTREPRISE_ID);
+
+            verify(fournisseurRepository).save(fournisseurCaptor.capture());
+            assertThat(fournisseurCaptor.getValue().getSupprime()).isTrue();
+            // Soft delete : aucune suppression physique, jamais.
+            verify(fournisseurRepository, never()).delete(any(Fournisseur.class));
+            verify(fournisseurRepository, never()).deleteById(any());
+            verify(fournisseurRepository, never()).deleteAll();
+        }
+
+        @Test
+        @DisplayName("❌ 409 RES_005 — commande active (COMMANDEE/PARTIELLEMENT_RECUE) : rien n'est modifié")
+        void shouldRefuserQuandCommandeActive() {
+            Fournisseur existant = fournisseurActif();
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.findByIdAndSupprimeFalse(ID_CIBLE))
+                    .thenReturn(Optional.of(existant));
+            when(commandesFournisseurPort.aDesCommandesActives(ID_CIBLE)).thenReturn(true);
+
+            assertThatThrownBy(() -> fournisseurService.supprimer(principalAchats(), ID_CIBLE))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_HAS_DEPENDENCIES);
+
+            verify(fournisseurRepository, never()).save(any(Fournisseur.class));
+            assertThat(existant.getSupprime()).isFalse();
+        }
+
+        @ParameterizedTest(name = "✅ 200 — commandes closes ({0}) n''empêchent pas l''archivage")
+        @ValueSource(strings = {"RECEPTIONNEE", "ANNULEE"})
+        @DisplayName("✅ 200 — CA5 : une commande reçue ou annulée ne bloque pas")
+        void shouldArchiverQuandCommandesCloses(String etat) {
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.findByIdAndSupprimeFalse(ID_CIBLE))
+                    .thenReturn(Optional.of(fournisseurActif()));
+            when(commandesFournisseurPort.aDesCommandesActives(ID_CIBLE)).thenReturn(false);
+            when(fournisseurRepository.save(any(Fournisseur.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+
+            FournisseurResponse reponse = fournisseurService.supprimer(principalAchats(), ID_CIBLE);
+
+            assertThat(reponse.getSupprime()).isTrue();
+            verify(commandesFournisseurPort).aDesCommandesActives(ID_CIBLE);
+        }
+
+        @ParameterizedTest(name = "❌ 403 — rôle {0}")
+        @ValueSource(strings = {"CAISSIER", "COMMERCIAL", "GESTIONNAIRE_STOCK"})
+        @DisplayName("❌ 403 SEC_001 — rôle hors périmètre achats, avant toute I/O")
+        void shouldRefuserQuandRoleNonAutorise(String role) {
+            StockMasterPrincipal acteur = principal(role, GROUP_ID, ENTREPRISE_ID);
+
+            assertThatThrownBy(() -> fournisseurService.supprimer(acteur, ID_CIBLE))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SEC_ACCESS_DENIED);
+
+            verify(entrepriseRepository, never()).findById(any());
+            verify(fournisseurRepository, never()).findByIdAndSupprimeFalse(any());
+            verify(commandesFournisseurPort, never()).aDesCommandesActives(any());
+            verify(fournisseurRepository, never()).save(any(Fournisseur.class));
+        }
+
+        @Test
+        @DisplayName("❌ 404 RES_001 — id inexistant, aucune dépendance n'est même interrogée")
+        void shouldRetourner404QuandIdInexistant() {
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.findByIdAndSupprimeFalse(9999L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> fournisseurService.supprimer(principalAchats(), 9999L))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
+
+            verify(commandesFournisseurPort, never()).aDesCommandesActives(any());
+            verify(fournisseurRepository, never()).save(any(Fournisseur.class));
+        }
+
+        @Test
+        @DisplayName("❌ 404 RES_001 — déjà archivé : idempotence, indistinguable d'un id inconnu")
+        void shouldRetourner404QuandDejaArchive() {
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.findByIdAndSupprimeFalse(ID_CIBLE)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> fournisseurService.supprimer(principalAchats(), ID_CIBLE))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
+
+            verify(fournisseurRepository, never()).save(any(Fournisseur.class));
+        }
+
+        @Test
+        @DisplayName("❌ 404 RES_001 — IDOR : tenant A sur un fournisseur du tenant B, rien n'est écrit")
+        void shouldRefuserSuppressionInterTenant() {
+            Entreprise entrepriseB = new Entreprise();
+            entrepriseB.setId(ENTREPRISE_ID_AUTRE_TENANT);
+            TenantGroup groupeB = new TenantGroup();
+            groupeB.setId(777L);
+            entrepriseB.setGroupe(groupeB);
+
+            Fournisseur fournisseurDeB = fournisseurActif();
+            fournisseurDeB.setEntreprise(entrepriseB);
+
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.findByIdAndSupprimeFalse(ID_CIBLE))
+                    .thenReturn(Optional.of(fournisseurDeB));
+
+            assertThatThrownBy(() -> fournisseurService.supprimer(principalAchats(), ID_CIBLE))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
+
+            verify(commandesFournisseurPort, never()).aDesCommandesActives(any());
+            verify(fournisseurRepository, never()).save(any(Fournisseur.class));
+            assertThat(fournisseurDeB.getSupprime()).isFalse();
+        }
+
+        @Test
+        @DisplayName("❌ 404 RES_001 — entreprise du JWT hors groupe : refus avant lecture")
+        void shouldRefuserQuandEntrepriseHorsGroupe() {
+            Entreprise entrepriseAutreGroupe = entrepriseA();
+            entrepriseAutreGroupe.getGroupe().setId(999L);
+            when(entrepriseRepository.findById(ENTREPRISE_ID))
+                    .thenReturn(Optional.of(entrepriseAutreGroupe));
+
+            assertThatThrownBy(() -> fournisseurService.supprimer(principalAchats(), ID_CIBLE))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
+
+            verify(fournisseurRepository, never()).findByIdAndSupprimeFalse(any());
+            verify(fournisseurRepository, never()).save(any(Fournisseur.class));
+        }
     }
 }

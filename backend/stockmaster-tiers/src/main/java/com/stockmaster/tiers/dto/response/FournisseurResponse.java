@@ -11,6 +11,11 @@ import lombok.Setter;
  *
  * <p>{@code entrepriseId} est dérivé de l'association {@code Fournisseur.entreprise}
  * (tenant du JWT) — jamais saisi en entrée.</p>
+ *
+ * <p><b>{@code supprime} (US-039)</b> — ajout <b>additif</b> : {@code true} après
+ * un {@code DELETE}, {@code false} sinon. Sans ce champ, un client ne pourrait pas
+ * distinguer un archivage réussi d'une modification (le {@code DELETE} renvoie
+ * {@code 200} + cette même enveloppe, convention US-029/035).</p>
  */
 @Getter
 @Setter
@@ -27,4 +32,7 @@ public class FournisseurResponse {
     private String email;
     private String adresseVille;
     private Long entrepriseId;
+
+    /** {@code true} si la fiche est archivée (soft delete, US-039). */
+    private Boolean supprime;
 }

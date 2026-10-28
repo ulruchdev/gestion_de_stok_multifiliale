@@ -197,7 +197,7 @@ cd backend && mvn -q test -pl stockmaster-catalogue \
 20 tests, `ArticleDefaultsTest` 2 tests — aucun échec, aucune erreur.
 **Résultat attendu :** `BUILD SUCCESS` + **421 tests, 0 failure, 0 error**
 
-> **Compteur réel (tiers revérifié le 28 oct. 2026 — US-036 + US-037 + US-038 ; autres modules inchangés) :** shared 71 · auth 96 · groupe 67 · catalogue 83 (dont 2 skippés — US-027→031 + defaults) · notification 8 · utilisateur 132 · tiers 81 (dont 79 US-036→038 : 49 service + 30 contrôleur, + 2 fondamentaux) · achat 3 · stock 20 · vente 8 · reporting 5 · bootstrap 7 (dont 4 ArchUnit) = **581**.
+> **Compteur réel (mesuré le 28 oct. 2026 après merge de `main` dans `feature/GS-039-supprimer-fournisseur`, soit US-036 + US-037 + US-038 + US-039 + port d'écriture stock) :** shared 71 · auth 96 · groupe 67 · catalogue 99 (dont 2 skippés — US-027→031 + defaults) · notification 8 · utilisateur 132 · tiers **102** (dont 100 US-036→039 : 60 service + 40 contrôleur, + 2 fondamentaux) · achat **6** (3 fondamentaux + 3 `CommandesFournisseurAdapterTest`) · stock **32** (dont 12 `EcritureStockServiceTest`) · vente 8 · reporting 5 · bootstrap 7 (dont 4 ArchUnit) = **633** — `BUILD SUCCESS`, 0 failure, 0 error, 2 skipped.
 > Les 3 tests de `bootstrap` (`StockMasterApplicationTest`) échouent **sans PostgreSQL** — c'est environnemental, pas un bug : `docker compose up -d postgres redis` les rend verts.
 >
 > ⚠️ **Le gate « Coverage ≥ 80 % » n'est PAS actif dans le build** (item **C-14** de la checklist `DEC-031` ouvert : le pom parent ne contient que `prepare-agent` + `report`, aucune exécution `jacoco:check`). Ne prétendez pas qu'il bloque la CI.

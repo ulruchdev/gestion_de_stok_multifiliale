@@ -1484,6 +1484,31 @@
             },
             "description": "US-038 (P0) — PUT /api/v1/fournisseurs/{id}. Rôles : RESP_ACHATS / ADMIN_FILIALE / ADMIN_GROUPE. Semantique PATCH sur un endpoint PUT (convention US-014/018/024) : champ absent ou blanc = inchange, corps vide valide. 6 champs modifiables : raisonSociale, nif, contact, telephone, email, adresseVille. Non modifiables : id, entreprise_id (JWT, absent du DTO), dateCreation, dateModification, supprime. raisonSociale fournie non blanche (max 200), telephone E.164 si fourni. Reponses : 200 (ApiResponse + FournisseurResponse), 400 SYS_005 (validation), 403 SEC_001 / GRP_002, 404 RES_001 pour id inexistant, soft-supprime OU autre tenant (aucune fuite d'existence, aucune modification)."
           }
+        },
+        {
+          "name": "US-039 — Supprimer (archiver) un fournisseur",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/fournisseurs/300",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "fournisseurs",
+                "300"
+              ]
+            },
+            "description": "US-039 (P0) — DELETE /api/v1/fournisseurs/{id}. Rôles : RESP_ACHATS / ADMIN_FILIALE / ADMIN_GROUPE. Archivage logique uniquement (supprime=true, la ligne reste en base : aucun DELETE SQL physique, historique des achats et FK commande_fournisseur ON DELETE RESTRICT preserves). Regle de blocage : 409 RES_005 si une commande fournisseur est encore a livrer (COMMANDEE ou PARTIELLEMENT_RECUE) ; une commande RECEPTIONNEE ou ANNULEE n'empeche PAS l'archivage. Le critere 'ligne receptionne=true' du ticket est abandonne : la colonne n'existe pas au modele. Reponses : 200 (ApiResponse + FournisseurResponse avec supprime=true), 403 SEC_001 / GRP_002, 404 RES_001 pour id inexistant, hors tenant OU deja archive (idempotence, aucune fuite), 409 RES_005."
+          }
         }
       ]
     }

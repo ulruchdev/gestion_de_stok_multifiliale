@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.Optional;
 
 public interface CommandeFournisseurRepository extends JpaRepository<CommandeFournisseur, Long> {
@@ -22,4 +23,13 @@ public interface CommandeFournisseurRepository extends JpaRepository<CommandeFou
     /** Réceptions en cours (indicateur filiale, page d'accueil). */
     long countByEntrepriseIdAndEtatCommandeAndSupprimeFalse(
             Long entrepriseId, EtatCommandeFournisseur etat);
+
+    /**
+     * US-039 — commandes non closes d'un fournisseur (port
+     * {@code tiers.port.CommandesFournisseurPort}). Aucun filtre tenant : l'id du
+     * fournisseur est unique au niveau plateforme et a déjà été contrôlé contre
+     * l'{@code entreprise_id} du JWT par l'appelant.
+     */
+    boolean existsByFournisseurIdAndEtatCommandeInAndSupprimeFalse(
+            Long fournisseurId, Collection<EtatCommandeFournisseur> etats);
 }

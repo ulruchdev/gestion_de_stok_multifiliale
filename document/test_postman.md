@@ -1373,7 +1373,81 @@ pm.test("Fournisseur mis a jour et scope au tenant", () => {
 
 ---
 
-### 5.4 DELETE — Supprimer un fournisseur (futur)
+### 5.4 DELETE — Supprimer (archiver) un fournisseur
+
+> **US :** US-039
+> **Statut :** ✅ Implémenté (branche `feature/GS-039-supprimer-fournisseur`)
+> **Authentification :** ✅ Oui — `@PreAuthorize("hasAnyRole('RESP_ACHATS','ADMIN_FILIALE','ADMIN_GROUPE')")`
+
+**Archivage logique (soft delete) uniquement** : `supprime = true`, la ligne **reste en base**. Aucun `DELETE` SQL physique n'existe dans le produit — l'historique des achats et les FK `commande_fournisseur` (`ON DELETE RESTRICT`) sont préservés.
+
+#### Requête
+
+```http
+DELETE {{base_url}}/api/v1/fournisseurs/300
+Authorization: Bearer {{access_token}}
+```
+
+#### Règle de blocage (arbitrage du 28 oct. 2026)
+
+> Le ticket initial contenait deux CA incompatibles : « l'historique des commandes est conservé après suppression » et « bloqué si des commandes existent ». Arbitrage retenu : **seules les commandes encore à livrer bloquent**.
+
+| État de la commande (`DEC-006`) | Bloque l'archivage ? |
+|---|---|
+| `COMMANDEE` | ✅ **oui** → `409 RES_005` |
+| `PARTIELLEMENT_RECUE` | ✅ **oui** → `409 RES_005` |
+| `RECEPTIONNEE` | ❌ non |
+| `ANNULEE` | ❌ non |
+
+> Le critère « au moins une ligne `receptionne=true` » du ticket est **abandonné** : cette colonne n'existe pas au modèle (`ligne_commande_fournisseur` = `quantite`, `prix_unitaire`, `taux_tva_snapshot`). Le critère est dérivé de l'état de l'en-tête.
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": 300,
+        "raisonSociale": "SOMIREF Distribution",
+        "nif": "M0126000045",
+        "contact": "Clarisse Mballa",
+        "telephone": "+237677445566",
+        "email": "commandes@somiref.cm",
+        "adresseVille": "Douala",
+        "entrepriseId": 10,
+        "supprime": true
+    }
+}
+```
+
+#### Réponses d'erreur
+
+| Cas | Code | HTTP |
+|---|---|---|
+| Commande fournisseur `COMMANDEE` / `PARTIELLEMENT_RECUE` | `RES_005` | 409 |
+| Rôle hors périmètre (`CAISSIER`, `COMMERCIAL`, `GESTIONNAIRE_STOCK`) | `SEC_001` | 403 |
+| JWT sans `groupId` | `GRP_002` | 403 |
+| Fournisseur inexistant, hors tenant, **ou déjà archivé** | `RES_001` | 404 |
+| Entreprise du JWT introuvable / soft-supprimée / hors groupe | `RES_001` | 404 |
+
+> **Idempotence :** rejouer le `DELETE` sur une fiche déjà archivée renvoie **404 `RES_001`** — même réponse qu'un id inconnu, aucune information n'est révélée et rien n'est réécrit.
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Fournisseur archive (soft delete)", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.supprime).to.be.true;
+    pm.expect(json.data.entrepriseId).to.be.a("number");
+});
+```
+
+---
+
 ### 5.5 POST — Créer un client (futur)
 ### 5.6 GET — Lister les clients (futur)
 ### 5.7 PUT — Modifier un client (futur)

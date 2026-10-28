@@ -2,6 +2,8 @@ package com.stockmaster.tiers.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stockmaster.shared.dto.response.PageResponse;
+import com.stockmaster.shared.exception.BusinessException;
+import com.stockmaster.shared.exception.ErrorCode;
 import com.stockmaster.tiers.TiersTestApplication;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
@@ -42,6 +44,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -238,7 +241,8 @@ class FournisseurControllerTest {
 
             mockMvc.perform(get("/api/v1/fournisseurs?search=somiref&page=0&size=20")
                             .with(SecurityMockMvcRequestPostProcessors.authentication(
-                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID))))
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.content[0].id").value(300))
@@ -258,7 +262,8 @@ class FournisseurControllerTest {
 
             mockMvc.perform(get("/api/v1/fournisseurs?search=zzz")
                             .with(SecurityMockMvcRequestPostProcessors.authentication(
-                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID))))
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.content").isEmpty())
@@ -273,7 +278,8 @@ class FournisseurControllerTest {
 
             mockMvc.perform(get("/api/v1/fournisseurs")
                             .with(SecurityMockMvcRequestPostProcessors.authentication(
-                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID))))
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.totalElements").value(1));
 
@@ -288,7 +294,8 @@ class FournisseurControllerTest {
 
             mockMvc.perform(get("/api/v1/fournisseurs?search=somi&entrepriseId=" + ENTREPRISE_ID_AUTRE_TENANT)
                             .with(SecurityMockMvcRequestPostProcessors.authentication(
-                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID))))
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf()))
                     .andExpect(status().isOk());
 
             // signature : (principal, search, page, size) — aucun identifiant de tenant
@@ -304,7 +311,8 @@ class FournisseurControllerTest {
 
             mockMvc.perform(get("/api/v1/fournisseurs?size=999")
                             .with(SecurityMockMvcRequestPostProcessors.authentication(
-                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID))))
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf()))
                     .andExpect(status().isOk());
 
             verify(fournisseurService).lister(any(StockMasterPrincipal.class), isNull(), eq(0), eq(999));
@@ -317,13 +325,123 @@ class FournisseurControllerTest {
             mockMvc.perform(get("/api/v1/fournisseurs")
                             .with(SecurityMockMvcRequestPostProcessors.authentication(
                                     asAuthentication(role, GROUP_ID, ENTREPRISE_ID))))
-                    .andExpect(status().isForbidden());
-
-            verify(fournisseurService, never()).lister(any(), any(), anyInt(), anyInt());
+                    .andExpect(status().isForbidden());            verify(fournisseurService, never()).lister(any(), any(), anyInt(), anyInt());
         }
     }
 
-    // ─── validation (CA3) ────────────────────────────────────────────────────
+    // ─── US-039 — suppression (archivage) ────────────────────────
+
+    /**
+     * US-039 — {@code DELETE /api/v1/fournisseurs/{id}}.
+     *
+     * <p>Contrats HTTP : {@code 200} + {@code ApiResponse} (convention
+     * US-029/035, aucun {@code 204} dans le repo) · {@code 404 RES_001} (id
+     * inconnu ou hors tenant) · {@code 409 RES_005} (commande active) ·
+     * {@code 403} sur rôle non autorisé.</p>
+     */
+    @Nested
+    @DisplayName("US-039 — DELETE /api/v1/fournisseurs/{id}")
+    class Suppression {
+
+        private static final Long ID_CIBLE = 400L;
+
+        private FournisseurResponse reponseArchivee() {
+            return FournisseurResponse.builder()
+                    .id(ID_CIBLE)
+                    .raisonSociale("SOMIREF Distribution")
+                    .adresseVille("Douala")
+                    .entrepriseId(ENTREPRISE_ID)
+                    .supprime(true)
+                    .build();
+        }
+
+        @ParameterizedTest(name = "✅ 200 — rôle {0}")
+        @ValueSource(strings = {"RESP_ACHATS", "ADMIN_FILIALE", "ADMIN_GROUPE"})
+        @DisplayName("✅ 200 — fournisseur archivé, enveloppe ApiResponse")
+        void shouldReturn200WhenRoleAutorise(String role) throws Exception {
+            when(fournisseurService.supprimer(any(StockMasterPrincipal.class), eq(ID_CIBLE)))
+                    .thenReturn(reponseArchivee());
+
+            mockMvc.perform(delete("/api/v1/fournisseurs/" + ID_CIBLE)
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication(role, GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.id").value(ID_CIBLE))
+                    .andExpect(jsonPath("$.data.supprime").value(true))
+                    .andExpect(jsonPath("$.data.entrepriseId").value(ENTREPRISE_ID));
+
+            verify(fournisseurService).supprimer(any(StockMasterPrincipal.class), eq(ID_CIBLE));
+        }
+
+        @Test
+        @DisplayName("❌ 404 RES_001 — id inexistant")
+        void shouldReturn404WhenIdInexistant() throws Exception {
+            when(fournisseurService.supprimer(any(StockMasterPrincipal.class), eq(9999L)))
+                    .thenThrow(new BusinessException(ErrorCode.RES_ENTITY_NOT_FOUND));
+
+            mockMvc.perform(delete("/api/v1/fournisseurs/9999")
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf()))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.errorCode").value("RES_001"));
+        }
+
+        @Test
+        @DisplayName("❌ 404 RES_001 — IDOR : id du tenant B depuis le tenant A (jamais 403)")
+        void shouldReturn404WhenFournisseurDhunAutreTenant() throws Exception {
+            when(fournisseurService.supprimer(any(StockMasterPrincipal.class), eq(ID_CIBLE)))
+                    .thenThrow(new BusinessException(ErrorCode.RES_ENTITY_NOT_FOUND));
+
+            mockMvc.perform(delete("/api/v1/fournisseurs/" + ID_CIBLE)
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf()))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.errorCode").value("RES_001"));
+        }
+
+        @Test
+        @DisplayName("❌ 409 RES_005 — commande fournisseur active")
+        void shouldReturn409WhenDependances() throws Exception {
+            when(fournisseurService.supprimer(any(StockMasterPrincipal.class), eq(ID_CIBLE)))
+                    .thenThrow(new BusinessException(ErrorCode.RES_ENTITY_HAS_DEPENDENCIES));
+
+            mockMvc.perform(delete("/api/v1/fournisseurs/" + ID_CIBLE)
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf()))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.errorCode").value("RES_005"));
+        }
+
+        @ParameterizedTest(name = "❌ 403 — rôle {0}")
+        @ValueSource(strings = {"CAISSIER", "COMMERCIAL", "GESTIONNAIRE_STOCK"})
+        @DisplayName("❌ 403 — rôle hors périmètre achats")
+        void shouldReturn403WhenRoleNonAutorise(String role) throws Exception {
+            mockMvc.perform(delete("/api/v1/fournisseurs/" + ID_CIBLE)
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication(role, GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf()))
+                    .andExpect(status().isForbidden());
+
+            verify(fournisseurService, never()).supprimer(any(), any());
+        }
+
+        @Test
+        @DisplayName("❌ 4xx — non authentifié")
+        void shouldRefuserSansAuthentification() throws Exception {
+            mockMvc.perform(delete("/api/v1/fournisseurs/" + ID_CIBLE)
+                            .with(SecurityMockMvcRequestPostProcessors.csrf()))
+                    .andExpect(status().is4xxClientError());
+
+            verify(fournisseurService, never()).supprimer(any(), any());
+        }
+    }
+
+    // ─── validation (CA3) ────────────────────────────────────────────────
 
     @Nested
     @DisplayName("CA3 — validation du corps")

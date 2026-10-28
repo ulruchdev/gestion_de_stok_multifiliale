@@ -12,6 +12,7 @@ import com.stockmaster.tiers.dto.request.CreerFournisseurRequest;
 import com.stockmaster.tiers.dto.request.ModifierFournisseurRequest;
 import com.stockmaster.tiers.dto.response.FournisseurResponse;
 import com.stockmaster.tiers.mapper.FournisseurMapper;
+import com.stockmaster.tiers.port.CommandesFournisseurPort;
 import com.stockmaster.tiers.repository.FournisseurRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +51,9 @@ import java.util.Set;
  *
  * <p><b>US-038</b> — {@link #modifier} : mise à jour des coordonnées, PATCH
  * sémantique, 404 uniforme hors tenant.</p>
+ *
+ * <p><b>US-039</b> — {@link #supprimer} : archivage logique (soft delete),
+ * {@code 409 RES_005} si une commande fournisseur est encore active.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -64,6 +68,12 @@ public class FournisseurService {
     private final EntrepriseRepository entrepriseRepository;
     private final FournisseurMapper fournisseurMapper;
     private final PaginationProperties paginationProperties;
+    /**
+     * US-039 — lecture des commandes fournisseur par port exposé (DEC-019) :
+     * l'implémentation est dans {@code stockmaster-achat}, {@code tiers} ne
+     * connaît que l'interface (ArchUnit règle 1).
+     */
+    private final CommandesFournisseurPort commandesFournisseurPort;
 
     /**
      * Crée un fournisseur dans l'entreprise du JWT.
@@ -132,6 +142,57 @@ public class FournisseurService {
 
         return reponse;
     }
+
+    // ─── US-039 — supprimer (archiver) ────────────────────────────
+
+    /**
+     * US-039 — archivage logique d'un fournisseur du tenant du JWT.
+     *
+     * <p><b>Soft delete uniquement</b> : {@code supprime = true}, la ligne reste
+     * en base — l'historique des achats et les FK {@code commande_fournisseur}
+     * ({@code ON DELETE RESTRICT}) sont préservés (CA7).</p>
+     *
+     * <p><b>Règle de blocage (arbitrage du 28 oct. 2026, contradiction CA7 ⟂ CA10)</b> :
+     * {@code 409 RES_005} seulement si une commande <b>active</b> reste à livrer
+     * ({@code COMMANDEE} | {@code PARTIELLEMENT_RECUE}). Une commande close
+     * ({@code RECEPTIONNEE}, {@code ANNULEE}) n'empêche pas l'archivage (CA5).
+     * Le critère CA3 ({@code ligne.receptionne}) est abandonné : la colonne n'existe
+     * pas au modèle, il est dérivé de l'état de l'en-tête.</p>
+     *
+     * <p><b>Isolation tenant</b> : chargement par id <b>puis</b> filtre
+     * {@code entreprise_id} du JWT. Id inconnu, hors tenant ou déjà archivé →
+     * <b>{@code 404 RES_001}</b> uniforme (idempotence : rejouer un DELETE ne
+     * révèle rien et ne réécrit rien).</p>
+     *
+     * @throws BusinessException {@code SEC_001} rôle non autorisé ; {@code GRP_002}
+     *         JWT sans groupe ; {@code RES_001} fournisseur ou entreprise hors
+     *         périmètre ; {@code RES_005} commande active à livrer.
+     */
+    @Transactional
+    public FournisseurResponse supprimer(StockMasterPrincipal principal, Long id) {
+        verifierRole(principal);
+        Entreprise entreprise = chargerEntrepriseDuPrincipal(principal);
+
+        Fournisseur fournisseur = fournisseurRepository.findByIdAndSupprimeFalse(id)
+                .filter(f -> f.getEntreprise() != null
+                        && entreprise.getId().equals(f.getEntreprise().getId()))
+                .orElseThrow(() -> new BusinessException(ErrorCode.RES_ENTITY_NOT_FOUND));
+
+        // Un fournisseur à qui l'on doit encore une marchandise ne s'archive pas.
+        if (commandesFournisseurPort.aDesCommandesActives(fournisseur.getId())) {
+            throw new BusinessException(ErrorCode.RES_ENTITY_HAS_DEPENDENCIES);
+        }
+
+        fournisseur.setSupprime(true);
+        Fournisseur archive = fournisseurRepository.save(fournisseur);
+
+        log.info("US-039 : fournisseur id={} ({}) archivé pour l'entreprise {} par l'utilisateur {}",
+                archive.getId(), archive.getRaisonSociale(), entreprise.getId(), principal.getUserId());
+
+        return fournisseurMapper.toResponse(archive);
+    }
+
+    // ─── US-038 — modifier ────────────────────────────────────────
 
     /**
      * US-038 — mise à jour des coordonnées d'un fournisseur du tenant du JWT.
