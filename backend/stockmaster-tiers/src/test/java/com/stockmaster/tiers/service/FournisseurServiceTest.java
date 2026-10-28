@@ -13,6 +13,7 @@ import com.stockmaster.shared.repository.EntrepriseRepository;
 import com.stockmaster.shared.security.StockMasterPrincipal;
 import com.stockmaster.tiers.domain.entity.Fournisseur;
 import com.stockmaster.tiers.dto.request.CreerFournisseurRequest;
+import com.stockmaster.tiers.dto.request.ModifierFournisseurRequest;
 import com.stockmaster.tiers.dto.response.FournisseurResponse;
 import com.stockmaster.tiers.mapper.FournisseurMapper;
 import com.stockmaster.tiers.mapper.FournisseurMapperImpl;
@@ -544,6 +545,290 @@ class FournisseurServiceTest {
             assertThat(pageable.getPageSize()).isEqualTo(100); // stockmaster.pagination.max-page-size
             assertThat(pageable.getSort().getOrderFor("raisonSociale").getDirection())
                     .isEqualTo(Sort.Direction.ASC);
+        }
+    }
+
+    // ─── US-038 — modifier un fournisseur ────────────────────────────────────
+
+    /**
+     * US-038 — {@code PUT /api/v1/fournisseurs/{id}}. Contrats verrouillés
+     * (arbitrages validés le 28 oct. 2026) :
+     * <ul>
+     *   <li><b>1.a</b> : PATCH sémantique sur le PUT (convention US-014/018/024)
+     *       — champ absent ou blanc = inchangé ;</li>
+     *   <li><b>1.b</b> : 6 champs modifiables, {@code entreprise_id} jamais ;</li>
+     *   <li><b>1.e/1.f/1.h</b> : 404 {@code RES_001} uniforme — id inconnu,
+     *       soft-supprimé ou appartenant à un autre tenant (aucune fuite) ;</li>
+     *   <li><b>1.i</b> : 200 + {@code FournisseurResponse} de l'état après update.</li>
+     * </ul>
+     */
+    @Nested
+    @DisplayName("US-038 — modifier un fournisseur")
+    class ModifierFournisseur {
+
+        private static final Long ID_CIBLE = 200L;
+
+        /** Autre tenant — le fournisseur cible ne doit jamais être atteignable. */
+        private Fournisseur fournisseurExistant() {
+            Fournisseur f = new Fournisseur();
+            f.setId(ID_CIBLE);
+            f.setEntreprise(entrepriseA());
+            f.setRaisonSociale("SARL Import Golfe");
+            f.setNif("M0126000001");
+            f.setContact("Jean Etoundi");
+            f.setTelephone("+237691234567");
+            f.setEmail("achats@importgolfe.cm");
+            f.setAdresseVille("Douala");
+            f.setSupprime(false);
+            return f;
+        }
+
+        private void appliquer(ModifierFournisseurRequest r, String champ, String valeur) {
+            switch (champ) {
+                case "raisonSociale" -> r.setRaisonSociale(valeur);
+                case "nif" -> r.setNif(valeur);
+                case "contact" -> r.setContact(valeur);
+                case "telephone" -> r.setTelephone(valeur);
+                case "email" -> r.setEmail(valeur);
+                case "adresseVille" -> r.setAdresseVille(valeur);
+                default -> throw new IllegalArgumentException(champ);
+            }
+        }
+
+        private String lire(Fournisseur f, String champ) {
+            return switch (champ) {
+                case "raisonSociale" -> f.getRaisonSociale();
+                case "nif" -> f.getNif();
+                case "contact" -> f.getContact();
+                case "telephone" -> f.getTelephone();
+                case "email" -> f.getEmail();
+                case "adresseVille" -> f.getAdresseVille();
+                default -> throw new IllegalArgumentException(champ);
+            };
+        }
+
+        private String lire(FournisseurResponse r, String champ) {
+            return switch (champ) {
+                case "raisonSociale" -> r.getRaisonSociale();
+                case "nif" -> r.getNif();
+                case "contact" -> r.getContact();
+                case "telephone" -> r.getTelephone();
+                case "email" -> r.getEmail();
+                case "adresseVille" -> r.getAdresseVille();
+                default -> throw new IllegalArgumentException(champ);
+            };
+        }
+
+        /** Valeur neuve par champ — chacune respecte les contraintes du DTO. */
+        private String valeurNeuve(String champ) {
+            return switch (champ) {
+                case "raisonSociale" -> "SARL Import Golfe SA";
+                case "nif" -> "M0126000099";
+                case "contact" -> "Clarisse Mballa";
+                case "telephone" -> "+237677445566";
+                case "email" -> "commandes@importgolfe.cm";
+                case "adresseVille" -> "Yaounde";
+                default -> throw new IllegalArgumentException(champ);
+            };
+        }
+
+        @ParameterizedTest(name = "✅ 200 — seul [{0}] change, les 5 autres champs sont intacts")
+        @ValueSource(strings = {"raisonSociale", "nif", "contact", "telephone", "email", "adresseVille"})
+        @DisplayName("✅ 200 — mise à jour champ par champ (PATCH sémantique), entreprise_id intact")
+        void shouldModifierChaqueChampModifiableSansToucherAuxAutres(String champ) {
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.findByIdAndSupprimeFalse(ID_CIBLE))
+                    .thenReturn(Optional.of(fournisseurExistant()));
+            when(fournisseurRepository.save(any(Fournisseur.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+
+            ModifierFournisseurRequest requete = new ModifierFournisseurRequest();
+            appliquer(requete, champ, valeurNeuve(champ));
+
+            FournisseurResponse reponse = fournisseurService.modifier(principalAchats(), ID_CIBLE, requete);
+
+            verify(fournisseurRepository).save(fournisseurCaptor.capture());
+            Fournisseur sauvegarde = fournisseurCaptor.getValue();
+            assertThat(lire(sauvegarde, champ)).isEqualTo(valeurNeuve(champ));
+            assertThat(lire(reponse, champ)).isEqualTo(valeurNeuve(champ));
+            assertThat(reponse.getId()).isEqualTo(ID_CIBLE);
+            assertThat(reponse.getEntrepriseId()).isEqualTo(ENTREPRISE_ID);
+            assertThat(sauvegarde.getEntreprise().getId()).isEqualTo(ENTREPRISE_ID);
+
+            String champTemoin = "nif".equals(champ) ? "contact" : "nif";
+            assertThat(lire(sauvegarde, champTemoin)).isEqualTo(
+                    lire(fournisseurExistant(), champTemoin));
+        }
+
+        @Test
+        @DisplayName("✅ 200 — payload vide (tout null) = aucune modification, aucune exception")
+        void shouldNeRienModifierQuandPayloadVide() {
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.findByIdAndSupprimeFalse(ID_CIBLE))
+                    .thenReturn(Optional.of(fournisseurExistant()));
+            when(fournisseurRepository.save(any(Fournisseur.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+
+            FournisseurResponse reponse = fournisseurService.modifier(
+                    principalAchats(), ID_CIBLE, new ModifierFournisseurRequest());
+
+            assertThat(reponse.getRaisonSociale()).isEqualTo("SARL Import Golfe");
+            assertThat(reponse.getTelephone()).isEqualTo("+237691234567");
+            assertThat(reponse.getAdresseVille()).isEqualTo("Douala");
+        }
+
+        @ParameterizedTest(name = "✅ 200 — raisonSociale [{0}] ignorée (blanc = inchangé)")
+        @ValueSource(strings = {"", "   "})
+        @DisplayName("✅ 200 — raisonSociale blanche = inchangée, jamais écrasée à null")
+        void shouldIgnorerRaisonSocialeBlanche(String blanc) {
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.findByIdAndSupprimeFalse(ID_CIBLE))
+                    .thenReturn(Optional.of(fournisseurExistant()));
+            when(fournisseurRepository.save(any(Fournisseur.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+
+            ModifierFournisseurRequest requete = new ModifierFournisseurRequest();
+            requete.setRaisonSociale(blanc);
+
+            FournisseurResponse reponse = fournisseurService.modifier(principalAchats(), ID_CIBLE, requete);
+
+            assertThat(reponse.getRaisonSociale()).isEqualTo("SARL Import Golfe");
+        }
+
+        @ParameterizedTest(name = "❌ 403 — rôle {0}")
+        @ValueSource(strings = {"CAISSIER", "COMMERCIAL", "GESTIONNAIRE_STOCK"})
+        @DisplayName("❌ 403 SEC_001 — rôle hors périmètre achats, avant toute I/O")
+        void shouldRefuserQuandRoleNonAutorise(String role) {
+            StockMasterPrincipal acteur = principal(role, GROUP_ID, ENTREPRISE_ID);
+            ModifierFournisseurRequest requete = new ModifierFournisseurRequest();
+            requete.setAdresseVille("Yaounde");
+
+            assertThatThrownBy(() -> fournisseurService.modifier(acteur, ID_CIBLE, requete))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SEC_ACCESS_DENIED);
+
+            verify(entrepriseRepository, never()).findById(any());
+            verify(fournisseurRepository, never()).findByIdAndSupprimeFalse(any());
+            verify(fournisseurRepository, never()).save(any(Fournisseur.class));
+        }
+
+        @Test
+        @DisplayName("❌ 404 RES_001 — id inexistant, rien n'est écrit")
+        void shouldRetourner404QuandIdInexistant() {
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.findByIdAndSupprimeFalse(9999L)).thenReturn(Optional.empty());
+            ModifierFournisseurRequest requete = new ModifierFournisseurRequest();
+            requete.setAdresseVille("Yaounde");
+
+            assertThatThrownBy(() -> fournisseurService.modifier(principalAchats(), 9999L, requete))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
+
+            verify(fournisseurRepository, never()).save(any(Fournisseur.class));
+        }
+
+        @Test
+        @DisplayName("❌ 404 RES_001 — fournisseur soft-supprimé : indistinguable d'un id inconnu")
+        void shouldRetourner404QuandFournisseurSoftSupprime() {
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.findByIdAndSupprimeFalse(ID_CIBLE)).thenReturn(Optional.empty());
+            ModifierFournisseurRequest requete = new ModifierFournisseurRequest();
+            requete.setAdresseVille("Yaounde");
+
+            assertThatThrownBy(() -> fournisseurService.modifier(principalAchats(), ID_CIBLE, requete))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
+
+            verify(fournisseurRepository, never()).save(any(Fournisseur.class));
+        }
+
+        @Test
+        @DisplayName("❌ 404 RES_001 — IDOR : tenant A sur un fournisseur du tenant B, aucune écriture")
+        void shouldRefuserModificationInterTenantSansRienModifier() {
+            Entreprise entrepriseB = new Entreprise();
+            entrepriseB.setId(ENTREPRISE_ID_AUTRE_TENANT);
+            TenantGroup groupeB = new TenantGroup();
+            groupeB.setId(777L);
+            entrepriseB.setGroupe(groupeB);
+
+            Fournisseur fournisseurDeB = fournisseurExistant();
+            fournisseurDeB.setEntreprise(entrepriseB);
+            fournisseurDeB.setRaisonSociale("Fournisseur du tenant B");
+
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.findByIdAndSupprimeFalse(ID_CIBLE))
+                    .thenReturn(Optional.of(fournisseurDeB));
+            ModifierFournisseurRequest requete = new ModifierFournisseurRequest();
+            requete.setRaisonSociale("Piratee");
+
+            assertThatThrownBy(() -> fournisseurService.modifier(principalAchats(), ID_CIBLE, requete))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
+
+            verify(fournisseurRepository, never()).save(any(Fournisseur.class));
+            assertThat(fournisseurDeB.getRaisonSociale()).isEqualTo("Fournisseur du tenant B");
+        }
+
+        @Test
+        @DisplayName("❌ 404 RES_001 — entreprise du JWT hors groupe : refus avant lecture du fournisseur")
+        void shouldRefuserQuandEntrepriseHorsGroupe() {
+            Entreprise entrepriseAutreGroupe = entrepriseA();
+            entrepriseAutreGroupe.getGroupe().setId(999L);
+            when(entrepriseRepository.findById(ENTREPRISE_ID))
+                    .thenReturn(Optional.of(entrepriseAutreGroupe));
+            ModifierFournisseurRequest requete = new ModifierFournisseurRequest();
+            requete.setAdresseVille("Yaounde");
+
+            assertThatThrownBy(() -> fournisseurService.modifier(principalAchats(), ID_CIBLE, requete))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
+
+            verify(fournisseurRepository, never()).findByIdAndSupprimeFalse(any());
+            verify(fournisseurRepository, never()).save(any(Fournisseur.class));
+        }
+
+        @Test
+        @DisplayName("✅ le DTO ne porte aucun champ tenant (entreprise_id non modifiable)")
+        void shouldNePasExposerDeChampTenant() {
+            Set<String> champs = Arrays.stream(ModifierFournisseurRequest.class.getDeclaredFields())
+                    .map(Field::getName)
+                    .collect(Collectors.toSet());
+
+            assertThat(champs).containsExactlyInAnyOrder(
+                    "raisonSociale", "nif", "contact", "telephone", "email", "adresseVille");
+            assertThat(champs).doesNotContain("entrepriseId", "entreprise", "groupId", "id", "supprime");
+        }
+
+        @Test
+        @DisplayName("❌ 400 SYS_005 (validation) — raisonSociale blanche refusée par le DTO")
+        void shouldRefuserRaisonSocialeBlancheALaValidation() {
+            ModifierFournisseurRequest requete = new ModifierFournisseurRequest();
+            requete.setRaisonSociale("   ");
+
+            assertThat(champsEnErreur(requete)).containsExactly("raisonSociale");
+        }
+
+        @Test
+        @DisplayName("❌ 400 SYS_005 (validation) — téléphone hors format E.164")
+        void shouldRefuserTelephoneInvalideALaValidation() {
+            ModifierFournisseurRequest requete = new ModifierFournisseurRequest();
+            requete.setTelephone("691234567");
+
+            assertThat(champsEnErreur(requete)).containsExactly("telephone");
+        }
+
+        @Test
+        @DisplayName("✅ validation — payload vide valide (PATCH : tous les champs optionnels)")
+        void shouldAccepterPayloadVideALaValidation() {
+            assertThat(champsEnErreur(new ModifierFournisseurRequest())).isEmpty();
+        }
+    }
+
+    private Set<String> champsEnErreur(ModifierFournisseurRequest request) {
+        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+            return factory.getValidator().validate(request).stream()
+                    .map(v -> ((ConstraintViolation<?>) v).getPropertyPath().toString())
+                    .collect(Collectors.toSet());
         }
     }
 
