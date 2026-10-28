@@ -1,6 +1,7 @@
 package com.stockmaster.tiers.controller;
 
 import com.stockmaster.tiers.dto.request.CreerFournisseurRequest;
+import com.stockmaster.tiers.dto.request.ModifierFournisseurRequest;
 import com.stockmaster.tiers.dto.response.FournisseurResponse;
 import com.stockmaster.tiers.service.FournisseurService;
 import com.stockmaster.shared.dto.response.ApiResponse;
@@ -13,7 +14,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -26,7 +29,9 @@ import jakarta.validation.Valid;
  *
  * <p>US-036 — {@code POST /api/v1/fournisseurs} : créer une fiche fournisseur.
  * <br>US-037 — {@code GET /api/v1/fournisseurs?search=&page=&size=} : lister /
- * rechercher par nom ou ville dans le tenant du JWT.</p>
+ * rechercher par nom ou ville dans le tenant du JWT.
+ * <br>US-038 — {@code PUT /api/v1/fournisseurs/{id}} : mettre à jour les
+ * coordonnées (PATCH sémantique, {@code 200} + état après modification).</p>
  *
  * <p><b>CA1</b> : {@code @PreAuthorize("hasAnyRole('RESP_ACHATS','ADMIN_FILIALE','ADMIN_GROUPE')")}
  * — même placement que {@code CategorieController} / {@code ArticleController}
@@ -70,6 +75,24 @@ public class FournisseurController {
             @RequestParam(defaultValue = "20") int size) {
         PageResponse<FournisseurResponse> reponse =
                 fournisseurService.lister(principal, search, page, size);
+        return ResponseEntity.ok(ApiResponse.ok(reponse));
+    }
+
+    /**
+     * US-038 — modification des coordonnées d'un fournisseur du tenant.
+     *
+     * <p>Sémantique PATCH (arbitrage 1.a, convention US-014/018/024) : champ
+     * absent ou blanc = inchangé. Aucun champ tenant dans le corps — un
+     * {@code entrepriseId} forcé est ignoré ; l'id ne peut pas être changé (il
+     * est dans le chemin). Réponse {@code 200} + {@code FournisseurResponse}.</p>
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('RESP_ACHATS','ADMIN_FILIALE','ADMIN_GROUPE')")
+    public ResponseEntity<ApiResponse<FournisseurResponse>> modifier(
+            @AuthenticationPrincipal StockMasterPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody ModifierFournisseurRequest request) {
+        FournisseurResponse reponse = fournisseurService.modifier(principal, id, request);
         return ResponseEntity.ok(ApiResponse.ok(reponse));
     }
 }

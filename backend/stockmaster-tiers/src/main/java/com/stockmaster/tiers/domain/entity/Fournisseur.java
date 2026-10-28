@@ -7,7 +7,16 @@ import lombok.*;
 
 /**
  * Fournisseur d'une filiale — périmètre entreprise (REF §6.2).
- * Le NIF est normalisé à NULL si vide (index partiel UNIQUE côté base).
+ *
+ * <p><b>Correction du 28 oct. 2026 (US-038)</b> — la javadoc affirmait « le NIF
+ * est normalisé à NULL si vide (index partiel UNIQUE côté base) ». Vérifié faux
+ * sur les deux points : aucune normalisation (US-036 n'en fait pas) et
+ * <b>aucun index UNIQUE</b> sur {@code fournisseur} ({@code V1__init_schema.sql}
+ * L197-209, {@code V2__create_indexes.sql} L14 = simple index de scoping).
+ * {@code FournisseurRepository.existsByEntrepriseIdAndNifAndSupprimeFalse} est
+ * donc sans appelant et sans contrainte sous-jacente : <b>un NIF en doublon est
+ * aujourd'hui accepté</b>, et US-038 n'ajoute aucune règle d'unicité (aucun
+ * critère d'acceptation, aucun index).</p>
  */
 @Entity
 @Table(name = "fournisseur")
