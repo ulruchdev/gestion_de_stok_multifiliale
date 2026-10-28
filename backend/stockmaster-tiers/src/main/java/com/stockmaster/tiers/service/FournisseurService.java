@@ -9,6 +9,7 @@ import com.stockmaster.shared.repository.EntrepriseRepository;
 import com.stockmaster.shared.security.StockMasterPrincipal;
 import com.stockmaster.tiers.domain.entity.Fournisseur;
 import com.stockmaster.tiers.dto.request.CreerFournisseurRequest;
+import com.stockmaster.tiers.dto.request.ModifierFournisseurRequest;
 import com.stockmaster.tiers.dto.response.FournisseurResponse;
 import com.stockmaster.tiers.mapper.FournisseurMapper;
 import com.stockmaster.tiers.repository.FournisseurRepository;
@@ -20,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.Set;
 
@@ -45,6 +47,9 @@ import java.util.Set;
  *
  * <p><b>US-037</b> — {@link #lister} : listing paginé + recherche par nom ou
  * ville, strictement rattaché à l'entreprise du JWT.</p>
+ *
+ * <p><b>US-038</b> — {@link #modifier} : mise à jour des coordonnées, PATCH
+ * sémantique, 404 uniforme hors tenant.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -126,6 +131,75 @@ public class FournisseurService {
                 (search == null || search.isBlank()) ? "<absent>" : search.trim());
 
         return reponse;
+    }
+
+    /**
+     * US-038 — mise à jour des coordonnées d'un fournisseur du tenant du JWT.
+     *
+     * <p><b>Sémantique PATCH (arbitrage 1.a)</b> — convention {@code US-014}/
+     * {@code US-018}/{@code US-024} sur un endpoint {@code PUT} : un champ absent
+     * ou blanc laisse la valeur actuelle en place, un corps vide ne change rien.</p>
+     *
+     * <p><b>Isolation tenant (règle n°1, arbitrages 1.e/1.f/1.h)</b> : le
+     * fournisseur est cherché par son id <b>puis</b> filtré sur
+     * {@code entreprise_id} du JWT — jamais de lookup par id seul. Les trois cas
+     * « id inconnu », « soft-supprimé » et « autre tenant » renvoient le
+     * <b>même {@code 404 RES_001}</b> : l'existence d'un fournisseur étranger
+     * n'est jamais révélée (miroir {@code FilialeService}/{@code ArticleService}).</p>
+     *
+     * <p><b>Aucun champ tenant dans le DTO</b> : {@code entreprise_id} n'est ni
+     * lu ni modifiable, {@code id} est dans le chemin — les setters de l'entité
+     * ne sont donc jamais atteints par le payload.</p>
+     *
+     * @throws BusinessException {@code SEC_001} si le rôle n'est pas autorisé ou
+     *         si le JWT ne porte pas d'{@code entrepriseId} ; {@code GRP_002} si
+     *         le JWT ne porte pas de {@code groupId} ; {@code RES_001} uniforme si
+     *         l'entreprise ou le fournisseur est introuvable, supprimé ou hors
+     *         périmètre.
+     */
+    @Transactional
+    public FournisseurResponse modifier(StockMasterPrincipal principal, Long id,
+                                        ModifierFournisseurRequest request) {
+        verifierRole(principal);
+        Entreprise entreprise = chargerEntrepriseDuPrincipal(principal);
+
+        Fournisseur fournisseur = fournisseurRepository.findByIdAndSupprimeFalse(id)
+                .filter(f -> f.getEntreprise() != null
+                        && entreprise.getId().equals(f.getEntreprise().getId()))
+                .orElseThrow(() -> new BusinessException(ErrorCode.RES_ENTITY_NOT_FOUND));
+
+        appliquerModifications(fournisseur, request);
+        Fournisseur misAJour = fournisseurRepository.save(fournisseur);
+
+        log.info("US-038 : fournisseur id={} ({}) modifié pour l'entreprise {} par l'utilisateur {}",
+                misAJour.getId(), misAJour.getRaisonSociale(), entreprise.getId(), principal.getUserId());
+
+        return fournisseurMapper.toResponse(misAJour);
+    }
+
+    /**
+     * PATCH sémantique — seule une valeur non nulle et non blanche est appliquée.
+     * {@code entreprise}, {@code id} et {@code supprime} ne sont jamais touchés.
+     */
+    private void appliquerModifications(Fournisseur fournisseur, ModifierFournisseurRequest request) {
+        if (StringUtils.hasText(request.getRaisonSociale())) {
+            fournisseur.setRaisonSociale(request.getRaisonSociale());
+        }
+        if (StringUtils.hasText(request.getNif())) {
+            fournisseur.setNif(request.getNif());
+        }
+        if (StringUtils.hasText(request.getContact())) {
+            fournisseur.setContact(request.getContact());
+        }
+        if (StringUtils.hasText(request.getTelephone())) {
+            fournisseur.setTelephone(request.getTelephone());
+        }
+        if (StringUtils.hasText(request.getEmail())) {
+            fournisseur.setEmail(request.getEmail());
+        }
+        if (StringUtils.hasText(request.getAdresseVille())) {
+            fournisseur.setAdresseVille(request.getAdresseVille());
+        }
     }
 
     /** Bornes de pagination — convention repo : clamp silencieux, pas de 400. */

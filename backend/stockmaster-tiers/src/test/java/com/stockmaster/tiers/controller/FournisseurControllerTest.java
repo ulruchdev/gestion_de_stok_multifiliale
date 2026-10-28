@@ -3,7 +3,10 @@ package com.stockmaster.tiers.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stockmaster.shared.dto.response.PageResponse;
 import com.stockmaster.tiers.TiersTestApplication;
+import com.stockmaster.shared.exception.BusinessException;
+import com.stockmaster.shared.exception.ErrorCode;
 import com.stockmaster.tiers.dto.request.CreerFournisseurRequest;
+import com.stockmaster.tiers.dto.request.ModifierFournisseurRequest;
 import com.stockmaster.tiers.dto.response.FournisseurResponse;
 import com.stockmaster.tiers.service.FournisseurService;
 import com.stockmaster.shared.security.StockMasterPrincipal;
@@ -41,6 +44,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -354,6 +358,170 @@ class FournisseurControllerTest {
                     .andExpect(jsonPath("$.errorCode").value("SYS_005"));
 
             verify(fournisseurService, never()).creer(any(), any());
+        }
+    }
+
+    // ─── US-038 — modification ──────────────────────────────────────────────
+
+    /**
+     * US-038 — {@code PUT /api/v1/fournisseurs/{id}}.
+     *
+     * <p>Contrats HTTP verrouillés : 200 + {@code ApiResponse} sur succès,
+     * 400 {@code SYS_005} sur payload invalide, 404 {@code RES_001} sur id
+     * inconnu ou hors tenant (jamais 403 : aucune fuite d'existence),
+     * 403 sur rôle non autorisé.</p>
+     */
+    @Nested
+    @DisplayName("US-038 — PUT /api/v1/fournisseurs/{id}")
+    class Modification {
+
+        private static final Long ID_CIBLE = 200L;
+
+        private FournisseurResponse reponseModifiee() {
+            return FournisseurResponse.builder()
+                    .id(ID_CIBLE)
+                    .raisonSociale("SARL Import Golfe SA")
+                    .telephone("+237677445566")
+                    .nif("M0126000099")
+                    .contact("Clarisse Mballa")
+                    .email("commandes@importgolfe.cm")
+                    .adresseVille("Yaounde")
+                    .entrepriseId(ENTREPRISE_ID)
+                    .build();
+        }
+
+        @ParameterizedTest(name = "✅ 200 — rôle {0}")
+        @ValueSource(strings = {"RESP_ACHATS", "ADMIN_FILIALE", "ADMIN_GROUPE"})
+        @DisplayName("✅ 200 — fournisseur modifié, enveloppe ApiResponse")
+        void shouldReturn200WhenRoleAutorise(String role) throws Exception {
+            when(fournisseurService.modifier(any(StockMasterPrincipal.class), eq(ID_CIBLE), any()))
+                    .thenReturn(reponseModifiee());
+
+            mockMvc.perform(put("/api/v1/fournisseurs/" + ID_CIBLE)
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication(role, GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"raisonSociale\":\"SARL Import Golfe SA\","
+                                    + "\"telephone\":\"+237677445566\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.id").value(ID_CIBLE))
+                    .andExpect(jsonPath("$.data.raisonSociale").value("SARL Import Golfe SA"))
+                    .andExpect(jsonPath("$.data.adresseVille").value("Yaounde"))
+                    .andExpect(jsonPath("$.data.entrepriseId").value(ENTREPRISE_ID));
+
+            verify(fournisseurService).modifier(any(StockMasterPrincipal.class),
+                    org.mockito.ArgumentMatchers.eq(ID_CIBLE), any(ModifierFournisseurRequest.class));
+        }
+
+        @Test
+        @DisplayName("✅ 200 — un entrepriseId forcé dans le payload est ignoré (absent du DTO)")
+        void shouldIgnorerEntrepriseIdForceDansLePayload() throws Exception {
+            when(fournisseurService.modifier(any(StockMasterPrincipal.class), eq(ID_CIBLE), any()))
+                    .thenReturn(reponseModifiee());
+
+            mockMvc.perform(put("/api/v1/fournisseurs/" + ID_CIBLE)
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"entrepriseId\":20,\"raisonSociale\":\"SARL Import Golfe SA\"}"))
+                    .andExpect(status().isOk());
+
+            assertThat(Arrays.stream(ModifierFournisseurRequest.class.getDeclaredFields())
+                    .map(Field::getName)
+                    .collect(Collectors.toSet()))
+                    .doesNotContain("entrepriseId", "entreprise", "groupId", "id");
+        }
+
+        @Test
+        @DisplayName("❌ 400 SYS_005 — raisonSociale blanche")
+        void shouldReturn400WhenRaisonSocialeBlanche() throws Exception {
+            mockMvc.perform(put("/api/v1/fournisseurs/" + ID_CIBLE)
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"raisonSociale\":\"   \"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errorCode").value("SYS_005"));
+
+            verify(fournisseurService, never()).modifier(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("❌ 400 SYS_005 — telephone hors format camerounais")
+        void shouldReturn400WhenTelephoneInvalide() throws Exception {
+            mockMvc.perform(put("/api/v1/fournisseurs/" + ID_CIBLE)
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"telephone\":\"691234567\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errorCode").value("SYS_005"));
+
+            verify(fournisseurService, never()).modifier(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("❌ 404 RES_001 — id inexistant")
+        void shouldReturn404WhenIdInexistant() throws Exception {
+            when(fournisseurService.modifier(any(StockMasterPrincipal.class), eq(9999L), any()))
+                    .thenThrow(new BusinessException(ErrorCode.RES_ENTITY_NOT_FOUND));
+
+            mockMvc.perform(put("/api/v1/fournisseurs/9999")
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"adresseVille\":\"Yaounde\"}"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.errorCode").value("RES_001"));
+        }
+
+        @Test
+        @DisplayName("❌ 404 RES_001 — IDOR : id du tenant B depuis le tenant A (jamais 403)")
+        void shouldReturn404WhenFournisseurDhunAutreTenant() throws Exception {
+            when(fournisseurService.modifier(any(StockMasterPrincipal.class), eq(ID_CIBLE), any()))
+                    .thenThrow(new BusinessException(ErrorCode.RES_ENTITY_NOT_FOUND));
+
+            mockMvc.perform(put("/api/v1/fournisseurs/" + ID_CIBLE)
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"adresseVille\":\"Yaounde\"}"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.errorCode").value("RES_001"));
+        }
+
+        @ParameterizedTest(name = "❌ 403 — rôle {0}")
+        @ValueSource(strings = {"CAISSIER", "COMMERCIAL", "GESTIONNAIRE_STOCK"})
+        @DisplayName("❌ 403 — rôle hors périmètre achats")
+        void shouldReturn403WhenRoleNonAutorise(String role) throws Exception {
+            mockMvc.perform(put("/api/v1/fournisseurs/" + ID_CIBLE)
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication(role, GROUP_ID, ENTREPRISE_ID)))
+                            .with(SecurityMockMvcRequestPostProcessors.csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"adresseVille\":\"Yaounde\"}"))
+                    .andExpect(status().isForbidden());
+
+            verify(fournisseurService, never()).modifier(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("❌ 4xx — non authentifié")
+        void shouldRefuserSansAuthentification() throws Exception {
+            mockMvc.perform(put("/api/v1/fournisseurs/" + ID_CIBLE)
+                            .with(SecurityMockMvcRequestPostProcessors.csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"adresseVille\":\"Yaounde\"}"))
+                    .andExpect(status().is4xxClientError());
+
+            verify(fournisseurService, never()).modifier(any(), any(), any());
         }
     }
 }
