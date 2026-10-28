@@ -1,7 +1,7 @@
 # StockMaster CM — Tiers (Clients & Fournisseurs)
 
 > **Artefact :** `stockmaster-tiers`
-> **Statut :** 🟡 EPIC 6 en cours — fondations + **US-036 livrée** (`POST /api/v1/fournisseurs`)
+> **Statut :** 🟡 EPIC 6 en cours — fondations + **US-036 livrée** (`POST /api/v1/fournisseurs`) + **US-037 livrée** (`GET /api/v1/fournisseurs`)
 > **Dépendance :** `stockmaster-shared`
 > **Package :** `com.stockmaster.tiers`
 
@@ -25,7 +25,7 @@ Gestion des partenaires commerciaux : clients B2B et fournisseurs.
 | US | Description | Priorité | Statut |
 |---|---|---|---|
 | **US-036** | Créer un fournisseur | P0 | ✅ Livré (branche `feature/GS-036-creer-fournisseur`) |
-| **US-037** | Lister / Rechercher les fournisseurs | P0 | 🔜 Non commencé |
+| **US-037** | Lister / Rechercher les fournisseurs | P0 | ✅ Livré (branche `feature/GS-037-lister-fournisseurs`) |
 | **US-038** | Modifier un fournisseur | P0 | 🔜 Non commencé |
 | **US-039** | Supprimer un fournisseur | P0 | 🔜 Non commencé |
 | **US-040** | Créer un client | P0 | 🔜 Non commencé |

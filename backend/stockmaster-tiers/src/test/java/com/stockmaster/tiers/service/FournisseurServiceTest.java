@@ -2,9 +2,11 @@ package com.stockmaster.tiers.service;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stockmaster.shared.config.PaginationProperties;
 import com.stockmaster.shared.domain.entity.Entreprise;
 import com.stockmaster.shared.domain.entity.TenantGroup;
 import com.stockmaster.shared.domain.enums.TypeEntreprise;
+import com.stockmaster.shared.dto.response.PageResponse;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
 import com.stockmaster.shared.repository.EntrepriseRepository;
@@ -24,6 +26,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -31,9 +34,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -41,6 +50,8 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -74,6 +85,9 @@ class FournisseurServiceTest {
     private FournisseurRepository fournisseurRepository;
     @Mock
     private EntrepriseRepository entrepriseRepository;
+    /** Vraie instance — valeurs par défaut du repo (maxPageSize = 100). */
+    @Spy
+    private final PaginationProperties paginationProperties = new PaginationProperties();
     /** Vraie instance MapStruct — mapping request → entité → réponse vérifiable. */
     @Spy
     private final FournisseurMapper fournisseurMapper = new FournisseurMapperImpl();
@@ -369,6 +383,167 @@ class FournisseurServiceTest {
             r.setTelephone(null);
 
             assertThat(valider(r)).isEmpty();
+        }
+    }
+
+    // ─── US-037 — lister / rechercher ───────────────────────────────────
+
+    @Nested
+    @DisplayName("US-037 — lister / rechercher (GET /api/v1/fournisseurs)")
+    class Lister {
+
+        private Fournisseur fournisseur(long id, String raisonSociale, String ville) {
+            Fournisseur f = Fournisseur.builder()
+                    .raisonSociale(raisonSociale)
+                    .adresseVille(ville)
+                    .entreprise(entrepriseA())
+                    .build();
+            f.setId(id);
+            return f;
+        }
+
+        private Page<Fournisseur> pageDe(int numero, int taille, long total, Fournisseur... elements) {
+            return new PageImpl<>(List.of(elements), PageRequest.of(numero, taille), total);
+        }
+
+        @Test
+        @DisplayName("✅ 200 — recherche paginée scopée au tenant du JWT, tri raisonSociale ASC")
+        void shouldListerFournisseursDuTenantQuandSearchPresent() {
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.rechercherParEntrepriseEtTexte(
+                    eq(ENTREPRISE_ID), eq("somiref"), any(Pageable.class)))
+                    .thenReturn(pageDe(0, 20, 2,
+                            fournisseur(1L, "SOMIREF Distribution", "Douala"),
+                            fournisseur(2L, "Somiref Plus", "Yaoundé")));
+
+            // search entouré d'espaces : le service doit le trimmer
+            PageResponse<FournisseurResponse> reponse =
+                    fournisseurService.lister(principalAchats(), "  somiref  ", 0, 20);
+
+            assertThat(reponse.getContent()).hasSize(2);
+            assertThat(reponse.getPage()).isZero();
+            assertThat(reponse.getSize()).isEqualTo(20);
+            assertThat(reponse.getTotalElements()).isEqualTo(2);
+            assertThat(reponse.getTotalPages()).isEqualTo(1);
+            assertThat(reponse.getContent().get(0).getRaisonSociale()).isEqualTo("SOMIREF Distribution");
+            assertThat(reponse.getContent().get(0).getAdresseVille()).isEqualTo("Douala");
+            assertThat(reponse.getContent().get(0).getEntrepriseId()).isEqualTo(ENTREPRISE_ID);
+
+            ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+            verify(fournisseurRepository).rechercherParEntrepriseEtTexte(
+                    eq(ENTREPRISE_ID), eq("somiref"), pageableCaptor.capture());
+            Pageable pageable = pageableCaptor.getValue();
+            assertThat(pageable.getPageSize()).isEqualTo(20);
+            assertThat(pageable.getSort().stream().map(Sort.Order::getProperty))
+                    .containsExactly("raisonSociale");
+            assertThat(pageable.getSort().getOrderFor("raisonSociale").getDirection())
+                    .isEqualTo(Sort.Direction.ASC);
+        }
+
+        @ParameterizedTest(name = "✅ search [{0}] → listing complet paginé")
+        @NullAndEmptySource
+        @ValueSource(strings = "   ")
+        @DisplayName("✅ 200 — search absent ou blanc → tous les fournisseurs du tenant")
+        void shouldListerToutQuandSearchVide(String search) {
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.findAllByEntrepriseIdAndSupprimeFalse(
+                    eq(ENTREPRISE_ID), any(Pageable.class)))
+                    .thenReturn(pageDe(0, 20, 1, fournisseur(1L, "SARL Import Golfe", "Douala")));
+
+            PageResponse<FournisseurResponse> reponse =
+                    fournisseurService.lister(principalAchats(), search, 0, 20);
+
+            assertThat(reponse.getContent()).hasSize(1);
+            assertThat(reponse.getTotalElements()).isEqualTo(1);
+            verify(fournisseurRepository).findAllByEntrepriseIdAndSupprimeFalse(
+                    eq(ENTREPRISE_ID), any(Pageable.class));
+            verify(fournisseurRepository, never())
+                    .rechercherParEntrepriseEtTexte(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("✅ 200 — recherche sans résultat → page vide, jamais 404")
+        void shouldRetournerPageVideQuandAucunResultat() {
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.rechercherParEntrepriseEtTexte(
+                    eq(ENTREPRISE_ID), eq("zzz"), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+
+            PageResponse<FournisseurResponse> reponse =
+                    fournisseurService.lister(principalAchats(), "zzz", 0, 20);
+
+            assertThat(reponse.getContent()).isEmpty();
+            assertThat(reponse.getTotalElements()).isZero();
+            assertThat(reponse.getTotalPages()).isZero();
+        }
+
+        @Test
+        @DisplayName("✅ isolation tenant — la requête part toujours pour l'entreprise du JWT")
+        void shouldToujoursFiltrerSurLEntrepriseDuJwt() {
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.rechercherParEntrepriseEtTexte(any(), any(), any()))
+                    .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+
+            fournisseurService.lister(principalAchats(), "somiref", 0, 20);
+
+            verify(fournisseurRepository).rechercherParEntrepriseEtTexte(
+                    eq(ENTREPRISE_ID), anyString(), any(Pageable.class));
+            verify(fournisseurRepository, never())
+                    .rechercherParEntrepriseEtTexte(eq(ENTREPRISE_ID_AUTRE_TENANT), any(), any());
+            verify(fournisseurRepository, never())
+                    .findAllByEntrepriseIdAndSupprimeFalse(eq(ENTREPRISE_ID_AUTRE_TENANT), any());
+        }
+
+        @Test
+        @DisplayName("❌ 404 — un utilisateur du tenant B ne lit aucun fournisseur du tenant A")
+        void shouldRefuserLectureQuandTenantEtranger() {
+            Entreprise entrepriseB = entrepriseA();
+            entrepriseB.setId(ENTREPRISE_ID_AUTRE_TENANT);
+            entrepriseB.getGroupe().setId(999L);
+            when(entrepriseRepository.findById(ENTREPRISE_ID_AUTRE_TENANT))
+                    .thenReturn(Optional.of(entrepriseB));
+            StockMasterPrincipal acteurB = principal("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID_AUTRE_TENANT);
+
+            assertThatThrownBy(() -> fournisseurService.lister(acteurB, "somiref", 0, 20))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RES_ENTITY_NOT_FOUND);
+
+            verify(fournisseurRepository, never()).rechercherParEntrepriseEtTexte(any(), any(), any());
+            verify(fournisseurRepository, never()).findAllByEntrepriseIdAndSupprimeFalse(any(), any());
+        }
+
+        @ParameterizedTest(name = "❌ 403 — rôle {0}")
+        @ValueSource(strings = {"CAISSIER", "COMMERCIAL", "GESTIONNAIRE_STOCK"})
+        @DisplayName("❌ 403 SEC_001 — lecture hors périmètre achats")
+        void shouldRefuserLectureWhenRoleNonAutorise(String role) {
+            StockMasterPrincipal acteur = principal(role, GROUP_ID, ENTREPRISE_ID);
+
+            assertThatThrownBy(() -> fournisseurService.lister(acteur, "somiref", 0, 20))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SEC_ACCESS_DENIED);
+
+            verify(fournisseurRepository, never()).rechercherParEntrepriseEtTexte(any(), any(), any());
+            verify(fournisseurRepository, never()).findAllByEntrepriseIdAndSupprimeFalse(any(), any());
+        }
+
+        @Test
+        @DisplayName("✅ bornes — page négative → 0, size 999 → plafonné, tri fixe raisonSociale ASC")
+        void shouldBorerPagination() {
+            when(entrepriseRepository.findById(ENTREPRISE_ID)).thenReturn(Optional.of(entrepriseA()));
+            when(fournisseurRepository.findAllByEntrepriseIdAndSupprimeFalse(
+                    any(), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+
+            fournisseurService.lister(principalAchats(), null, -5, 999);
+
+            ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+            verify(fournisseurRepository).findAllByEntrepriseIdAndSupprimeFalse(
+                    eq(ENTREPRISE_ID), pageableCaptor.capture());
+            Pageable pageable = pageableCaptor.getValue();
+            assertThat(pageable.getPageNumber()).isZero();
+            assertThat(pageable.getPageSize()).isEqualTo(100); // stockmaster.pagination.max-page-size
+            assertThat(pageable.getSort().getOrderFor("raisonSociale").getDirection())
+                    .isEqualTo(Sort.Direction.ASC);
         }
     }
 

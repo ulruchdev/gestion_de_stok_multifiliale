@@ -1,6 +1,7 @@
 package com.stockmaster.tiers.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stockmaster.shared.dto.response.PageResponse;
 import com.stockmaster.tiers.TiersTestApplication;
 import com.stockmaster.tiers.dto.request.CreerFournisseurRequest;
 import com.stockmaster.tiers.dto.response.FournisseurResponse;
@@ -26,14 +27,19 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -68,6 +74,8 @@ class FournisseurControllerTest {
 
     private static final Long GROUP_ID = 1L;
     private static final Long ENTREPRISE_ID = 10L;
+    /** Autre tenant — ne doit JAMAIS être utilisé par le service. */
+    private static final Long ENTREPRISE_ID_AUTRE_TENANT = 20L;
 
     // ─── helpers ─────────────────────────────────────────────────────────────
 
@@ -189,6 +197,125 @@ class FournisseurControllerTest {
                     .andExpect(status().is4xxClientError());
 
             verify(fournisseurService, never()).creer(any(), any());
+        }
+    }
+
+    // ─── US-037 — lister / rechercher ───────────────────────────────────
+
+    @Nested
+    @DisplayName("US-037 — GET /api/v1/fournisseurs")
+    class Lister {
+
+        private PageResponse<FournisseurResponse> pageDunFournisseur() {
+            return PageResponse.<FournisseurResponse>builder()
+                    .content(List.of(reponseCreee()))
+                    .page(0)
+                    .size(20)
+                    .totalElements(1)
+                    .totalPages(1)
+                    .build();
+        }
+
+        private PageResponse<FournisseurResponse> pageVide() {
+            return PageResponse.<FournisseurResponse>builder()
+                    .content(List.of())
+                    .page(0)
+                    .size(20)
+                    .totalElements(0)
+                    .totalPages(0)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("✅ 200 — liste paginée du tenant, enveloppe ApiResponse + PageResponse")
+        void shouldReturn200WhenRecherchePresente() throws Exception {
+            when(fournisseurService.lister(any(StockMasterPrincipal.class), eq("somiref"), eq(0), eq(20)))
+                    .thenReturn(pageDunFournisseur());
+
+            mockMvc.perform(get("/api/v1/fournisseurs?search=somiref&page=0&size=20")
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.content[0].id").value(300))
+                    .andExpect(jsonPath("$.data.content[0].raisonSociale").value("SARL Import Golfe"))
+                    .andExpect(jsonPath("$.data.content[0].entrepriseId").value(ENTREPRISE_ID))
+                    .andExpect(jsonPath("$.data.page").value(0))
+                    .andExpect(jsonPath("$.data.size").value(20))
+                    .andExpect(jsonPath("$.data.totalElements").value(1))
+                    .andExpect(jsonPath("$.data.totalPages").value(1));
+        }
+
+        @Test
+        @DisplayName("✅ 200 — recherche sans résultat → page vide (content = [], jamais 404)")
+        void shouldReturn200WhenAucunResultat() throws Exception {
+            when(fournisseurService.lister(any(StockMasterPrincipal.class), eq("zzz"), eq(0), eq(20)))
+                    .thenReturn(pageVide());
+
+            mockMvc.perform(get("/api/v1/fournisseurs?search=zzz")
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.content").isEmpty())
+                    .andExpect(jsonPath("$.data.totalElements").value(0));
+        }
+
+        @Test
+        @DisplayName("✅ 200 — search absent → défauts page=0 size=20, search null")
+        void shouldReturn200AvecDefautsQuandSearchAbsent() throws Exception {
+            when(fournisseurService.lister(any(StockMasterPrincipal.class), isNull(), eq(0), eq(20)))
+                    .thenReturn(pageDunFournisseur());
+
+            mockMvc.perform(get("/api/v1/fournisseurs")
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.totalElements").value(1));
+
+            verify(fournisseurService).lister(any(StockMasterPrincipal.class), isNull(), eq(0), eq(20));
+        }
+
+        @Test
+        @DisplayName("✅ isolation tenant — un entrepriseId forcé dans la query est ignoré")
+        void shouldIgnorerEntrepriseIdForceDansLaQuery() throws Exception {
+            when(fournisseurService.lister(any(StockMasterPrincipal.class), eq("somi"), eq(0), eq(20)))
+                    .thenReturn(pageVide());
+
+            mockMvc.perform(get("/api/v1/fournisseurs?search=somi&entrepriseId=" + ENTREPRISE_ID_AUTRE_TENANT)
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID))))
+                    .andExpect(status().isOk());
+
+            // signature : (principal, search, page, size) — aucun identifiant de tenant
+            // ne transite par la requête ; le tenant vient du JWT (claims entrepriseId = 10).
+            verify(fournisseurService).lister(any(StockMasterPrincipal.class), eq("somi"), eq(0), eq(20));
+        }
+
+        @Test
+        @DisplayName("✅ 200 — size hors bornes (999) borné côté service, pas de 400 (arbitrage G2)")
+        void shouldPasserSizeHorsBornesAuService() throws Exception {
+            when(fournisseurService.lister(any(StockMasterPrincipal.class), isNull(), eq(0), eq(999)))
+                    .thenReturn(pageVide());
+
+            mockMvc.perform(get("/api/v1/fournisseurs?size=999")
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication("RESP_ACHATS", GROUP_ID, ENTREPRISE_ID))))
+                    .andExpect(status().isOk());
+
+            verify(fournisseurService).lister(any(StockMasterPrincipal.class), isNull(), eq(0), eq(999));
+        }
+
+        @ParameterizedTest(name = "❌ 403 — rôle {0}")
+        @ValueSource(strings = {"CAISSIER", "COMMERCIAL", "GESTIONNAIRE_STOCK"})
+        @DisplayName("❌ 403 — rôle non autorisé à consulter les fournisseurs")
+        void shouldReturn403WhenRoleNonAutorise(String role) throws Exception {
+            mockMvc.perform(get("/api/v1/fournisseurs")
+                            .with(SecurityMockMvcRequestPostProcessors.authentication(
+                                    asAuthentication(role, GROUP_ID, ENTREPRISE_ID))))
+                    .andExpect(status().isForbidden());
+
+            verify(fournisseurService, never()).lister(any(), any(), anyInt(), anyInt());
         }
     }
 

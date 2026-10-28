@@ -1134,7 +1134,7 @@ photo   = (fichier)
 
 ## 5. Tiers — `/api/v1/clients` et `/api/v1/fournisseurs`
 
-> **Statut :** 🟡 EPIC 6 — **US-036 ✅ implémentée** ; US-037 à US-043 🔜 non implémentées
+> **Statut :** 🟡 EPIC 6 — **US-036 ✅ et US-037 ✅ implémentées** ; US-038 à US-043 🔜 non implémentées
 
 ### 5.1 POST — Créer un fournisseur
 
@@ -1206,7 +1206,88 @@ pm.test("Fournisseur rattache au tenant du JWT", () => {
 
 ---
 
-### 5.2 GET — Lister les fournisseurs (futur)
+### 5.2 GET — Lister / Rechercher les fournisseurs
+
+> **US :** US-037
+> **Statut :** ✅ Implémenté (branche `feature/GS-037-lister-fournisseurs`)
+> **Authentification :** ✅ Oui — `@PreAuthorize("hasAnyRole('RESP_ACHATS','ADMIN_FILIALE','ADMIN_GROUPE')")`
+
+Listing **strictement limité aux fournisseurs de l'entreprise du JWT** — aucun paramètre de tenant n'est accepté (un `entrepriseId` ajouté à la query string est ignoré).
+
+#### Requête
+
+```http
+GET {{base_url}}/api/v1/fournisseurs?search=somiref&page=0&size=20
+Authorization: Bearer {{access_token}}
+```
+
+| Paramètre | Type | Obligatoire | Défaut | Comportement |
+|---|---|---|---|---|
+| `search` | string | ❌ | — | Recherche sur **raison sociale OU ville** (`LIKE %x%`, insensible à la casse, accents non normalisés), trimé. **Absent ou blanc → tous les fournisseurs du tenant** |
+| `page` | int | ❌ | `0` | négatif borné à 0 |
+| `size` | int | ❌ | `20` | **borné à 100** (`stockmaster.pagination.max-page-size`) — clamp silencieux, **jamais de 400** |
+
+Tri **fixe** : `raisonSociale ASC` (aucun tri dynamique exposé).
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": 300,
+                "raisonSociale": "SOMIREF Distribution",
+                "nif": "M0126000001",
+                "contact": "Jean Etoundi",
+                "telephone": "+237691234567",
+                "email": "achats@importgolfe.cm",
+                "adresseVille": "Douala",
+                "entrepriseId": 10
+            }
+        ],
+        "page": 0,
+        "size": 20,
+        "totalElements": 1,
+        "totalPages": 1
+    }
+}
+```
+
+#### Réponse — Recherche sans résultat (200 OK, **jamais 404**)
+
+```json
+{
+    "success": true,
+    "data": { "content": [], "page": 0, "size": 20, "totalElements": 0, "totalPages": 0 }
+}
+```
+
+#### Réponses d'erreur
+
+| Cas | Code | HTTP |
+|---|---|---|
+| Rôle hors périmètre (`CAISSIER`, `COMMERCIAL`, `GESTIONNAIRE_STOCK`) | `SEC_001` | 403 |
+| JWT sans `groupId` | `GRP_002` | 403 |
+| Entreprise du JWT introuvable / soft-supprimée / hors groupe | `RES_001` | 404 |
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Page de fournisseurs bien formee", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.content).to.be.an("array");
+    pm.expect(json.data.totalElements).to.be.a("number");
+});
+```
+
+---
+
 ### 5.3 PUT — Modifier un fournisseur (futur)
 ### 5.4 DELETE — Supprimer un fournisseur (futur)
 ### 5.5 POST — Créer un client (futur)
@@ -1399,6 +1480,7 @@ if (pm.response.code === 201) {
 | 8 sept. 2026 | Claude Code | Sections 12-14 (caisse, inventaire, imports) + règle `Idempotency-Key` ; §10.2 aligné sur `etat` | Rédaction des US `US-087` à `US-106` couvrant `DEC-009/010/027/036/038` |
 | 21 oct. 2026 | Codebuff | Section 15 (`POST /api/v1/articles`) + requête dans `postman_collection.json` | Livraison US-031 (EPIC 5) |
 | 27 oct. 2026 | Codebuff | Section 5.1 (`POST /api/v1/fournisseurs`) + requête dans `postman_collection.json` | Livraison US-036 (EPIC 6) |
+| 27 oct. 2026 | Codebuff | Section 5.2 (`GET /api/v1/fournisseurs`) + requête dans `postman_collection.json` | Livraison US-037 (EPIC 6) |
 
 ---
 
