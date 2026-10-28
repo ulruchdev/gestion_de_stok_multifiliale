@@ -197,8 +197,7 @@ cd backend && mvn -q test -pl stockmaster-catalogue \
 20 tests, `ArticleDefaultsTest` 2 tests — aucun échec, aucune erreur.
 **Résultat attendu :** `BUILD SUCCESS` + **421 tests, 0 failure, 0 error**
 
-> **Compteur réel (US-039, branche `feature/GS-039-supprimer-fournisseur`, base `main`) :** shared 71 · auth 96 · groupe 67 · catalogue 83 (dont 2 skippés — US-027→031 + defaults) · notification 8 · utilisateur 132 · tiers **70** (dont 68 US-036/037/039 : 40 service + 28 contrôleur, + 2 fondamentaux) · achat **6** (3 fondamentaux + 3 `CommandesFournisseurAdapterTest`) · stock 20 · vente 8 · reporting 5 · bootstrap 7 (dont 4 ArchUnit) = **573**.
-> ⚠️ **Branche sœur :** `feature/GS-038-modifier-fournisseur` (non mergée) porte tiers à 81 et le total à 581. Les deux branches partent de `main` et touchent le même module : **après merge des deux, attendre `tiers 102` et un total de 605** — à revérifier au second merge.
+> **Compteur réel (mesuré le 28 oct. 2026 après merge de `main` dans `feature/GS-039-supprimer-fournisseur`, soit US-036 + US-037 + US-038 + US-039 + port d'écriture stock) :** shared 71 · auth 96 · groupe 67 · catalogue 99 (dont 2 skippés — US-027→031 + defaults) · notification 8 · utilisateur 132 · tiers **102** (dont 100 US-036→039 : 60 service + 40 contrôleur, + 2 fondamentaux) · achat **6** (3 fondamentaux + 3 `CommandesFournisseurAdapterTest`) · stock **32** (dont 12 `EcritureStockServiceTest`) · vente 8 · reporting 5 · bootstrap 7 (dont 4 ArchUnit) = **633** — `BUILD SUCCESS`, 0 failure, 0 error, 2 skipped.
 > Les 3 tests de `bootstrap` (`StockMasterApplicationTest`) échouent **sans PostgreSQL** — c'est environnemental, pas un bug : `docker compose up -d postgres redis` les rend verts.
 >
 > ⚠️ **Le gate « Coverage ≥ 80 % » n'est PAS actif dans le build** (item **C-14** de la checklist `DEC-031` ouvert : le pom parent ne contient que `prepare-agent` + `report`, aucune exécution `jacoco:check`). Ne prétendez pas qu'il bloque la CI.
@@ -575,6 +574,7 @@ curl http://localhost:8080/actuator/health
 |---|---|---|---|
 | Juin 2026 | Codebuff | Création initiale | Guide stratégie de test |
 | 2026-10-19 | clement ange | Mise à jour compte de tests catalogue et CI | Ajout exemple réel `CategorieServiceTest`/`CategorieControllerTest`/`ArticleDefaultsTest` (39 + 20 + 2 tests, 2 ignorés) et alignement workflow pré-push sur `ci-backend.yml`/`ci-frontend.yml` |
+| 2026-10-28 | baudrel | Port d'écriture stock GS-1240 : +12 tests `EcritureStockServiceTest` (module stock 20 → 32, reactor 577/577) ; whitelist ArchUnit étendue à `stock.port..` + `stock.domain.enums..` | Ticket #1240 — contrat inter-modules pour EPIC 8 (achat/vente/transferts écrivent le stock par ce port uniquement) |
 
 ---
 

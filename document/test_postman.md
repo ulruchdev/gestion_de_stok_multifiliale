@@ -1176,13 +1176,10 @@ Content-Type: application/json
         "telephone": "+237691234567",
         "email": "achats@importgolfe.cm",
         "adresseVille": "Douala",
-        "entrepriseId": 10,
-        "supprime": false
+        "entrepriseId": 10
     }
 }
 ```
-
-> `supprime` (US-039) est **additif** : `false` à la création, `true` après un `DELETE`.
 
 #### Réponses d'erreur
 
@@ -1247,8 +1244,7 @@ Tri **fixe** : `raisonSociale ASC` (aucun tri dynamique exposé).
                 "telephone": "+237691234567",
                 "email": "achats@importgolfe.cm",
                 "adresseVille": "Douala",
-                "entrepriseId": 10,
-                "supprime": false
+                "entrepriseId": 10
             }
         ],
         "page": 0,
@@ -1292,7 +1288,91 @@ pm.test("Page de fournisseurs bien formee", () => {
 
 ---
 
-### 5.3 PUT — Modifier un fournisseur (futur)
+### 5.3 PUT — Modifier un fournisseur
+
+> **US :** US-038
+> **Statut :** ✅ Implémenté (branche `feature/GS-038-modifier-fournisseur`)
+> **Authentification :** ✅ Oui — `@PreAuthorize("hasAnyRole('RESP_ACHATS','ADMIN_FILIALE','ADMIN_GROUPE')")`
+
+Modifie les coordonnées d'un fournisseur **de l'entreprise du JWT** uniquement.
+
+**Sémantique PATCH sur un endpoint PUT** (convention US-014 / US-018 / US-024) : un champ absent **ou blanc** laisse la valeur actuelle en place. Un corps vide `{}` est donc valide — il ne modifie rien et renvoie l'état courant (200).
+
+#### Requête
+
+```http
+PUT {{base_url}}/api/v1/fournisseurs/300
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "raisonSociale": "SARL Import Golfe SA",
+    "telephone": "+237677445566",
+    "nif": "M0126000099",
+    "contact": "Clarisse Mballa",
+    "email": "commandes@importgolfe.cm",
+    "adresseVille": "Yaounde"
+}
+```
+
+| Champ | Obligatoire | Contrainte | Comportement |
+|---|---|---|---|
+| `raisonSociale` | ❌ | max 200, **non blanc si fourni** | blanc → 400 `SYS_005` (la colonne est `NOT NULL`) ; absent → inchangé |
+| `telephone` | ❌ | E.164 `^\+[1-9]\d{1,14}$`, max 20 | `691234567` (sans `+`) → 400 `SYS_005` |
+| `nif` | ❌ | max 20 | **aucune unicité** (pas d'index UNIQUE en base, aucun CA) |
+| `contact` | ❌ | max 100 | — |
+| `email` | ❌ | format email, max 150 | — |
+| `adresseVille` | ❌ | max 100 | — |
+
+**Non modifiables** : `id` (dans le chemin), `entreprise_id` (JWT — aucun champ dans le DTO), `dateCreation`, `dateModification` (trigger V3), `supprime`.
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": 300,
+        "raisonSociale": "SARL Import Golfe SA",
+        "nif": "M0126000099",
+        "contact": "Clarisse Mballa",
+        "telephone": "+237677445566",
+        "email": "commandes@importgolfe.cm",
+        "adresseVille": "Yaounde",
+        "entrepriseId": 10
+    }
+}
+```
+
+#### Réponses d'erreur
+
+| Cas | Code | HTTP |
+|---|---|---|
+| `raisonSociale` blanche, `telephone` hors E.164, email invalide, champ trop long | `SYS_005` | 400 |
+| Rôle hors périmètre (`CAISSIER`, `COMMERCIAL`, `GESTIONNAIRE_STOCK`) | `SEC_001` | 403 |
+| JWT sans `groupId` | `GRP_002` | 403 |
+| Fournisseur inexistant, **soft-supprimé** ou **appartenant à un autre tenant** (IDOR) | `RES_001` | 404 |
+| Entreprise du JWT introuvable / soft-supprimée / hors groupe | `RES_001` | 404 |
+
+> **Isolation tenant :** un fournisseur d'un autre tenant renvoie **404**, jamais 403 — l'existence de la fiche n'est pas révélée, et **rien n'est modifié** (test dédié).
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Fournisseur mis a jour et scope au tenant", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.id).to.eql(300);
+    pm.expect(json.data.raisonSociale).to.eql("SARL Import Golfe SA");
+    pm.expect(json.data.entrepriseId).to.eql(10);
+});
+```
+
+---
+
 ### 5.4 DELETE — Supprimer (archiver) un fournisseur
 
 > **US :** US-039

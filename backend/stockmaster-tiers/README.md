@@ -1,7 +1,7 @@
 # StockMaster CM — Tiers (Clients & Fournisseurs)
 
 > **Artefact :** `stockmaster-tiers`
-> **Statut :** 🟡 EPIC 6 en cours — fondations + **US-036 livrée** (`POST /api/v1/fournisseurs`) + **US-037 livrée** (`GET /api/v1/fournisseurs`) + **US-039 livrée** (`DELETE /api/v1/fournisseurs/{id}`)
+> **Statut :** 🟡 EPIC 6 en cours — fondations + **US-036 livrée** (`POST /api/v1/fournisseurs`) + **US-037 livrée** (`GET /api/v1/fournisseurs`) + **US-038 livrée** (`PUT /api/v1/fournisseurs/{id}`) + **US-039 livrée** (`DELETE /api/v1/fournisseurs/{id}`)
 > **Dépendance :** `stockmaster-shared`
 > **Package :** `com.stockmaster.tiers`
 
@@ -26,7 +26,7 @@ Gestion des partenaires commerciaux : clients B2B et fournisseurs.
 |---|---|---|---|
 | **US-036** | Créer un fournisseur | P0 | ✅ Livré (branche `feature/GS-036-creer-fournisseur`) |
 | **US-037** | Lister / Rechercher les fournisseurs | P0 | ✅ Livré (branche `feature/GS-037-lister-fournisseurs`) |
-| **US-038** | Modifier un fournisseur | P0 | 🔜 Non commencé |
+| **US-038** | Modifier un fournisseur | P0 | ✅ Livré (branche `feature/GS-038-modifier-fournisseur`) |
 | **US-039** | Supprimer (archiver) un fournisseur | P0 | ✅ Livré (branche `feature/GS-039-supprimer-fournisseur`) |
 | **US-040** | Créer un client | P0 | 🔜 Non commencé |
 | **US-041** | Lister / Rechercher les clients | P0 | 🔜 Non commencé |
@@ -41,7 +41,7 @@ Gestion des partenaires commerciaux : clients B2B et fournisseurs.
 |---|---|---|
 | POST | `/api/v1/fournisseurs` | US-036 |
 | GET | `/api/v1/fournisseurs` | US-037 |
-| PUT | `/api/v1/fournisseurs/{id}` | US-038 |
+| PUT | `/api/v1/fournisseurs/{id}` | US-038 ✅ |
 | DELETE | `/api/v1/fournisseurs/{id}` | US-039 ✅ |
 | POST | `/api/v1/clients` | US-040 |
 | GET | `/api/v1/clients` | US-041 |
