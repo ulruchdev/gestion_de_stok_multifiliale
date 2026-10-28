@@ -23,10 +23,11 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
  *   <li>{@code com.stockmaster.shared..} — infrastructure et agrégats tenant ;</li>
  *   <li>la <strong>couche contrat</strong> des modules exposés : {@code domain.entity},
  *       {@code domain.enums}, {@code event}, {@code port} de
- *       catalogue / tiers / notification — c'est la structure voulue par V1
+ *       catalogue / tiers / notification / stock — c'est la structure voulue par V1
  *       (les FK de commande_fournisseur → article, vente → client…
  *       exigent que les documents référencent les entités du catalogue et des
- *       tiers, cf. DEC-002).</li>
+ *       tiers, cf. DEC-002 ; pour stock, seul le port d'écriture
+ *       {@code EcritureStockPort} est exposé — GS-1240, DEC-023).</li>
  * </ul>
  *
  * <p>Tout le reste est interdit : un module ne doit JAMAIS toucher aux
@@ -58,7 +59,12 @@ class ModuleDependencyArchTest {
             "com.stockmaster.notification.domain.entity..",
             "com.stockmaster.notification.domain.enums..",
             "com.stockmaster.notification.event..",
-            "com.stockmaster.notification.port.."
+            "com.stockmaster.notification.port..",
+            // GS-1240 : le port d'écriture du stock est le seul point d'entrée
+            // prévu pour achat/vente/transferts (les internes du module restent
+            // encapsulés — référentiel §4.2 et DEC-023).
+            "com.stockmaster.stock.port..",
+            "com.stockmaster.stock.domain.enums.."
     };
 
     /** Tous les modules fonctionnels + bootstrap (tout ce qui n'est ni self ni shared). */
@@ -104,10 +110,9 @@ class ModuleDependencyArchTest {
         }
 
         if (!violations.isEmpty()) {
-            throw new AssertionError(
-                    "Dépendances inter-modules interdites détectées "
-                    + "(seuls shared et les contrats domain.entity/domain.enums/event/port "
-                    + "de catalogue, tiers, notification sont autorisés) :\n"
+            throw new AssertionError(                    "Dépendances inter-modules interdites détectées "
+                            + "(seuls shared et les contrats domain.entity/domain.enums/event/port "
+                            + "de catalogue, tiers, notification, stock sont autorisés) :\n"
                     + String.join("\n", violations));
         }
     }

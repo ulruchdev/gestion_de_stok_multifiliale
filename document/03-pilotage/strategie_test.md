@@ -574,6 +574,7 @@ curl http://localhost:8080/actuator/health
 |---|---|---|---|
 | Juin 2026 | Codebuff | Création initiale | Guide stratégie de test |
 | 2026-10-19 | clement ange | Mise à jour compte de tests catalogue et CI | Ajout exemple réel `CategorieServiceTest`/`CategorieControllerTest`/`ArticleDefaultsTest` (39 + 20 + 2 tests, 2 ignorés) et alignement workflow pré-push sur `ci-backend.yml`/`ci-frontend.yml` |
+| 2026-10-28 | baudrel | Port d'écriture stock GS-1240 : +12 tests `EcritureStockServiceTest` (module stock 20 → 32, reactor 577/577) ; whitelist ArchUnit étendue à `stock.port..` + `stock.domain.enums..` | Ticket #1240 — contrat inter-modules pour EPIC 8 (achat/vente/transferts écrivent le stock par ce port uniquement) |
 
 ---
 

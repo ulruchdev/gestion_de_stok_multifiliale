@@ -224,4 +224,19 @@ La CI (profil dev, `ddl-auto=validate`) a attrapé un drift que les tests locaux
 - reactor : **206/206 tests verts** (13 modules), integration test + 4 règles ArchUnit incluses
 - reste hors couverture : packages déjà exclus par Sonar (`config/**`, `dto/**`), quatre modules sans logique de service encore (interfaces+entités posés, implémentations à venir par US)
 
+---
+
+## Stock — Port d'écriture `EcritureStockPort` (GS-1240, 28/10/2026)
+
+Terminé (branche `feature/GS-1240-port-ecriture-stock`, ticket **#1240**). EPIC 8 n'a pas encore de contrôleur (US-052→054 à venir) : ce ticket pose l'**unique porte d'entrée d'écriture** du stock, le contrat que consommeront achat (réception US-049), vente (US-064) et transferts (US-068) — qui n'ont accès ni à `stock.repository` ni à `stock.service` (rule ArchUnit n°1).
+
+| Élément | Contenu | Statut |
+|---------|---------|--------|
+| Contrat | `stock.port.EcritureStockPort` autoportant : record `RequeteMouvement` (entreprise/article/utilisateur, `typeMouvement`, `quantite > 0` — le sens est porté par le type, jamais par le signe, `origineType/origineId`, `motif`) et record résultat `MouvementEnregistre` (`mouvementId` + `stockApres` recalculé **dans la même transaction** sous le même verrou — l'appelant ne relit jamais le journal). S'appuie uniquement sur les enums `stock.domain.enums` (couche contrat autorisée) | ✅ |
+| Sérialisation explicite | **DEC-023 addendum** : le stock étant calculé à la volée (ADR-003), il n'y a aucune ligne de stock à verrouiller → `pg_advisory_xact_lock(:entrepriseId, :articleId)` (`MouvementStockRepository.verrouilleCouple`) appelé **avant toute lecture du stock** ; deux ventes simultanées du dernier article ne peuvent plus passer toutes deux avec `stock = 1` | ✅ |
+| Isolation multi-tenant | Une seule requête native `MouvementStockRepository.referenceValide` : article **actif** du même groupe que l'entreprise **ET** utilisateur actif de cette entreprise — sinon 404 `RES_001` uniforme (pattern US-033/US-052, jamais révéler l'existence). Aucune FK paresseuse lue avant la validation | ✅ |
+| Invariants métier | Stock **jamais négatif** : toute écriture décrémentante sous 0 → `InsufficientStockException` (409 `STK_001`), rien n'est écrit (chapron rollback). Journal **immuable** (insertion seule, V5 §12). `motif` obligatoire sur `CORRECTION_*` → `STK_002` ; cohérence `CORRECTION_POS/CORRECTION_NEG → origineType = CORRECTION` otherwise `SYS_BAD_REQUEST` | ✅ |
+| ArchUnit | Whitelist règle 1 étendue : + `stock.port..` et `stock.domain.enums..` (miroir de catalogue/tiers/noti) — 4 règles vertes | ✅ |
+| Tests | 12 nouveaux tests Mockito (`EcritureStockServiceTest`, pattern `StockServiceTest` : `Nominatif`, `ValidationChamps`, `ReglesCorrection`, `IsolationMultiTenant`, `InvariantNonNegatif`) — module stock **20 → 32** ; reactor complet **577/577 verts** (13 modules, dont bootstrap 7 : 3 intégration `validate` + 4 ArchUnit) | ✅ |
+
 *Dernière mise à jour : 19 septembre 2026 — EPIC 4 : US-026 livrée (consulter/modifier son profil avec upload photo MinIO, +14 tests), 421/421 verts, branche `feature/GS-026-profil-utilisateur`*
