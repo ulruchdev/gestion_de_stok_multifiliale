@@ -1446,6 +1446,44 @@
             },
             "description": "US-037 (P0) — GET /api/v1/fournisseurs. Rôles : RESP_ACHATS / ADMIN_FILIALE / ADMIN_GROUPE. Listing strictement scope a l'entreprise du JWT : aucun paramètre de tenant n'est accepte (un entrepriseId force dans la query string est ignore). Tri fixe raisonSociale ASC. Reponses : 200 (ApiResponse + PageResponse), 200 avec content=[] si aucun resultat (jamais 404), 403 SEC_001 / GRP_002, 404 RES_001."
           }
+        },
+        {
+          "name": "US-038 — Modifier un fournisseur",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"raisonSociale\": \"SARL Import Golfe SA\",\n  \"telephone\": \"+237677445566\",\n  \"nif\": \"M0126000099\",\n  \"contact\": \"Clarisse Mballa\",\n  \"email\": \"commandes@importgolfe.cm\",\n  \"adresseVille\": \"Yaounde\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/fournisseurs/300",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "fournisseurs",
+                "300"
+              ]
+            },
+            "description": "US-038 (P0) — PUT /api/v1/fournisseurs/{id}. Rôles : RESP_ACHATS / ADMIN_FILIALE / ADMIN_GROUPE. Semantique PATCH sur un endpoint PUT (convention US-014/018/024) : champ absent ou blanc = inchange, corps vide valide. 6 champs modifiables : raisonSociale, nif, contact, telephone, email, adresseVille. Non modifiables : id, entreprise_id (JWT, absent du DTO), dateCreation, dateModification, supprime. raisonSociale fournie non blanche (max 200), telephone E.164 si fourni. Reponses : 200 (ApiResponse + FournisseurResponse), 400 SYS_005 (validation), 403 SEC_001 / GRP_002, 404 RES_001 pour id inexistant, soft-supprime OU autre tenant (aucune fuite d'existence, aucune modification)."
+          }
         }
       ]
     }
