@@ -12,7 +12,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,7 +28,10 @@ import jakarta.validation.Valid;
  *
  * <p>US-036 — {@code POST /api/v1/fournisseurs} : créer une fiche fournisseur.
  * <br>US-037 — {@code GET /api/v1/fournisseurs?search=&page=&size=} : lister /
- * rechercher par nom ou ville dans le tenant du JWT.</p>
+ * rechercher par nom ou ville dans le tenant du JWT.
+ * <br>US-039 — {@code DELETE /api/v1/fournisseurs/{id}} : archiver une fiche
+ * (soft delete, {@code 200} + état après archivage, {@code 409} si une commande
+ * fournisseur est encore active).</p>
  *
  * <p><b>CA1</b> : {@code @PreAuthorize("hasAnyRole('RESP_ACHATS','ADMIN_FILIALE','ADMIN_GROUPE')")}
  * — même placement que {@code CategorieController} / {@code ArticleController}
@@ -70,6 +75,24 @@ public class FournisseurController {
             @RequestParam(defaultValue = "20") int size) {
         PageResponse<FournisseurResponse> reponse =
                 fournisseurService.lister(principal, search, page, size);
+        return ResponseEntity.ok(ApiResponse.ok(reponse));
+    }
+
+    /**
+     * US-039 — archivage logique d'un fournisseur du tenant.
+     *
+     * <p><b>Soft delete</b> : {@code supprime = true}, la ligne est conservée
+     * (historique des achats préservé). {@code 409 RES_005} si une commande
+     * fournisseur est encore active ({@code COMMANDEE} | {@code PARTIELLEMENT_RECUE}) ;
+     * une commande reçue ou annulée n'empêche pas l'archivage. {@code 404 RES_001}
+     * uniforme sur id inconnu, hors tenant ou déjà archivé.</p>
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('RESP_ACHATS','ADMIN_FILIALE','ADMIN_GROUPE')")
+    public ResponseEntity<ApiResponse<FournisseurResponse>> supprimer(
+            @AuthenticationPrincipal StockMasterPrincipal principal,
+            @PathVariable Long id) {
+        FournisseurResponse reponse = fournisseurService.supprimer(principal, id);
         return ResponseEntity.ok(ApiResponse.ok(reponse));
     }
 }
