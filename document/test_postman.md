@@ -1134,12 +1134,320 @@ photo   = (fichier)
 
 ## 5. Tiers — `/api/v1/clients` et `/api/v1/fournisseurs`
 
-> **Statut :** 🔜 Non implémenté (EPIC 6, US-036 à US-043, Sprint 5)
+> **Statut :** 🟡 EPIC 6 — **US-036 ✅ et US-037 ✅ implémentées** ; US-038 à US-043 🔜 non implémentées
 
-### 5.1 POST — Créer un fournisseur (futur)
-### 5.2 GET — Lister les fournisseurs (futur)
-### 5.3 PUT — Modifier un fournisseur (futur)
-### 5.4 DELETE — Supprimer un fournisseur (futur)
+### 5.1 POST — Créer un fournisseur
+
+> **US :** US-036
+> **Statut :** ✅ Implémenté (branche `feature/GS-036-creer-fournisseur`)
+> **Authentification :** ✅ Oui — `@PreAuthorize("hasAnyRole('RESP_ACHATS','ADMIN_FILIALE','ADMIN_GROUPE')")`
+
+La fiche est rattachée à l'`entreprise_id` **extrait du JWT** — jamais lu du corps. Un champ `entrepriseId` ajouté dans le payload est **ignoré** (le DTO n'en possède aucun).
+
+#### Requête
+
+```http
+POST {{base_url}}/api/v1/fournisseurs
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "raisonSociale": "SARL Import Golfe",
+    "telephone": "+237691234567",
+    "nif": "M0126000001",
+    "contact": "Jean Etoundi",
+    "email": "achats@importgolfe.cm",
+    "adresseVille": "Douala"
+}
+```
+
+> **Contraintes (`CreerFournisseurRequest`) :** `raisonSociale` **obligatoire**, max 200 · `telephone` **optionnel** mais, si fourni, format E.164 `^\\+[1-9]\\d{1,14}$` (même regex que l'inscription) · `nif` (20), `contact` (100), `email` (150, format validé), `adresseVille` (100) optionnels. **Aucun champ tenant** dans le corps.
+
+#### Réponse — Succès (201 Created)
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": 300,
+        "raisonSociale": "SARL Import Golfe",
+        "nif": "M0126000001",
+        "contact": "Jean Etoundi",
+        "telephone": "+237691234567",
+        "email": "achats@importgolfe.cm",
+        "adresseVille": "Douala",
+        "entrepriseId": 10
+    }
+}
+```
+
+#### Réponses d'erreur
+
+| Cas | Code | HTTP |
+|---|---|---|
+| `raisonSociale` vide / trop longue, `telephone` hors format | `SYS_005` | 400 |
+| Rôle hors périmètre (`CAISSIER`, `COMMERCIAL`, `GESTIONNAIRE_STOCK`) | `SEC_001` | 403 |
+| JWT sans `groupId` | `GRP_002` | 403 |
+| Entreprise introuvable / soft-supprimée / hors groupe | `RES_001` | 404 |
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 201 Created", () => {
+    pm.response.to.have.status(201);
+});
+pm.test("Fournisseur rattache au tenant du JWT", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.raisonSociale).to.eql("SARL Import Golfe");
+    pm.expect(json.data).to.have.property("entrepriseId");
+});
+```
+
+---
+
+### 5.2 GET — Lister / Rechercher les fournisseurs
+
+> **US :** US-037
+> **Statut :** ✅ Implémenté (branche `feature/GS-037-lister-fournisseurs`)
+> **Authentification :** ✅ Oui — `@PreAuthorize("hasAnyRole('RESP_ACHATS','ADMIN_FILIALE','ADMIN_GROUPE')")`
+
+Listing **strictement limité aux fournisseurs de l'entreprise du JWT** — aucun paramètre de tenant n'est accepté (un `entrepriseId` ajouté à la query string est ignoré).
+
+#### Requête
+
+```http
+GET {{base_url}}/api/v1/fournisseurs?search=somiref&page=0&size=20
+Authorization: Bearer {{access_token}}
+```
+
+| Paramètre | Type | Obligatoire | Défaut | Comportement |
+|---|---|---|---|---|
+| `search` | string | ❌ | — | Recherche sur **raison sociale OU ville** (`LIKE %x%`, insensible à la casse, accents non normalisés), trimé. **Absent ou blanc → tous les fournisseurs du tenant** |
+| `page` | int | ❌ | `0` | négatif borné à 0 |
+| `size` | int | ❌ | `20` | **borné à 100** (`stockmaster.pagination.max-page-size`) — clamp silencieux, **jamais de 400** |
+
+Tri **fixe** : `raisonSociale ASC` (aucun tri dynamique exposé).
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": 300,
+                "raisonSociale": "SOMIREF Distribution",
+                "nif": "M0126000001",
+                "contact": "Jean Etoundi",
+                "telephone": "+237691234567",
+                "email": "achats@importgolfe.cm",
+                "adresseVille": "Douala",
+                "entrepriseId": 10
+            }
+        ],
+        "page": 0,
+        "size": 20,
+        "totalElements": 1,
+        "totalPages": 1
+    }
+}
+```
+
+#### Réponse — Recherche sans résultat (200 OK, **jamais 404**)
+
+```json
+{
+    "success": true,
+    "data": { "content": [], "page": 0, "size": 20, "totalElements": 0, "totalPages": 0 }
+}
+```
+
+#### Réponses d'erreur
+
+| Cas | Code | HTTP |
+|---|---|---|
+| Rôle hors périmètre (`CAISSIER`, `COMMERCIAL`, `GESTIONNAIRE_STOCK`) | `SEC_001` | 403 |
+| JWT sans `groupId` | `GRP_002` | 403 |
+| Entreprise du JWT introuvable / soft-supprimée / hors groupe | `RES_001` | 404 |
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Page de fournisseurs bien formee", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.content).to.be.an("array");
+    pm.expect(json.data.totalElements).to.be.a("number");
+});
+```
+
+---
+
+### 5.3 PUT — Modifier un fournisseur
+
+> **US :** US-038
+> **Statut :** ✅ Implémenté (branche `feature/GS-038-modifier-fournisseur`)
+> **Authentification :** ✅ Oui — `@PreAuthorize("hasAnyRole('RESP_ACHATS','ADMIN_FILIALE','ADMIN_GROUPE')")`
+
+Modifie les coordonnées d'un fournisseur **de l'entreprise du JWT** uniquement.
+
+**Sémantique PATCH sur un endpoint PUT** (convention US-014 / US-018 / US-024) : un champ absent **ou blanc** laisse la valeur actuelle en place. Un corps vide `{}` est donc valide — il ne modifie rien et renvoie l'état courant (200).
+
+#### Requête
+
+```http
+PUT {{base_url}}/api/v1/fournisseurs/300
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "raisonSociale": "SARL Import Golfe SA",
+    "telephone": "+237677445566",
+    "nif": "M0126000099",
+    "contact": "Clarisse Mballa",
+    "email": "commandes@importgolfe.cm",
+    "adresseVille": "Yaounde"
+}
+```
+
+| Champ | Obligatoire | Contrainte | Comportement |
+|---|---|---|---|
+| `raisonSociale` | ❌ | max 200, **non blanc si fourni** | blanc → 400 `SYS_005` (la colonne est `NOT NULL`) ; absent → inchangé |
+| `telephone` | ❌ | E.164 `^\+[1-9]\d{1,14}$`, max 20 | `691234567` (sans `+`) → 400 `SYS_005` |
+| `nif` | ❌ | max 20 | **aucune unicité** (pas d'index UNIQUE en base, aucun CA) |
+| `contact` | ❌ | max 100 | — |
+| `email` | ❌ | format email, max 150 | — |
+| `adresseVille` | ❌ | max 100 | — |
+
+**Non modifiables** : `id` (dans le chemin), `entreprise_id` (JWT — aucun champ dans le DTO), `dateCreation`, `dateModification` (trigger V3), `supprime`.
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": 300,
+        "raisonSociale": "SARL Import Golfe SA",
+        "nif": "M0126000099",
+        "contact": "Clarisse Mballa",
+        "telephone": "+237677445566",
+        "email": "commandes@importgolfe.cm",
+        "adresseVille": "Yaounde",
+        "entrepriseId": 10
+    }
+}
+```
+
+#### Réponses d'erreur
+
+| Cas | Code | HTTP |
+|---|---|---|
+| `raisonSociale` blanche, `telephone` hors E.164, email invalide, champ trop long | `SYS_005` | 400 |
+| Rôle hors périmètre (`CAISSIER`, `COMMERCIAL`, `GESTIONNAIRE_STOCK`) | `SEC_001` | 403 |
+| JWT sans `groupId` | `GRP_002` | 403 |
+| Fournisseur inexistant, **soft-supprimé** ou **appartenant à un autre tenant** (IDOR) | `RES_001` | 404 |
+| Entreprise du JWT introuvable / soft-supprimée / hors groupe | `RES_001` | 404 |
+
+> **Isolation tenant :** un fournisseur d'un autre tenant renvoie **404**, jamais 403 — l'existence de la fiche n'est pas révélée, et **rien n'est modifié** (test dédié).
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Fournisseur mis a jour et scope au tenant", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.id).to.eql(300);
+    pm.expect(json.data.raisonSociale).to.eql("SARL Import Golfe SA");
+    pm.expect(json.data.entrepriseId).to.eql(10);
+});
+```
+
+---
+
+### 5.4 DELETE — Supprimer (archiver) un fournisseur
+
+> **US :** US-039
+> **Statut :** ✅ Implémenté (branche `feature/GS-039-supprimer-fournisseur`)
+> **Authentification :** ✅ Oui — `@PreAuthorize("hasAnyRole('RESP_ACHATS','ADMIN_FILIALE','ADMIN_GROUPE')")`
+
+**Archivage logique (soft delete) uniquement** : `supprime = true`, la ligne **reste en base**. Aucun `DELETE` SQL physique n'existe dans le produit — l'historique des achats et les FK `commande_fournisseur` (`ON DELETE RESTRICT`) sont préservés.
+
+#### Requête
+
+```http
+DELETE {{base_url}}/api/v1/fournisseurs/300
+Authorization: Bearer {{access_token}}
+```
+
+#### Règle de blocage (arbitrage du 28 oct. 2026)
+
+> Le ticket initial contenait deux CA incompatibles : « l'historique des commandes est conservé après suppression » et « bloqué si des commandes existent ». Arbitrage retenu : **seules les commandes encore à livrer bloquent**.
+
+| État de la commande (`DEC-006`) | Bloque l'archivage ? |
+|---|---|
+| `COMMANDEE` | ✅ **oui** → `409 RES_005` |
+| `PARTIELLEMENT_RECUE` | ✅ **oui** → `409 RES_005` |
+| `RECEPTIONNEE` | ❌ non |
+| `ANNULEE` | ❌ non |
+
+> Le critère « au moins une ligne `receptionne=true` » du ticket est **abandonné** : cette colonne n'existe pas au modèle (`ligne_commande_fournisseur` = `quantite`, `prix_unitaire`, `taux_tva_snapshot`). Le critère est dérivé de l'état de l'en-tête.
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": 300,
+        "raisonSociale": "SOMIREF Distribution",
+        "nif": "M0126000045",
+        "contact": "Clarisse Mballa",
+        "telephone": "+237677445566",
+        "email": "commandes@somiref.cm",
+        "adresseVille": "Douala",
+        "entrepriseId": 10,
+        "supprime": true
+    }
+}
+```
+
+#### Réponses d'erreur
+
+| Cas | Code | HTTP |
+|---|---|---|
+| Commande fournisseur `COMMANDEE` / `PARTIELLEMENT_RECUE` | `RES_005` | 409 |
+| Rôle hors périmètre (`CAISSIER`, `COMMERCIAL`, `GESTIONNAIRE_STOCK`) | `SEC_001` | 403 |
+| JWT sans `groupId` | `GRP_002` | 403 |
+| Fournisseur inexistant, hors tenant, **ou déjà archivé** | `RES_001` | 404 |
+| Entreprise du JWT introuvable / soft-supprimée / hors groupe | `RES_001` | 404 |
+
+> **Idempotence :** rejouer le `DELETE` sur une fiche déjà archivée renvoie **404 `RES_001`** — même réponse qu'un id inconnu, aucune information n'est révélée et rien n'est réécrit.
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Fournisseur archive (soft delete)", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.supprime).to.be.true;
+    pm.expect(json.data.entrepriseId).to.be.a("number");
+});
+```
+
+---
+
 ### 5.5 POST — Créer un client (futur)
 ### 5.6 GET — Lister les clients (futur)
 ### 5.7 PUT — Modifier un client (futur)
@@ -1358,8 +1666,9 @@ if (pm.response.code === 201) {
 | Juin 2026 | Codebuff | Ajout fichier JSON collection v2.1 + maintenance workflow | Création de `postman_collection.json` importable directement |
 | 8 sept. 2026 | Claude Code | Sections 12-14 (caisse, inventaire, imports) + règle `Idempotency-Key` ; §10.2 aligné sur `etat` | Rédaction des US `US-087` à `US-106` couvrant `DEC-009/010/027/036/038` |
 | 21 oct. 2026 | Codebuff | Section 15 (`POST /api/v1/articles`) + requête dans `postman_collection.json` | Livraison US-031 (EPIC 5) |
+| 27 oct. 2026 | Codebuff | Section 5.1 (`POST /api/v1/fournisseurs`) + requête dans `postman_collection.json` | Livraison US-036 (EPIC 6) |
+| 27 oct. 2026 | Codebuff | Section 5.2 (`GET /api/v1/fournisseurs`) + requête dans `postman_collection.json` | Livraison US-037 (EPIC 6) |
 | 27 oct. 2026 | Codebuff | Section 7 : 7.1 (`GET /api/v1/stock`) et 7.2 (`GET /api/v1/stock/articles/{id}/mouvements`) passées en ✅ + requêtes dans `postman_collection.json` | Livraison US-051/US-052 (EPIC 8) |
-
 ---
 
 > **Règle de gestion — Les deux fichiers :**

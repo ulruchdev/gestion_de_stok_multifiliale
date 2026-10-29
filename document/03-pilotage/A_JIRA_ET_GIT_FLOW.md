@@ -43,7 +43,8 @@ Chaque User Story doit suivre **exactement** ce workflow. Aucune étape ne doit 
 │ Commit après chaque étape stable (voir règles de commit)      │
 ├─────────────────────────────────────────────────────────────┤
 │ ÉTAPE 7  — TESTER                                             │
-│ mvn test -pl stockmaster-auth (ou module concerné)            │
+│ mvn test -pl stockmaster-auth (ou module concerné)
+  test unitaire + integration +verification regression            │
 │ Vérifier : BUILD SUCCESS, 0 failures, 0 errors                │
 ├─────────────────────────────────────────────────────────────┤
 │ ÉTAPE 8  — METTRE À JOUR LES DOCUMENTS                        │
@@ -52,7 +53,7 @@ Chaque User Story doit suivre **exactement** ce workflow. Aucune étape ne doit 
 │ test_postman.md / postman_collection.json — si API changée    │
 │ A_JIRA_ET_GIT_FLOW.md — si workflow modifié                  │
 ├─────────────────────────────────────────────────────────────┤
-│ ÉTAPE 9  — COMMIT FINAL                                       │
+│ ÉTAPE 9  — COMMIT FINAL sans signature                                      │
 │ git add <fichiers>                                            │
 │ git commit -m "feat(GS-XXX): description concise"             │
 │ Un commit = une chose cohérente                               │
@@ -123,6 +124,7 @@ Exemples valides :
 - Un commit = **une chose cohérente** (ne pas mélanger feat + docs dans le même commit)
 - Jamais de message comme "update", "fix", "wip", "save"
 - Si une US a plusieurs volets → commits séparés : `feat(GS-XXX): ...`, `test(GS-XXX): ...`, `docs(GS-XXX): ...`
+- commit sans signature
 
 ---
 
