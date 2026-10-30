@@ -328,10 +328,22 @@
     "refreshToken": "eyJ...",
     "expiresIn": 900,
     "role": "ADMIN_GROUPE",
-    "scope": "FILIALE"
+    "scope": "FILIALE",
+    "utilisateur": {
+      "id": 2,
+      "nom": "Kamga",
+      "prenom": "Jean",
+      "email": "jean.kamga@epicerie.cm",
+      "role": "ADMIN_GROUPE",
+      "scope": "GROUPE",
+      "entrepriseId": 2,
+      "groupId": 2
+    }
   }
 }
 ```
+
+> **Révision GS-1244 :** l'objet `utilisateur` est un additif du contrat (session frontend : RBAC + Header sans décodage JWT). Les clients qui ne le lisaient pas ne sont pas impactés.
 
 ---
 
