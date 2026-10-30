@@ -130,6 +130,9 @@ public class AuthServiceImpl implements AuthService {
         }
         entreprise.setGroupe(groupe);
         entreprise.setTypeEntreprise(TypeEntreprise.MERE);
+        // DEC-015 : code_filiale NOT NULL — le siège de l'entreprise MERE porte SIEGE
+        // (le backfill V5 ne s'applique qu'aux lignes déjà existantes)
+        entreprise.setCodeFiliale("SIEGE");
         entreprise = entrepriseRepository.save(entreprise);
         log.debug("Entreprise créée: id={}", entreprise.getId());
 
@@ -223,6 +226,8 @@ public class AuthServiceImpl implements AuthService {
             entreprise.setNif(null);
         }
         entreprise.setGroupe(groupe);
+        // DEC-015 : code_filiale NOT NULL — le siège (siège social du groupe) porte SIEGE
+        entreprise.setCodeFiliale("SIEGE");
         entreprise = entrepriseRepository.save(entreprise);
         log.debug("Entreprise (siège) créée: id={}", entreprise.getId());
 
@@ -330,6 +335,16 @@ public class AuthServiceImpl implements AuthService {
                 .expiresIn(jwtProperties.getAccessTokenExpiration())
                 .role(role)
                 .scope(scope)
+                .utilisateur(LoginResponse.UtilisateurInfo.builder()
+                        .id(userId)
+                        .nom(utilisateur.getNom())
+                        .prenom(utilisateur.getPrenom())
+                        .email(utilisateur.getEmail())
+                        .role(role)
+                        .scope(scope)
+                        .entrepriseId(entrepriseId)
+                        .groupId(groupId)
+                        .build())
                 .build();
     }
 

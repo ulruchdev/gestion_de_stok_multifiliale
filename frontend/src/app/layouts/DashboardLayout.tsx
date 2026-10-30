@@ -57,13 +57,13 @@ const menuStructure: MenuEntry[] = [
     label: 'Tiers',
     path: '/tiers/clients',
     icon: Users,
-    roles: [RoleUtilisateur.ADMIN_FILIALE, RoleUtilisateur.COMMERCIAL, RoleUtilisateur.RESPONSABLE_ACHATS],
+    roles: [RoleUtilisateur.ADMIN_FILIALE, RoleUtilisateur.COMMERCIAL, RoleUtilisateur.RESP_ACHATS],
   },
   {
     label: 'Achats',
     path: '/achats/commandes',
     icon: ShoppingCart,
-    roles: [RoleUtilisateur.ADMIN_FILIALE, RoleUtilisateur.RESPONSABLE_ACHATS],
+    roles: [RoleUtilisateur.ADMIN_FILIALE, RoleUtilisateur.RESP_ACHATS],
   },
   {
     label: 'Ventes',

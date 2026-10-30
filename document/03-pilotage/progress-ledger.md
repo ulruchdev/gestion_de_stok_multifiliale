@@ -242,3 +242,19 @@ Terminé (branche `feature/GS-1240-port-ecriture-stock`, ticket **#1240**). EPIC
 | Tests | 12 nouveaux tests Mockito (`EcritureStockServiceTest`, pattern `StockServiceTest` : `Nominatif`, `ValidationChamps`, `ReglesCorrection`, `IsolationMultiTenant`, `InvariantNonNegatif`) — module stock **20 → 32** ; reactor complet **577/577 verts** (13 modules, dont bootstrap 7 : 3 intégration `validate` + 4 ArchUnit) | ✅ |
 
 *Dernière mise à jour : 19 septembre 2026 — EPIC 4 : US-026 livrée (consulter/modifier son profil avec upload photo MinIO, +14 tests), 421/421 verts, branche `feature/GS-026-profil-utilisateur`*
+
+## Auth — Parité contrat frontend↔backend (GS-1244, 30/10/2026)
+
+Terminé (branche `fix/GS-1244-parite-contrat-auth`, ticket **#1244**). Audit e2e en direct du module auth (API locale profil dev + frontend via proxy Vite) : l'inscription plantait en 500 SYS_001 sur les 2 flux.
+
+| Élément | Contenu | Statut |
+|---------|---------|--------|
+| 500 inscription (2 flux) | Entreprise MERE créée sans `code_filiale` → violation NOT NULL. Fix `AuthServiceImpl` : `codeFiliale = "SIEGE"` posé sur `inscrireEntrepriseUnique` et `inscrireGroupe` (le backfill V5 ne couvre que les lignes existantes — cf. A-10/DEC-015). 2 nouveaux tests TDD sur la captation de l'entité sauvegardée | ✅ |
+| `utilisateur` dans `LoginResponse` | Le store frontend persistait `data.utilisateur` inexistant → session vide au reload + RBAC indisponible. Fix **backend additif** : `LoginResponse.utilisateur` (id, nom, prenom, email, role, scope, entrepriseId, groupId) + test contrat ; les clients existants ne lisant pas le champ ne sont pas impactés. Docs contrat révisées (test_postman.md, BACKLOG US-008, README auth) | ✅ |
+| Rotation refresh non persistée (GS-083) | Ni l'intercepteur 401 (`api-client.ts`) ni `refreshSession` (`useAuthStore.ts`) ne stockaient le nouveau `refreshToken` renvoyé → la famille restait sur le jti déjà tourné, chaque refresh suivant échouait en rejeu → révocation totale. Fix : persistance du nouveau token dans les deux chemins | ✅ |
+| RBAC + DTOs front | `RESPONSABLE_ACHATS` → `RESP_ACHATS` (enum shared) dans le type et les 2 usages de `DashboardLayout` ; `Utilisateur` aligné (`entrepriseId`/`groupId`, `actif` optionnel) ; `LoginResponse` typé complet ; `InscriptionGroupeRequest` / `InscriptionEntrepriseUniqueRequest` alignés au contrat réel (les pages envoyaient déjà le bon payload — la divergence n’était que typée) | ✅ |
+| Vérifications | `AuthServiceImplTest` **40/40 verts** (TDD RED prouvé : échec compilation puis green) ; `mvn -pl stockmaster-auth install` OK ; typecheck + eslint frontend **0 erreur** | ✅ |
+| E2E live (API 8080 + proxy Vite) | inscription entreprise-unique → **201** ; inscription groupe → **201** ; login → **200** avec `utilisateur` complet ; refresh → **rotation effective** (nouveau refreshToken ≠ ancien) ; mauvais mdp → **401** AUTH_001 ; email dupliqué → **409** RES_duplicate ; rate limiter → **429** AUTH_429 ; login via proxy Vite → **200** | ✅ |
+| Hors périmètre | Conteneur `stockmaster-api` du compose déployé avec un fat jar sans modules métier (rebuild image à part) ; `/utilisateurs/me` → 405 (aucun appel front, non bloquant) | ⚠️ |
+
+*Dernière mise à jour : 30 octobre 2026 — EPIC 1 : parité contrat auth GS-1244 (2 fixes backend, 6 corrections front, e2e live vert)*
