@@ -1471,10 +1471,39 @@ pm.test("Fournisseur archive (soft delete)", () => {
 
 ## 7. Stock — `/api/v1/stock`
 
-> **Statut :** 🔜 Non implémenté (EPIC 8, US-051 à US-054, Sprint 7)
+> **Statut :** 🟡 Partiellement implémenté — US-051 et US-052 livrées le 27 oct. 2026
+> (branche `feature/GS-051-consultation-stock`) ; US-053/US-054 (corrections) restent futures.
 
-### 7.1 GET — Consulter le stock réel (futur)
-### 7.2 GET — Historique des mouvements (futur)
+### 7.1 GET — Consulter le stock réel ✅
+
+`GET /api/v1/stock?statutAlerte=BAS&page=0&size=20`
+
+- **Rôles :** aucun `@PreAuthorize` — « tout utilisateur authentifié » (critère US-051)
+- **Paramètres :** `statutAlerte` (`NORMAL` \| `BAS` \| `RUPTURE` \| `ANOMALIE`, optionnel), `page` (défaut 0), `size` (défaut 20, borné à 100)
+- **Réponse :** `200` enveloppe `ApiResponse<PageResponse<StockArticleResponse>>` —
+  `articleId`, `codeArticle`, `designation`, `stockActuel`, `seuilAlerte`, `statutAlerte`
+- **Erreurs :** `400` SYS_002 (`statutAlerte` invalide) · `403` GRP_002 (groupe absent/inactif) /
+  SEC_001 (entrepriseId absent du JWT)
+- **Règles :** stock = Σ entrées − Σ sorties en SQL (REF §4.2, table `mouvement_stock`) ;
+  filtre `statutAlerte` appliqué **en SQL** pour préserver la pagination ; un article sans
+  mouvement remonte `RUPTURE` (stock 0 — décision GO, REF §4.2 littéral)
+- **Isolation :** `groupId` + `entrepriseId` du JWT, jamais d'un paramètre
+
+### 7.2 GET — Historique des mouvements d'un article ✅
+
+`GET /api/v1/stock/articles/{articleId}/mouvements?typeMouvement=ENTREE&dateDebut=2026-10-01&dateFin=2026-10-31&page=0&size=20`
+
+- **Rôles :** `GESTIONNAIRE_STOCK` / `ADMIN_FILIALE` / `ADMIN_GROUPE` (`@PreAuthorize` + garde service)
+- **Paramètres :** `typeMouvement` (8 valeurs, optionnel), `dateDebut`/`dateFin` (`YYYY-MM-DD`, inclusives, optionnelles), `page`, `size` (borné à 100)
+- **Réponse :** `200` `PageResponse<MouvementStockResponse>` — `id`, `typeMouvement`, `quantite`,
+  `dateMouvement`, `utilisateurId`, `utilisateurNom` (« prénom nom »), `origineType`, `origineId`, `motif`
+  — tri `date_mouvement DESC`
+- **Erreurs :** `400` SYS_002 (type invalide ou `dateDebut > dateFin`) · `403` SEC_001 / GRP_002 ·
+  `404` RES_001 (article inexistant **ou** hors groupe du JWT — 404 uniforme, jamais révéler l'existence)
+
+> **Requête sans authentification :** `401` (JWT requis, `SecurityConfig`) — vérifié aussi `403`
+> pour un `CAISSIER` ou `RESP_ACHATS` sur 7.2.
+
 ### 7.3 POST — Correction positive (futur)
 ### 7.4 POST — Correction négative (futur)
 
@@ -1639,7 +1668,7 @@ if (pm.response.code === 201) {
 | 21 oct. 2026 | Codebuff | Section 15 (`POST /api/v1/articles`) + requête dans `postman_collection.json` | Livraison US-031 (EPIC 5) |
 | 27 oct. 2026 | Codebuff | Section 5.1 (`POST /api/v1/fournisseurs`) + requête dans `postman_collection.json` | Livraison US-036 (EPIC 6) |
 | 27 oct. 2026 | Codebuff | Section 5.2 (`GET /api/v1/fournisseurs`) + requête dans `postman_collection.json` | Livraison US-037 (EPIC 6) |
-
+| 27 oct. 2026 | Codebuff | Section 7 : 7.1 (`GET /api/v1/stock`) et 7.2 (`GET /api/v1/stock/articles/{id}/mouvements`) passées en ✅ + requêtes dans `postman_collection.json` | Livraison US-051/US-052 (EPIC 8) |
 ---
 
 > **Règle de gestion — Les deux fichiers :**
