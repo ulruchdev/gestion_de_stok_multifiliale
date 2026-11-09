@@ -48,7 +48,7 @@ com.stockmaster.auth/
 │   │   └── LoginRequest.java           ← email, motDePasse
 │   └── response/
 │       ├── InscriptionResponse.java    ← email, groupId, message
-│       └── LoginResponse.java          ← accessToken, refreshToken, expiresIn, role, scope
+│       └── LoginResponse.java          ← accessToken, refreshToken, expiresIn, role, scope + utilisateur (GS-1244)
 ├── event/
 │   └── InscriptionSuccessEvent.java    ← Événement async pour email de bienvenue
 ├── mapper/

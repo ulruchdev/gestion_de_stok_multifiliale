@@ -71,13 +71,20 @@ apiClient.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem('refresh_token');
-        const response = await axios.post<ApiResponse<{ accessToken: string }>>(
+        const response = await axios.post<
+          ApiResponse<{ accessToken: string; refreshToken: string }>
+        >(
           `${API_BASE_URL}/auth/refresh`,
           { refreshToken },
         );
 
+        // GS-083 — rotation : persister le NOUVEAU refreshToken renvoyé par le backend
         const newAccessToken = response.data.data.accessToken;
+        const newRefreshToken = response.data.data.refreshToken;
         localStorage.setItem('access_token', newAccessToken);
+        if (newRefreshToken) {
+          localStorage.setItem('refresh_token', newRefreshToken);
+        }
         processQueue(null, newAccessToken);
 
         if (originalRequest.headers) {

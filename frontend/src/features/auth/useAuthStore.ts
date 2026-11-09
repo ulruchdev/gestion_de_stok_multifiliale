@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { apiClient } from '@/shared/lib/api-client';
 import type {
+  ApiResponse,
   AuthState,
   LoginRequest,
   LoginResponse,
@@ -91,14 +92,22 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const refreshToken = localStorage.getItem('refresh_token');
       if (!refreshToken) throw new Error('No refresh token');
 
-      const response = await apiClient.post<{ data: { accessToken: string } }>(
+      const response = await apiClient.post<
+        ApiResponse<{ accessToken: string; refreshToken: string; expiresIn: number }>
+      >(
         '/auth/refresh',
         { refreshToken },
       );
 
-      const newAccessToken = response.data.data.accessToken;
+      // GS-083 — rotation : le backend renvoie un NOUVEAU refreshToken,
+      // il doit remplacer l'ancien (sinon la famille de tokens reste sur le jti déjà tourné)
+      const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
+        response.data.data;
       localStorage.setItem('access_token', newAccessToken);
-      set({ accessToken: newAccessToken });
+      if (newRefreshToken) {
+        localStorage.setItem('refresh_token', newRefreshToken);
+      }
+      set({ accessToken: newAccessToken, refreshToken: newRefreshToken });
     } catch {
       await get().logout();
     }

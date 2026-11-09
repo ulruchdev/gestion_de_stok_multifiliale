@@ -98,7 +98,7 @@ if (pm.response.code === 200) {
 }
 ```
 
-> **Note :** `LoginResponse` ne contient que `accessToken`, `refreshToken`, `expiresIn`, `role`, `scope` — il n'y a **pas** de `entrepriseId` ni `groupId` dans la réponse de connexion (ils sont dans le JWT). Le `groupId` est récupéré à l'inscription (`InscriptionResponse`).
+> **Note (révisé GS-1244) :** `LoginResponse` contient `accessToken`, `refreshToken`, `expiresIn`, `role`, `scope` **et** l'objet `utilisateur` (id, nom, prenom, email, role, scope, entrepriseId, groupId) — additif pour la session frontend ; `entrepriseId` et `groupId` restent dans le JWT.
 
 ---
 
@@ -203,7 +203,17 @@ Content-Type: application/json
         "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
         "expiresIn": 900,
         "role": "ADMIN_GROUPE",
-        "scope": "GROUPE"
+        "scope": "GROUPE",
+        "utilisateur": {
+            "id": 6,
+            "nom": "Kamga",
+            "prenom": "Jean",
+            "email": "jean.kamga@epicerie.cm",
+            "role": "ADMIN_GROUPE",
+            "scope": "GROUPE",
+            "entrepriseId": 6,
+            "groupId": 6
+        }
     }
 }
 ```

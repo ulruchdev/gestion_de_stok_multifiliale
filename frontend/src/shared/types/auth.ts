@@ -3,7 +3,7 @@ export enum RoleUtilisateur {
   ADMIN_GROUPE = 'ADMIN_GROUPE',
   ADMIN_FILIALE = 'ADMIN_FILIALE',
   GESTIONNAIRE_STOCK = 'GESTIONNAIRE_STOCK',
-  RESPONSABLE_ACHATS = 'RESPONSABLE_ACHATS',
+  RESP_ACHATS = 'RESP_ACHATS',
   COMMERCIAL = 'COMMERCIAL',
   CAISSIER = 'CAISSIER',
 }
@@ -21,8 +21,9 @@ export interface Utilisateur {
   role: RoleUtilisateur;
   scope: ScopeUtilisateur;
   entrepriseId: number;
-  groupeId?: number;
-  actif: boolean;
+  groupId: number;
+  /** Non renvoyé par l'endpoint login (GS-1244) — optionnel pour compat. */
+  actif?: boolean;
 }
 
 export interface AuthState {
@@ -41,28 +42,32 @@ export interface LoginRequest {
 export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
+  expiresIn: number;
+  role: RoleUtilisateur;
+  scope: ScopeUtilisateur;
   utilisateur: Utilisateur;
 }
 
 export interface InscriptionEntrepriseUniqueRequest {
   nomEntreprise: string;
-  nif: string;
+  nif?: string;
   email: string;
-  telephone: string;
+  telephone?: string;
   adminNom: string;
   adminPrenom: string;
-  adminMotDePasse: string;
+  motDePasse: string;
 }
 
 export interface InscriptionGroupeRequest {
   nomGroupe: string;
-  nomEntreprise: string;
-  nif: string;
-  email: string;
-  telephone: string;
-  adminNom: string;
-  adminPrenom: string;
-  adminMotDePasse: string;
+  villeSiege: string;
+  nif?: string;
+  telephone?: string;
+  emailEntreprise: string;
+  prenom: string;
+  nom: string;
+  emailAdmin: string;
+  motDePasse: string;
 }
 
 export interface ApiResponse<T> {

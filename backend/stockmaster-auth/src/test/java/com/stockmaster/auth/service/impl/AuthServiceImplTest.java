@@ -205,6 +205,30 @@ class AuthServiceImplTest {
         }
 
         @Test
+        @DisplayName("✅ DEC-015 : l'entreprise MERE créée porte code_filiale=SIEGE (sinon violation NOT NULL → 500)")
+        void shouldSetCodeFilialeSiegeOnMereEntreprise() {
+            // Arrange
+            when(utilisateurRepository.existsByEmail(inscriptionUniqueRequest.getEmail())).thenReturn(false);
+            when(tenantGroupRepository.save(any(TenantGroup.class))).thenReturn(savedGroupe);
+            when(authMapper.toEntreprise(inscriptionUniqueRequest)).thenReturn(savedEntreprise);
+            when(entrepriseRepository.save(any(Entreprise.class))).thenReturn(savedEntreprise);
+            when(passwordEncoder.encode(inscriptionUniqueRequest.getMotDePasse())).thenReturn("$2a$10$hash");
+            when(utilisateurRepository.save(any(Utilisateur.class))).thenReturn(savedUtilisateur);
+
+            // Act
+            authService.inscrireEntrepriseUnique(inscriptionUniqueRequest);
+
+            // Assert
+            ArgumentCaptor<Entreprise> entrepriseCaptor = ArgumentCaptor.forClass(Entreprise.class);
+            verify(entrepriseRepository).save(entrepriseCaptor.capture());
+            Entreprise entrepriseCapturee = entrepriseCaptor.getValue();
+            assertThat(entrepriseCapturee.getTypeEntreprise()).isEqualTo(TypeEntreprise.MERE);
+            assertThat(entrepriseCapturee.getCodeFiliale())
+                    .as("A-10/DEC-015 — codeFiliale NOT NULL obligatoire au siège")
+                    .isEqualTo("SIEGE");
+        }
+
+        @Test
         @DisplayName("❌ Lève BusinessException AUTH_EMAIL_ALREADY_EXISTS quand l'email existe déjà")
         void shouldThrowWhenEmailAlreadyExists() {
             // Arrange
@@ -332,6 +356,30 @@ class AuthServiceImplTest {
                     .motDePasse("$2a$10$hash")
                     .actif(true)
                     .build();
+        }
+
+        @Test
+        @DisplayName("✅ DEC-015 : l'entreprise MERE du groupe porte code_filiale=SIEGE (sinon violation NOT NULL → 500)")
+        void shouldSetCodeFilialeSiegeOnGroupeMereEntreprise() {
+            // Arrange
+            when(utilisateurRepository.existsByEmail(inscriptionGroupeRequest.getEmailAdmin())).thenReturn(false);
+            when(tenantGroupRepository.save(any(TenantGroup.class))).thenReturn(savedGroupeGroupe);
+            when(authMapper.toEntrepriseFromGroupe(inscriptionGroupeRequest)).thenReturn(savedEntrepriseGroupe);
+            when(entrepriseRepository.save(any(Entreprise.class))).thenReturn(savedEntrepriseGroupe);
+            when(passwordEncoder.encode(inscriptionGroupeRequest.getMotDePasse())).thenReturn("$2a$10$hash");
+            when(utilisateurRepository.save(any(Utilisateur.class))).thenReturn(savedUtilisateurGroupe);
+
+            // Act
+            authService.inscrireGroupe(inscriptionGroupeRequest);
+
+            // Assert
+            ArgumentCaptor<Entreprise> entrepriseCaptor = ArgumentCaptor.forClass(Entreprise.class);
+            verify(entrepriseRepository).save(entrepriseCaptor.capture());
+            Entreprise entrepriseCapturee = entrepriseCaptor.getValue();
+            assertThat(entrepriseCapturee.getTypeEntreprise()).isEqualTo(TypeEntreprise.MERE);
+            assertThat(entrepriseCapturee.getCodeFiliale())
+                    .as("A-10/DEC-015 — codeFiliale NOT NULL obligatoire au siège")
+                    .isEqualTo("SIEGE");
         }
 
         @Test
@@ -466,6 +514,34 @@ class AuthServiceImplTest {
     @Nested
     @DisplayName("Connexion JWT (US-008)")
     class Login {
+
+        @Test
+        @DisplayName("✅ Parité contrat frontend : LoginResponse expose un objet utilisateur (id, nom, prenom, email, role, scope, entrepriseId, groupId)")
+        void shouldReturnUtilisateurInLoginResponse() {
+            // Arrange
+            when(utilisateurRepository.findByEmail(loginRequest.getEmail())).thenReturn(Optional.of(savedUtilisateur));
+            when(passwordEncoder.matches(loginRequest.getMotDePasse(), savedUtilisateur.getMotDePasse())).thenReturn(true);
+            when(jwtTokenProvider.generateAccessToken(1L, 1L, 1L, "ADMIN_GROUPE", "GROUPE"))
+                    .thenReturn("access-token");
+            when(jwtTokenProvider.generateRefreshToken(eq(1L), anyString(), anyString())).thenReturn("refresh-token");
+            when(jwtProperties.getRefreshTokenExpiration()).thenReturn(604800L);
+            when(jwtProperties.getAccessTokenExpiration()).thenReturn(900L);
+            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+            // Act
+            LoginResponse response = authService.login(loginRequest);
+
+            // Assert
+            assertThat(response.getUtilisateur()).isNotNull();
+            assertThat(response.getUtilisateur().getId()).isEqualTo(1L);
+            assertThat(response.getUtilisateur().getNom()).isEqualTo("Kamga");
+            assertThat(response.getUtilisateur().getPrenom()).isEqualTo("Jean");
+            assertThat(response.getUtilisateur().getEmail()).isEqualTo("jean.kamga@epicerie.cm");
+            assertThat(response.getUtilisateur().getRole()).isEqualTo("ADMIN_GROUPE");
+            assertThat(response.getUtilisateur().getScope()).isEqualTo("GROUPE");
+            assertThat(response.getUtilisateur().getEntrepriseId()).isEqualTo(1L);
+            assertThat(response.getUtilisateur().getGroupId()).isEqualTo(1L);
+        }
 
         @Test
         @DisplayName("✅ Retourne LoginResponse avec accessToken et refreshToken quand credentials valides")
