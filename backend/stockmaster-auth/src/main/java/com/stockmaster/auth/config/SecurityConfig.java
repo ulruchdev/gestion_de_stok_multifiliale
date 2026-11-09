@@ -52,6 +52,10 @@ public class SecurityConfig {
                 ).permitAll()
                 .anyRequest().authenticated()
             )
+            // 401 (et non 403) pour toute requête non authentifiée : contrat consommé
+            // par l'intercepteur frontend qui rafraîchit le token sur 401 (GS-1244)
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint(new RestAuthenticationEntryPoint()))
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -108,6 +108,8 @@ if (pm.response.code === 200) {
 
 ## 1. Auth — `/api/v1/auth`
 
+> **401 vs 403 (GS-1244) :** toute requête sur un endpoint protégé sans authentification valide (token absent, malformé ou expiré) répond **`401` `AUTH_011`** `{"errorCode":"AUTH_011","detail":"Authentification requise"}` — contrat requis par l'intercepteur frontend qui déclenche le refresh sur 401. Un **403** reste réservé aux refus d'autorisation (rôle/périmètre) et aux comptes désactivés/groupe suspendu.
+
 ### 1.1 POST — Inscription entreprise unique
 
 > **US :** US-006

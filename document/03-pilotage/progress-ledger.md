@@ -258,3 +258,11 @@ Terminé (branche `fix/GS-1244-parite-contrat-auth`, ticket **#1244**). Audit e2
 | Hors périmètre | Conteneur `stockmaster-api` du compose déployé avec un fat jar sans modules métier (rebuild image à part) ; `/utilisateurs/me` → 405 (aucun appel front, non bloquant) | ⚠️ |
 
 *Dernière mise à jour : 30 octobre 2026 — EPIC 1 : parité contrat auth GS-1244 (2 fixes backend, 6 corrections front, e2e live vert)*
+
+### Vérification navigateur (Chrome, Playwright) — 14/14
+
+Login réel via `/login` → `/dashboard` ; tokens + `user` persistés ; identité « Jean Kamga » affichée ; **reload → session conservée** ; access token volontairement corrompu → appel protégé → **401 → refresh → retry 200**, `refresh_token` **roté** (GS-083), utilisateur intact, aucune redirection `/login`.
+
+### Correctif complémentaire — 401 au lieu de 403 (GS-1244)
+
+Le test navigateur a révélé un écart réel : une requête non authentifiée répondait **403** (défaut Spring Security), or l'intercepteur frontend ne rafraîchit que sur **401** → l'auto-refresh ne se déclenchait jamais. Fix : `RestAuthenticationEntryPoint` (401 `AUTH_011` JSON, format des filtres) câblé dans `SecurityConfig.exceptionHandling` + test dédié. Module auth **100/100 verts**, vérifié live (`/categories` sans token → 401 AUTH_011).
