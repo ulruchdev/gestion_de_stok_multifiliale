@@ -1,29 +1,16 @@
 package com.stockmaster.bootstrap.integration;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Contrairement à {@code ClientServiceTest} / {@code ClientControllerTest}
  * (mocks), ce test traverse toute la pile : HTTP → filtre JWT →
  * {@code @PreAuthorize} → service → repository → PostgreSQL, puis relit la base
- * via {@link JdbcTemplate} pour vérifier l'état réellement persisté. Il valide
+ * via {@code JdbcTemplate} pour vérifier l'état réellement persisté. Il valide
  * en particulier ce que les mocks ne peuvent pas prouver :</p>
  *
  * <ul>
@@ -43,60 +30,25 @@ import static org.assertj.core.api.Assertions.assertThat;
  *       table {@code commande_client} contient une commande <b>annulée</b>.</li>
  * </ul>
  *
- * <p><b>Prérequis</b> : PostgreSQL 16 et Redis 7 accessibles
- * ({@code docker compose up -d postgres redis}), profil {@code integration}
- * ({@code ddl-auto=validate}). Le rate limiting est désactivé pour ne pas
- * consommer les quotas réels entre deux exécutions. Chaque exécution crée deux
- * entreprises jetables (UUID) et supprime toutes ses lignes en fin de classe.</p>
+ * <p>Deux entreprises jetables (UUID) sont créées par {@link ApiIntegrationTestSupport}
+ * et toutes leurs lignes sont supprimées en fin de classe.</p>
  */
-@SpringBootTest(
-        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {
-                "springdoc.api-docs.enabled=false",
-                "springdoc.swagger-ui.enabled=false",
-                "stockmaster.rate-limiting.enabled=false"
-        }
-)
-@ActiveProfiles("integration")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DisplayName("🧪 Intégration — CRUD clients (US-040 → US-043), PostgreSQL réel")
-class ClientApiIntegrationTest {
-
-    private static final String MOT_DE_PASSE = "Integr@tion2026";
-
-    @Autowired
-    private TestRestTemplate restTemplate;
-
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    private final List<Long> entreprisesCreees = new ArrayList<>();
+class ClientApiIntegrationTest extends ApiIntegrationTestSupport {
 
     private Tenant tenantA;
     private Tenant tenantB;
 
     @BeforeAll
     void creerDeuxTenants() throws Exception {
-        tenantA = inscrireEtConnecter("A");
-        tenantB = inscrireEtConnecter("B");
+        tenantA = inscrireEtConnecter("Clients A");
+        tenantB = inscrireEtConnecter("Clients B");
     }
 
     @AfterAll
     void nettoyerLaBase() {
-        if (entreprisesCreees.isEmpty()) {
-            return;
-        }
-        String marques = String.join(", ", entreprisesCreees.stream().map(id -> "?").toList());
-        Object[] ids = entreprisesCreees.toArray();
-
-        jdbcTemplate.update("DELETE FROM commande_client WHERE entreprise_id IN (" + marques + ")", ids);
-        jdbcTemplate.update("DELETE FROM client WHERE entreprise_id IN (" + marques + ")", ids);
-        jdbcTemplate.update("DELETE FROM utilisateur WHERE entreprise_id IN (" + marques + ")", ids);
-        jdbcTemplate.update("DELETE FROM entreprise WHERE id IN (" + marques + ")", ids);
-        jdbcTemplate.update("DELETE FROM tenant_group WHERE id IN (" + marques + ")", ids);
+        nettoyer("commande_client", "client", "utilisateur");
     }
 
     // ─── US-040 + US-041 ─────────────────────────────────────────────────────
@@ -295,77 +247,5 @@ class ClientApiIntegrationTest {
                 "/api/v1/clients/" + clientId, null, tenantA);
         assertThat(secondDelete.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(erreurCode(secondDelete)).isEqualTo("RES_001");
-    }
-
-    // ─── helpers ─────────────────────────────────────────────────────────────
-
-    private Tenant inscrireEtConnecter(String etiquette) throws Exception {
-        String suffixe = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
-        String email = "it-clients-" + etiquette.toLowerCase() + "-" + suffixe + "@stockmaster.test";
-
-        Map<String, Object> inscription = new HashMap<>();
-        inscription.put("nomEntreprise", "IT Clients " + etiquette + " " + suffixe);
-        inscription.put("email", email);
-        inscription.put("telephone", "+2376" + chiffres(8));
-        inscription.put("adminNom", "Admin");
-        inscription.put("adminPrenom", "Integration");
-        inscription.put("motDePasse", MOT_DE_PASSE);
-
-        ResponseEntity<String> reponseInscription = restTemplate.postForEntity(
-                "/api/v1/auth/inscription/entreprise-unique", json(inscription, null), String.class);
-        assertThat(reponseInscription.getStatusCode())
-                .as("Inscription %s : %s", etiquette, reponseInscription.getBody())
-                .isEqualTo(HttpStatus.CREATED);
-
-        ResponseEntity<String> reponseLogin = restTemplate.postForEntity(
-                "/api/v1/auth/login",
-                json(Map.of("email", email, "motDePasse", MOT_DE_PASSE), null),
-                String.class);
-        assertThat(reponseLogin.getStatusCode())
-                .as("Login %s : %s", etiquette, reponseLogin.getBody())
-                .isEqualTo(HttpStatus.OK);
-
-        JsonNode donnees = data(reponseLogin);
-        long entrepriseId = donnees.path("utilisateur").path("entrepriseId").asLong();
-        entreprisesCreees.add(entrepriseId);
-
-        return new Tenant(donnees.path("accessToken").asText(), entrepriseId);
-    }
-
-    private ResponseEntity<String> echanger(HttpMethod methode, String chemin,
-                                            Object corps, Tenant tenant) {
-        return restTemplate.exchange(chemin, methode, json(corps, tenant.token()), String.class);
-    }
-
-    private HttpEntity<Object> json(Object corps, String token) {
-        HttpHeaders entetes = new HttpHeaders();
-        entetes.setContentType(MediaType.APPLICATION_JSON);
-        if (token != null) {
-            entetes.setBearerAuth(token);
-        }
-        return new HttpEntity<>(corps, entetes);
-    }
-
-    private JsonNode data(ResponseEntity<String> reponse) throws Exception {
-        return objectMapper.readTree(reponse.getBody()).path("data");
-    }
-
-    private String erreurCode(ResponseEntity<String> reponse) throws Exception {
-        return objectMapper.readTree(reponse.getBody()).path("errorCode").asText();
-    }
-
-    private String suffixe() {
-        return UUID.randomUUID().toString().replace("-", "").substring(0, 10);
-    }
-
-    private String chiffres(int longueur) {
-        StringBuilder sb = new StringBuilder(longueur);
-        for (int i = 0; i < longueur; i++) {
-            sb.append((int) (Math.random() * 10));
-        }
-        return sb.toString();
-    }
-
-    private record Tenant(String token, long entrepriseId) {
     }
 }
