@@ -1144,7 +1144,7 @@ photo   = (fichier)
 
 ## 5. Tiers — `/api/v1/clients` et `/api/v1/fournisseurs`
 
-> **Statut :** 🟡 EPIC 6 — **US-036 ✅ et US-037 ✅ implémentées** ; US-038 à US-043 🔜 non implémentées
+> **Statut :** ✅ EPIC 6 — **US-036 à US-043 implémentées** (fournisseurs et clients)
 
 ### 5.1 POST — Créer un fournisseur
 
@@ -1458,10 +1458,305 @@ pm.test("Fournisseur archive (soft delete)", () => {
 
 ---
 
-### 5.5 POST — Créer un client (futur)
-### 5.6 GET — Lister les clients (futur)
-### 5.7 PUT — Modifier un client (futur)
-### 5.8 DELETE — Supprimer un client (futur)
+### 5.5 POST — Créer un client
+
+> **US :** US-040
+> **Statut :** ✅ Implémenté (branche `feature/GS-040-crud-clients`)
+> **Authentification :** ✅ Oui — `@PreAuthorize("hasAnyRole('COMMERCIAL','ADMIN_FILIALE','ADMIN_GROUPE')")`
+
+La fiche est rattachée à l'`entreprise_id` **extrait du JWT** — jamais lu du corps. Un champ `entrepriseId` ajouté dans le payload est **ignoré** (le DTO n'en possède aucun).
+
+#### Requête
+
+```http
+POST {{base_url}}/api/v1/clients
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "nom": "Martin",
+    "prenom": "Alice",
+    "telephone": "+237691234567",
+    "email": "alice.martin@example.cm",
+    "adresseVille": "Douala",
+    "adresseQuartier": "Bonapriso"
+}
+```
+
+> **Contraintes (`CreerClientRequest`) :** `nom` **obligatoire**, max 100 · `telephone` **optionnel** mais, si fourni, format E.164 `^\\+[1-9]\\d{1,14}$` · `prenom` (100), `email` (150, format validé), `adresseVille` (100), `adresseQuartier` (100) optionnels. **Aucun champ tenant** dans le corps.
+
+#### Réponse — Succès (201 Created)
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": 500,
+        "nom": "Martin",
+        "prenom": "Alice",
+        "telephone": "+237691234567",
+        "email": "alice.martin@example.cm",
+        "adresseVille": "Douala",
+        "adresseQuartier": "Bonapriso",
+        "entrepriseId": 10,
+        "supprime": false
+    }
+}
+```
+
+#### Réponses d'erreur
+
+| Cas | Code | HTTP |
+|---|---|---|
+| `nom` vide / trop long, `telephone` hors format, `email` invalide | `SYS_005` | 400 |
+| Rôle hors périmètre (`CAISSIER`, `RESP_ACHATS`, `GESTIONNAIRE_STOCK`) | `SEC_001` | 403 |
+| JWT sans `groupId` | `GRP_002` | 403 |
+| Entreprise du JWT introuvable / soft-supprimée / hors groupe | `RES_001` | 404 |
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 201 Created", () => {
+    pm.response.to.have.status(201);
+});
+pm.test("Client rattache au tenant du JWT", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.entrepriseId).to.be.a("number");
+    pm.expect(json.data.supprime).to.be.false;
+});
+
+if (pm.response.code === 201) {
+    pm.collectionVariables.set("client_id", pm.response.json().data.id);
+}
+```
+
+---
+
+### 5.6 GET — Lister / rechercher les clients
+
+> **US :** US-041
+> **Statut :** ✅ Implémenté (branche `feature/GS-040-crud-clients`)
+> **Authentification :** ✅ Oui — `@PreAuthorize("hasAnyRole('COMMERCIAL','ADMIN_FILIALE','ADMIN_GROUPE','CAISSIER')")`
+
+#### Requête
+
+```http
+GET {{base_url}}/api/v1/clients?search=martin&page=0&size=20
+Authorization: Bearer {{access_token}}
+```
+
+| Paramètre | Défaut | Rôle |
+|---|---|---|
+| `search` | absent | Recherche sur **nom**, **prénom** ou **téléphone** (`LOWER(...) LIKE LOWER('%x%')`). Absent ou blanc → tous les clients du tenant. |
+| `page` | `0` | Index de page (négatif ramené à 0). |
+| `size` | `20` | Taille de page, **bornée silencieusement à 100** (jamais de 400). |
+
+> **Tri fixe** `nom ASC`. Aucun paramètre de tenant n'est accepté : `entreprise_id` vient du JWT, un `entrepriseId` forcé dans la query string est ignoré.
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": 500,
+                "nom": "Martin",
+                "prenom": "Alice",
+                "telephone": "+237691234567",
+                "email": "alice.martin@example.cm",
+                "adresseVille": "Douala",
+                "adresseQuartier": "Bonapriso",
+                "entrepriseId": 10,
+                "supprime": false
+            }
+        ],
+        "page": 0,
+        "size": 20,
+        "totalElements": 1,
+        "totalPages": 1
+    }
+}
+```
+
+> **Aucun résultat → `200` avec `content: []`**, jamais `404`.
+
+#### Réponses d'erreur
+
+| Cas | Code | HTTP |
+|---|---|---|
+| Rôle hors périmètre (`RESP_ACHATS`, `GESTIONNAIRE_STOCK`) | `SEC_001` | 403 |
+| JWT sans `groupId` | `GRP_002` | 403 |
+| Entreprise du JWT introuvable / soft-supprimée / hors groupe | `RES_001` | 404 |
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Page paginee et scope tenant", () => {
+    const json = pm.response.json();
+    pm.expect(json.data.content).to.be.an("array");
+    pm.expect(json.data.page).to.eql(0);
+    pm.expect(json.data.size).to.eql(20);
+    json.data.content.forEach((c) => pm.expect(c.entrepriseId).to.be.a("number"));
+});
+```
+
+---
+
+### 5.7 PUT — Modifier un client
+
+> **US :** US-042
+> **Statut :** ✅ Implémenté (branche `feature/GS-040-crud-clients`)
+> **Authentification :** ✅ Oui — `@PreAuthorize("hasAnyRole('COMMERCIAL','ADMIN_FILIALE','ADMIN_GROUPE')")`
+
+**Sémantique PATCH sur un endpoint `PUT`** (convention US-014/018/024/038) : champ **absent ou blanc = inchangé**, un corps vide est valide et ne modifie rien.
+
+#### Requête
+
+```http
+PUT {{base_url}}/api/v1/clients/500
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "nom": "Martin Ngo",
+    "adresseVille": "Yaounde"
+}
+```
+
+| Champ | Modifiable | Contrainte |
+|---|---|---|
+| `nom` | ✅ | Non blanc si fourni, max 100 |
+| `prenom` | ✅ | max 100 |
+| `telephone` | ✅ | E.164 si fourni, max 20 |
+| `email` | ✅ | Format email, max 150 |
+| `adresseVille` | ✅ | max 100 |
+| `adresseQuartier` | ✅ | max 100 |
+| `id`, `entrepriseId`, `supprime` | ❌ | — |
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": 500,
+        "nom": "Martin Ngo",
+        "prenom": "Alice",
+        "telephone": "+237691234567",
+        "email": "alice.martin@example.cm",
+        "adresseVille": "Yaounde",
+        "adresseQuartier": "Bonapriso",
+        "entrepriseId": 10,
+        "supprime": false
+    }
+}
+```
+
+#### Réponses d'erreur
+
+| Cas | Code | HTTP |
+|---|---|---|
+| `nom` blanc, `telephone` hors format | `SYS_005` | 400 |
+| Rôle hors périmètre (`CAISSIER`, `RESP_ACHATS`, `GESTIONNAIRE_STOCK`) | `SEC_001` | 403 |
+| JWT sans `groupId` | `GRP_002` | 403 |
+| Client inexistant, soft-supprimé **ou autre tenant** | `RES_001` | 404 |
+| Entreprise du JWT introuvable / soft-supprimée / hors groupe | `RES_001` | 404 |
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Champs modifies, tenant et id intacts", () => {
+    const json = pm.response.json();
+    pm.expect(json.data.nom).to.eql("Martin Ngo");
+    pm.expect(json.data.adresseVille).to.eql("Yaounde");
+    pm.expect(json.data.entrepriseId).to.be.a("number");
+    pm.expect(json.data.id).to.eql(500);
+});
+```
+
+---
+
+### 5.8 DELETE — Supprimer (archiver) un client
+
+> **US :** US-043
+> **Statut :** ✅ Implémenté (branche `feature/GS-040-crud-clients`)
+> **Authentification :** ✅ Oui — `@PreAuthorize("hasAnyRole('COMMERCIAL','ADMIN_FILIALE','ADMIN_GROUPE')")`
+
+**Archivage logique (soft delete) uniquement** : `supprime = true`, la ligne **reste en base** — l'historique commercial et les FK `commande_client` sont préservés.
+
+#### Requête
+
+```http
+DELETE {{base_url}}/api/v1/clients/500
+Authorization: Bearer {{access_token}}
+```
+
+#### Règle de blocage (arbitrage du 9 nov. 2026)
+
+> Le CA US-043 exige la suppression d'un client « **sans historique de commandes** ». Choix volontairement plus strict que US-039 (fournisseurs).
+
+| État de la commande (`EtatCommandeClient`) | Bloque l'archivage ? |
+|---|---|
+| `EN_PREPARATION` | ✅ **oui** → `409 RES_005` |
+| `VALIDEE` | ✅ **oui** → `409 RES_005` |
+| `LIVREE` | ✅ **oui** → `409 RES_005` |
+| `ANNULEE` | ✅ **oui** → `409 RES_005` |
+
+> Une commande annulée reste une commande passée : la trace commerciale est conservée tant que la fiche existe.
+
+#### Réponse — Succès (200 OK)
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": 500,
+        "nom": "Martin",
+        "prenom": "Alice",
+        "telephone": "+237691234567",
+        "email": "alice.martin@example.cm",
+        "adresseVille": "Douala",
+        "adresseQuartier": "Bonapriso",
+        "entrepriseId": 10,
+        "supprime": true
+    }
+}
+```
+
+#### Réponses d'erreur
+
+| Cas | Code | HTTP |
+|---|---|---|
+| Au moins une commande client, **tous états confondus** | `RES_005` | 409 |
+| Rôle hors périmètre (`CAISSIER`, `RESP_ACHATS`, `GESTIONNAIRE_STOCK`) | `SEC_001` | 403 |
+| JWT sans `groupId` | `GRP_002` | 403 |
+| Client inexistant, hors tenant **ou déjà archivé** | `RES_001` | 404 |
+| Entreprise du JWT introuvable / soft-supprimée / hors groupe | `RES_001` | 404 |
+
+> **Idempotence :** rejouer le `DELETE` sur une fiche déjà archivée renvoie **404 `RES_001`** — même réponse qu'un id inconnu, rien n'est réécrit.
+
+#### Tests Postman
+
+```javascript
+pm.test("Statut 200 OK", () => {
+    pm.response.to.have.status(200);
+});
+pm.test("Client archive (soft delete)", () => {
+    const json = pm.response.json();
+    pm.expect(json.success).to.be.true;
+    pm.expect(json.data.supprime).to.be.true;
+    pm.expect(json.data.entrepriseId).to.be.a("number");
+});
+```
 
 ---
 
@@ -1678,6 +1973,7 @@ if (pm.response.code === 201) {
 | 21 oct. 2026 | Codebuff | Section 15 (`POST /api/v1/articles`) + requête dans `postman_collection.json` | Livraison US-031 (EPIC 5) |
 | 27 oct. 2026 | Codebuff | Section 5.1 (`POST /api/v1/fournisseurs`) + requête dans `postman_collection.json` | Livraison US-036 (EPIC 6) |
 | 27 oct. 2026 | Codebuff | Section 5.2 (`GET /api/v1/fournisseurs`) + requête dans `postman_collection.json` | Livraison US-037 (EPIC 6) |
+| 11 nov. 2026 | Codebuff | Sections 5.5 à 5.8 (CRUD clients US-040→043) + 4 requêtes dans `postman_collection.json` | Livraison US-040→043 (EPIC 6) |
 | 27 oct. 2026 | Codebuff | Section 7 : 7.1 (`GET /api/v1/stock`) et 7.2 (`GET /api/v1/stock/articles/{id}/mouvements`) passées en ✅ + requêtes dans `postman_collection.json` | Livraison US-051/US-052 (EPIC 8) |
 ---
 

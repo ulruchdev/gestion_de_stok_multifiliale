@@ -195,9 +195,9 @@ cd backend && mvn -q test -pl stockmaster-catalogue \
 **Résultat observé en local :** `BUILD SUCCESS` —
 `CategorieServiceTest` 39 tests (2 ignorés dans `TauxTva`), `CategorieControllerTest`
 20 tests, `ArticleDefaultsTest` 2 tests — aucun échec, aucune erreur.
-**Résultat attendu :** `BUILD SUCCESS` + **545 tests, 0 failure, 0 error**
+**Résultat attendu :** `BUILD SUCCESS` + **771 tests, 0 failure, 0 error**
 
-> **Compteur réel (mesuré le 29 oct. 2026 après merge de `main` dans `feature/GS-051-consultation-stock`, soit US-036→039 + port d'écriture stock + US-051/US-052) :** shared 71 · auth 96 · groupe 67 · catalogue 99 (dont 2 skippés — US-027→031 + defaults) · notification 8 · utilisateur 132 · tiers **102** (dont 100 US-036→039 : 60 service + 40 contrôleur, + 2 fondamentaux) · achat **6** (3 fondamentaux + 3 `CommandesFournisseurAdapterTest`) · stock **75** (12 `EcritureStockServiceTest` + 43 US-051/052 : `StockServiceTest` 24, `StockControllerTest` 11, `StatutAlerteTest` 8) · vente 8 · reporting 5 · bootstrap 7 (dont 4 ArchUnit) = **676** — `BUILD SUCCESS`, 0 failure, 0 error, 2 skipped.
+> **Compteur réel (mesuré le 11 nov. 2026 sur `feature/GS-040-crud-clients`, soit US-036→039 + US-040→043 + port d'écriture stock + US-051/US-052 + e2e auth) :** shared 71 · auth 96 · groupe 67 · catalogue 99 (dont 2 skippés — US-027→031 + defaults) · notification 8 · utilisateur 132 · tiers **195** (dont 100 US-036→039 et 93 US-040→043 — 56 `ClientServiceTest` + 37 `ClientControllerTest`, + 2 fondamentaux) · achat **6** (3 fondamentaux + 3 `CommandesFournisseurAdapterTest`) · stock **75** (12 `EcritureStockServiceTest` + 43 US-051/052 : `StockServiceTest` 24, `StockControllerTest` 11, `StatutAlerteTest` 8) · vente **10** (8 fondamentaux + 2 `CommandesClientAdapterTest`) · reporting 5 · bootstrap 7 (dont 4 ArchUnit) = **771** — `BUILD SUCCESS`, 0 failure, 0 error, 2 skipped.
 > Les 3 tests de `bootstrap` (`StockMasterApplicationTest`) échouent **sans PostgreSQL** — c'est environnemental, pas un bug : `docker compose up -d postgres redis` les rend verts.
 >
 > ⚠️ **Le gate « Coverage ≥ 80 % » n'est PAS actif dans le build** (item **C-14** de la checklist `DEC-031` ouvert : le pom parent ne contient que `prepare-agent` + `report`, aucune exécution `jacoco:check`). Ne prétendez pas qu'il bloque la CI.

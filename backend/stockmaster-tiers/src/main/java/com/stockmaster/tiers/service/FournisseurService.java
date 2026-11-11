@@ -5,7 +5,6 @@ import com.stockmaster.shared.domain.entity.Entreprise;
 import com.stockmaster.shared.dto.response.PageResponse;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
-import com.stockmaster.shared.repository.EntrepriseRepository;
 import com.stockmaster.shared.security.StockMasterPrincipal;
 import com.stockmaster.tiers.domain.entity.Fournisseur;
 import com.stockmaster.tiers.dto.request.CreerFournisseurRequest;
@@ -65,7 +64,8 @@ public class FournisseurService {
             "RESP_ACHATS", "ADMIN_FILIALE", "ADMIN_GROUPE");
 
     private final FournisseurRepository fournisseurRepository;
-    private final EntrepriseRepository entrepriseRepository;
+    /** Gardes rôle/tenant mutualisées avec {@code ClientService} (US-040→043). */
+    private final TiersPerimetreGuard perimetre;
     private final FournisseurMapper fournisseurMapper;
     private final PaginationProperties paginationProperties;
     /**
@@ -85,9 +85,9 @@ public class FournisseurService {
      */
     @Transactional
     public FournisseurResponse creer(StockMasterPrincipal principal, CreerFournisseurRequest request) {
-        verifierRole(principal);
+        perimetre.verifierRole(principal, ROLES_AUTORISES);
 
-        Entreprise entreprise = chargerEntrepriseDuPrincipal(principal);
+        Entreprise entreprise = perimetre.chargerEntrepriseDuPrincipal(principal);
 
         Fournisseur fournisseur = fournisseurMapper.toEntity(request);
         fournisseur.setEntreprise(entreprise);
@@ -120,8 +120,8 @@ public class FournisseurService {
     @Transactional(readOnly = true)
     public PageResponse<FournisseurResponse> lister(StockMasterPrincipal principal,
                                                     String search, int page, int size) {
-        verifierRole(principal);
-        Entreprise entreprise = chargerEntrepriseDuPrincipal(principal);
+        perimetre.verifierRole(principal, ROLES_AUTORISES);
+        Entreprise entreprise = perimetre.chargerEntrepriseDuPrincipal(principal);
         Long entrepriseId = entreprise.getId();
 
         Pageable pageable = PageRequest.of(Math.max(0, page), borneTaille(size),
@@ -170,8 +170,8 @@ public class FournisseurService {
      */
     @Transactional
     public FournisseurResponse supprimer(StockMasterPrincipal principal, Long id) {
-        verifierRole(principal);
-        Entreprise entreprise = chargerEntrepriseDuPrincipal(principal);
+        perimetre.verifierRole(principal, ROLES_AUTORISES);
+        Entreprise entreprise = perimetre.chargerEntrepriseDuPrincipal(principal);
 
         Fournisseur fournisseur = fournisseurRepository.findByIdAndSupprimeFalse(id)
                 .filter(f -> f.getEntreprise() != null
@@ -221,8 +221,8 @@ public class FournisseurService {
     @Transactional
     public FournisseurResponse modifier(StockMasterPrincipal principal, Long id,
                                         ModifierFournisseurRequest request) {
-        verifierRole(principal);
-        Entreprise entreprise = chargerEntrepriseDuPrincipal(principal);
+        perimetre.verifierRole(principal, ROLES_AUTORISES);
+        Entreprise entreprise = perimetre.chargerEntrepriseDuPrincipal(principal);
 
         Fournisseur fournisseur = fournisseurRepository.findByIdAndSupprimeFalse(id)
                 .filter(f -> f.getEntreprise() != null
@@ -266,38 +266,5 @@ public class FournisseurService {
     /** Bornes de pagination — convention repo : clamp silencieux, pas de 400. */
     private int borneTaille(int size) {
         return Math.min(Math.max(1, size), paginationProperties.getMaxPageSize());
-    }
-
-    // ─── helpers privés ──────────────────────────────────────────────────────
-
-    /**
-     * CA1 — garde fail-fast, avant toute requête en base (défense en profondeur
-     * derrière le {@code @PreAuthorize} du contrôleur).
-     */
-    private void verifierRole(StockMasterPrincipal principal) {
-        String role = principal != null ? principal.getRole() : null;
-        if (role == null || role.isBlank() || !ROLES_AUTORISES.contains(role)) {
-            throw new BusinessException(ErrorCode.SEC_ACCESS_DENIED);
-        }
-    }
-
-    /**
-     * Charge l'entreprise portée par le JWT avec isolation groupe (agrégat
-     * tenant de {@code stockmaster-shared}). {@code 404} uniforme si
-     * introuvable, soft-supprimée ou rattachée à un autre groupe.
-     */
-    private Entreprise chargerEntrepriseDuPrincipal(StockMasterPrincipal principal) {
-        Long groupId = principal.getGroupId();
-        if (groupId == null) {
-            throw new BusinessException(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
-        }
-        Long entrepriseId = principal.getEntrepriseId();
-        if (entrepriseId == null) {
-            throw new BusinessException(ErrorCode.SEC_ACCESS_DENIED);
-        }
-        return entrepriseRepository.findById(entrepriseId)
-                .filter(e -> !Boolean.TRUE.equals(e.getSupprime()))
-                .filter(e -> e.getGroupe() != null && groupId.equals(e.getGroupe().getId()))
-                .orElseThrow(() -> new BusinessException(ErrorCode.RES_ENTITY_NOT_FOUND));
     }
 }
