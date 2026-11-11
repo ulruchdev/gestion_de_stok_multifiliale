@@ -305,3 +305,23 @@ Suite à l'audit `document/03-pilotage/audit-frontend-2026-11.md` : deux correct
 | Vérifications | `npx tsc --noEmit` 0 erreur · `npm run lint` 0 warning · `npm test` **25/25** · `npm run build` OK · `npm audit --omit=dev` 0 | ✅ |
 | Effet bundle | `index` 305,1 → **322,9 kB** (99,7 → 106,1 kB gz) et chunk partagé `style` 95,8 → **126,7 kB** (26,4 → 38,6 kB gz) — mesuré, dû aux montées react-router 7 / zod 4 / resolver 5 | ℹ️ |
 | Hors périmètre | `Tabs` reste sans navigation clavier par flèches (non demandé) ; CSP, ErrorBoundary, 404 et jeton en `localStorage` inchangés (cf. audit) | ⚠️ |
+
+## Frontend — Catalogue branché sur l'API (US-F030/F032/F033, 11/11/2026)
+
+Première consommation réelle des endpoints catalogue (lecture seule : liste + détail + catégories), avec enrichissement stock côté backend.
+
+| Élément | Contenu | Statut |
+|---------|---------|--------|
+| Contrat stock (Q5=D) | Port inversé `catalogue.port.StockDisponiblePort` (`stockParArticle(entrepriseId, articleIds)` → `Map<Long, LigneStock>`), implémenté dans `stock.adapter.StockDisponibleAdapter` ; requête native `MouvementStockRepository.stockParArticles` (Σ ENTREE − Σ SORTIE + seuil, alignée REF §4.2). ArchUnit règle 1 respectée : `catalogue.port` est une couche contrat, `stock` dépend déjà de `catalogue` | ✅ |
+| Enrichissement API | `ArticleService` injecte le port et remplit `stockActuel` / `statutAlerte` sur `lister`, `consulter`, `creer`, `modifier`, `supprimer` ; aucun stock inventé sans filiale dans le JWT (port non appelé) ; identifiant non persisté → pas d'appel | ✅ |
+| Types front (Q6=A) | `src/features/catalogue/types.ts` : `Article`, `Categorie`, `ArticleListResponse`, `CategorieListResponse` (avec `first`/`last`), miroir exact des DTO ; `ProblemResponse.errorCode` ajouté au type partagé | ✅ |
+| API + hooks (Q10=A) | `features/catalogue/api.ts` (paramètres `page,size,sort,direction,search` / `designation`) et `hooks.ts` (TanStack Query, `keepPreviousData`, clés par filtre, lookup catégorie id → désignation) | ✅ |
+| Pages | `/catalogue/articles` (DataTable, recherche serveur débouncée, pagination), `/catalogue/articles/:id` (prix HT/TTC, marge, seuil, stock, catégorie, états chargement/404/erreur), `/catalogue/categories` (code, désignation, TVA) ; état de liste dans l'URL (`?q&page`, page 1-based convertie en 0-based) | ✅ |
+| Formatage (Q7=A) | `formaterMontantXaf` : `Intl.NumberFormat('fr-CM', {style:'currency',currency:'XAF',maximumFractionDigits:0})` centralisé ; TVA et marge en `%` ; `—` si valeur absente | ✅ |
+| Erreurs (Q8=B) | Table code métier → message (`CAT_001`, `GRP_002`, `SEC_001`, `RES_001/002`, `SYS_001/005`) avec repli `getErrorMessage()` RFC 7807 ; 404 détecté pour l'écran « Article introuvable » | ✅ |
+| RBAC (Q9=A) | `ROLES_PAR_SECTION.catalogue` étendu à `ADMIN_GROUPE` (menu + guards déjà centralisés) ; les routes catalogue restent sous `RequireAuth roles=…` | ✅ |
+| Tests | Backend : `ArticleServiceTest` (2 tests d'enrichissement, constructeur à 7 args) + `StockDisponibleAdapterTest` (2 tests) + ArchUnit verts. Frontend : **16 nouveaux tests** (API, format, erreurs, page liste) → `npm test` **41/41** | ✅ |
+| E2E (Q11=A) | Playwright + Chromium installés, `playwright.config.ts` (Vite, backend réel), `e2e/catalogue.spec.ts` : **5/5 verts** sur backend réel (liste + stock `0`/`RUPTURE`, recherche + aucun résultat, pagination URL, chargement/erreur + réessai, refus de rôle CAISSIER) | ✅ |
+| Vérifications | `npx tsc --noEmit` 0 erreur · `npm run lint` 0 warning · `npm test` 41/41 · `npm run build` OK · `npx playwright test` 5/5 · `mvn -Dtest='ArticleServiceTest,StockDisponibleAdapterTest'` + ArchUnit verts · smoke API réel (article créé → `stockActuel=0`, `statutAlerte=RUPTURE`) | ✅ |
+| Hypothèses Q12/Q13 | Non répondues : 5 scénarios E2E retenus (Q12=A) et MSW laissé hors périmètre (Q13=A) — voir `strategie_test.md` | ⚠️ |
+| Hors périmètre | Écriture catalogue (création/modification d'article et de catégorie) ; MSW ; nettoyage des tenants E2E (données `E2E Catalogue …` conservées en base de dev) | ⚠️ |

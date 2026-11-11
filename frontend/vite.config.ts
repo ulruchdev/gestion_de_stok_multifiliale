@@ -13,6 +13,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     restoreMocks: true,
+    // Les specs Playwright (e2e/) ont leur propre runner : ne pas les charger ici.
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
   },
   server: {
     port: 5173,
