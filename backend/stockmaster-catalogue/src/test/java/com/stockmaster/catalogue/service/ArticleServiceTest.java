@@ -6,6 +6,8 @@ import com.stockmaster.catalogue.dto.request.ArticleCreateRequest;
 import com.stockmaster.catalogue.dto.request.ArticleUpdateRequest;
 import com.stockmaster.catalogue.dto.response.ArticleListResponse;
 import com.stockmaster.catalogue.dto.response.ArticleResponse;
+import com.stockmaster.catalogue.port.StockDisponiblePort;
+import com.stockmaster.catalogue.port.StockDisponiblePort.LigneStock;
 import com.stockmaster.catalogue.repository.ArticleRepository;
 import com.stockmaster.catalogue.repository.CategorieRepository;
 import com.stockmaster.shared.domain.entity.TenantGroup;
@@ -26,6 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -69,6 +72,9 @@ class ArticleServiceTest {
     @Mock
     private TenantGroupRepository tenantGroupRepository;
 
+    @Mock
+    private StockDisponiblePort stockDisponiblePort;
+
     private TauxTvaAutorises tauxTvaAutorises;
     private PerimetreCatalogueGuard perimetreCatalogueGuard;
     private CalculTvaService calculTvaService;
@@ -86,14 +92,20 @@ class ArticleServiceTest {
         calculTvaService = new CalculTvaService();
         articleService = new ArticleService(
                 articleRepository, categorieRepository, tenantGroupRepository,
-                tauxTvaAutorises, perimetreCatalogueGuard, calculTvaService);
+                tauxTvaAutorises, perimetreCatalogueGuard, calculTvaService,
+                stockDisponiblePort);
     }
 
     // ─── fixtures ───────────────────────────────────────────────────────────
 
     private StockMasterPrincipal principal(String role, Long groupId) {
+        return principal(role, groupId, null);
+    }
+
+    private StockMasterPrincipal principal(String role, Long groupId, Long entrepriseId) {
         Claims claims = mock(Claims.class);
         lenient().when(claims.get("groupId", Long.class)).thenReturn(groupId);
+        lenient().when(claims.get("entrepriseId", Long.class)).thenReturn(entrepriseId);
         lenient().when(claims.get("role", String.class)).thenReturn(role);
         return new StockMasterPrincipal(99L, claims);
     }
@@ -479,6 +491,42 @@ class ArticleServiceTest {
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
             verifyNoInteractions(articleRepository);
+        }
+
+        @Test
+        @DisplayName("✅ US-032 : stock réel et statut d'alerte de la page fournis par le port stock")
+        void shouldEnrichPageWithStockFromPort() {
+            TenantGroup groupe = groupeActif();
+            Categorie categorie = categorieDuGroupe(groupe);
+            Article article = articleExistant(groupe, categorie);
+            when(articleRepository.findAllByGroupeIdAndSupprimeFalse(eq(GROUP_ID), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(article), PageRequest.of(0, 20), 1));
+            when(stockDisponiblePort.stockParArticle(7L, List.of(article.getId())))
+                    .thenReturn(Map.of(article.getId(),
+                            new LigneStock(new BigDecimal("12.5"), "BAS")));
+
+            ArticleListResponse reponse = articleService.lister(
+                    principal("GESTIONNAIRE_STOCK", GROUP_ID, 7L), 0, 20, "designation", "ASC", null);
+
+            assertThat(reponse.getContent().get(0).getStockActuel()).isEqualByComparingTo("12.5");
+            assertThat(reponse.getContent().get(0).getStatutAlerte()).isEqualTo("BAS");
+        }
+
+        @Test
+        @DisplayName("✅ US-032 : sans filiale dans le JWT, aucun stock n'est inventé et le port n'est pas appelé")
+        void shouldNotCallStockPortWithoutEntreprise() {
+            TenantGroup groupe = groupeActif();
+            Categorie categorie = categorieDuGroupe(groupe);
+            Article article = articleExistant(groupe, categorie);
+            when(articleRepository.findAllByGroupeIdAndSupprimeFalse(eq(GROUP_ID), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(article), PageRequest.of(0, 20), 1));
+
+            ArticleListResponse reponse = articleService.lister(
+                    principal("ADMIN_GROUPE", GROUP_ID), 0, 20, "designation", "ASC", null);
+
+            assertThat(reponse.getContent().get(0).getStockActuel()).isNull();
+            assertThat(reponse.getContent().get(0).getStatutAlerte()).isNull();
+            verifyNoInteractions(stockDisponiblePort);
         }
     }
 
