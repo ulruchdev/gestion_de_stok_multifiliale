@@ -1,4 +1,4 @@
-import { type InputHTMLAttributes, forwardRef, type ReactNode } from 'react';
+import { type InputHTMLAttributes, forwardRef, useId, type ReactNode } from 'react';
 import { cn } from '../lib/utils';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -10,12 +10,34 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   icon?: ReactNode;
   trailingIcon?: ReactNode;
   onTrailingIconClick?: () => void;
+  /** Nom accessible du bouton d'icône de fin (par défaut : bascule mot de passe). */
+  trailingIconLabel?: string;
   inputSize?: 'default' | 'lg';
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, error, warning, success, label, description, icon, trailingIcon, onTrailingIconClick, inputSize, id, ...props }, ref) => {
-    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+  (
+    {
+      className,
+      type,
+      error,
+      warning,
+      success,
+      label,
+      description,
+      icon,
+      trailingIcon,
+      onTrailingIconClick,
+      trailingIconLabel = 'Afficher ou masquer le mot de passe',
+      inputSize,
+      id,
+      ...props
+    },
+    ref,
+  ) => {
+    const generatedId = useId();
+    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-') || generatedId;
+    const showDescription = !!description && !error && !warning && !success;
 
     return (
       <div className="space-y-1.5">
@@ -53,7 +75,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             aria-invalid={!!error}
             aria-describedby={
-              [error ? `${inputId}-error` : '', description ? `${inputId}-description` : ''].filter(Boolean).join(' ') || undefined
+              [
+                error ? `${inputId}-error` : '',
+                warning && !error ? `${inputId}-warning` : '',
+                success && !error && !warning ? `${inputId}-success` : '',
+                showDescription ? `${inputId}-description` : '',
+              ]
+                .filter(Boolean)
+                .join(' ') || undefined
             }
             {...props}
           />
@@ -62,14 +91,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               type="button"
               onClick={onTrailingIconClick}
               className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-muted-foreground hover:text-[var(--brand-ink)] transition-colors"
-              tabIndex={-1}
-              aria-label={onTrailingIconClick ? 'Afficher/masquer le mot de passe' : undefined}
+              aria-label={trailingIconLabel}
             >
               {trailingIcon}
             </button>
           )}
         </div>
-        {description && !error && !warning && !success && (
+        {showDescription && (
           <p id={`${inputId}-description`} className="text-xs text-[var(--brand-ink-muted)]">{description}</p>
         )}
         {error && (
@@ -78,12 +106,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           </p>
         )}
         {warning && !error && (
-          <p className="text-sm text-[var(--stock-warning)]" role="alert">
+          <p id={`${inputId}-warning`} className="text-sm text-[var(--stock-warning)]" role="alert">
             {warning}
           </p>
         )}
         {success && !error && !warning && (
-          <p className="text-sm text-[var(--stock-success)]" role="status">
+          <p id={`${inputId}-success`} className="text-sm text-[var(--stock-success)]" role="status">
             {success}
           </p>
         )}

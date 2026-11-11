@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { cn } from '../lib/utils';
 import { X } from 'lucide-react';
 import { Button } from './Button';
@@ -14,22 +14,76 @@ interface ModalProps {
   blur?: boolean;
 }
 
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'textarea:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ');
+
 export function Modal({ open, onClose, title, description, children, footer, size = 'md', blur = true }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+  const titleId = useId();
+  const descriptionId = useId();
+
+  // Évite de relancer l'effet (et de voler le focus) quand le parent repasse une nouvelle fonction.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+    if (!open) return;
+
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = 'hidden';
+
+    const panel = panelRef.current;
+    const getFocusable = () =>
+      Array.from(panel?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? []);
+
+    (getFocusable()[0] ?? panel)?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== 'Tab' || !panel) return;
+
+      const focusable = getFocusable();
+      if (focusable.length === 0) {
+        event.preventDefault();
+        panel.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey && (active === first || active === panel)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-    if (open) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
-    }
+
+    document.addEventListener('keydown', handleKeyDown);
+
     return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+      previouslyFocused.current?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -42,11 +96,14 @@ export function Modal({ open, onClose, title, description, children, footer, siz
         blur && 'backdrop-blur-sm',
       )}
       onClick={(e) => e.target === overlayRef.current && onClose()}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
     >
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
+        tabIndex={-1}
         className={cn(
           'relative bg-background rounded-lg shadow-xl max-h-[85vh] overflow-y-auto animate-scale-in',
           {
@@ -60,12 +117,17 @@ export function Modal({ open, onClose, title, description, children, footer, siz
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--brand-hairline)] p-5">
           <div className="pr-4">
-            <h2 id="modal-title" className="text-lg font-semibold font-display">
+            <h2 id={titleId} className="text-lg font-semibold font-display">
               {title}
             </h2>
-            {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}
+            {description && (
+              <p id={descriptionId} className="text-sm text-muted-foreground mt-1">
+                {description}
+              </p>
+            )}
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="rounded-full p-1.5 hover:bg-accent transition-colors shrink-0"
             aria-label="Fermer"

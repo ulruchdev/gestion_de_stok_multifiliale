@@ -49,8 +49,9 @@ function ToastItem({ toast: t, onRemove }: { toast: Toast; onRemove: (id: string
       )}
       role="alert"
     >
-      {/* Progress bar */}
+      {/* Progress bar (décorative) */}
       <div
+        aria-hidden="true"
         className="absolute bottom-0 left-0 h-1 bg-current opacity-20 transition-all duration-100 linear"
         style={{ width: `${progress}%` }}
       />
@@ -61,8 +62,10 @@ function ToastItem({ toast: t, onRemove }: { toast: Toast; onRemove: (id: string
         {t.message && <p className="text-sm opacity-80 mt-0.5">{t.message}</p>}
       </div>
       <button
+        type="button"
         onClick={() => onRemove(t.id)}
         className="shrink-0 rounded-full p-1 hover:bg-black/10 transition-colors"
+        aria-label={`Fermer la notification : ${t.title}`}
       >
         <X className="h-4 w-4" />
       </button>
@@ -89,6 +92,7 @@ export function ToastContainer({ position = 'bottom-right' }: ToastContainerProp
 
   return (
     <div
+      aria-label="Notifications"
       className={cn(
         'fixed z-[100] flex flex-col gap-2 w-full max-w-sm pointer-events-none',
         positionClasses[position],
