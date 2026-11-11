@@ -23,6 +23,7 @@ import io.jsonwebtoken.Claims;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.ValidatorFactory;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,6 @@ import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -96,7 +96,6 @@ class FournisseurServiceTest {
     /** Vraie instance MapStruct — mapping request → entité → réponse vérifiable. */
     @Spy
     private final FournisseurMapper fournisseurMapper = new FournisseurMapperImpl();
-    @InjectMocks
     private FournisseurService fournisseurService;
 
     @Captor
@@ -109,6 +108,20 @@ class FournisseurServiceTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+    /**
+     * Construction explicite : le service reçoit un vrai {@link TiersPerimetreGuard}
+     * (mêmes mocks d'entreprise que le service).
+     */
+    @BeforeEach
+    void setUp() {
+        fournisseurService = new FournisseurService(
+                fournisseurRepository,
+                new TiersPerimetreGuard(entrepriseRepository),
+                fournisseurMapper,
+                paginationProperties,
+                commandesFournisseurPort);
+    }
 
     /**
      * Valide le corps avec une {@code ValidatorFactory} ouverte en

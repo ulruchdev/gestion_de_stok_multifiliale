@@ -1509,6 +1509,147 @@
             },
             "description": "US-039 (P0) — DELETE /api/v1/fournisseurs/{id}. Rôles : RESP_ACHATS / ADMIN_FILIALE / ADMIN_GROUPE. Archivage logique uniquement (supprime=true, la ligne reste en base : aucun DELETE SQL physique, historique des achats et FK commande_fournisseur ON DELETE RESTRICT preserves). Regle de blocage : 409 RES_005 si une commande fournisseur est encore a livrer (COMMANDEE ou PARTIELLEMENT_RECUE) ; une commande RECEPTIONNEE ou ANNULEE n'empeche PAS l'archivage. Le critere 'ligne receptionne=true' du ticket est abandonne : la colonne n'existe pas au modele. Reponses : 200 (ApiResponse + FournisseurResponse avec supprime=true), 403 SEC_001 / GRP_002, 404 RES_001 pour id inexistant, hors tenant OU deja archive (idempotence, aucune fuite), 409 RES_005."
           }
+        },
+        {
+          "name": "US-040 — Créer un client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Martin\",\n  \"prenom\": \"Alice\",\n  \"telephone\": \"+237691234567\",\n  \"email\": \"alice.martin@example.cm\",\n  \"adresseVille\": \"Douala\",\n  \"adresseQuartier\": \"Bonapriso\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clients"
+              ]
+            },
+            "description": "US-040 (P0) — POST /api/v1/clients. Rôles : COMMERCIAL / ADMIN_FILIALE / ADMIN_GROUPE. entreprise_id extrait du JWT, jamais du corps (un entrepriseId force dans le payload est ignore). nom obligatoire (max 100), telephone optionnel mais E.164 si fourni, email valide (max 150), prenom (100), adresseVille/adresseQuartier (100). Reponses : 201 (ApiResponse + ClientResponse, supprime=false), 400 SYS_005, 403 SEC_001 / GRP_002, 404 RES_001 (entreprise hors groupe)."
+          }
+        },
+        {
+          "name": "US-041 — Lister / Rechercher les clients",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients?search=martin&page=0&size=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clients"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "martin",
+                  "description": "Recherche sur nom, prenom OU telephone (insensible a la casse). Absent ou blanc = tous les clients du tenant."
+                },
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "Defaut 0 (borne inferieure)"
+                },
+                {
+                  "key": "size",
+                  "value": "20",
+                  "description": "Defaut 20, borne silencieusement a 100 (jamais de 400)"
+                }
+              ]
+            },
+            "description": "US-041 (P0) — GET /api/v1/clients. Rôles : COMMERCIAL / ADMIN_FILIALE / ADMIN_GROUPE + CAISSIER (lecture seule, arbitrage du 9 nov. 2026). Listing strictement scope a l'entreprise du JWT : aucun parametre de tenant n'est accepte. Tri fixe nom ASC. Reponses : 200 (ApiResponse + PageResponse), 200 avec content=[] si aucun resultat (jamais 404), 403 SEC_001 / GRP_002, 404 RES_001."
+          }
+        },
+        {
+          "name": "US-042 — Modifier un client",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Martin Ngo\",\n  \"prenom\": \"Alicia\",\n  \"telephone\": \"+237677445566\",\n  \"email\": \"alicia.martin@example.cm\",\n  \"adresseVille\": \"Yaounde\",\n  \"adresseQuartier\": \"Bastos\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients/500",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clients",
+                "500"
+              ]
+            },
+            "description": "US-042 (P0) — PUT /api/v1/clients/{id}. Rôles : COMMERCIAL / ADMIN_FILIALE / ADMIN_GROUPE (CAISSIER refuse). Semantique PATCH sur un endpoint PUT : champ absent ou blanc = inchange, corps vide valide. 6 champs modifiables : nom, prenom, telephone, email, adresseVille, adresseQuartier. Non modifiables : id, entreprise_id (JWT, absent du DTO), dateCreation, dateModification, supprime. nom fourni non blanc (max 100), telephone E.164 si fourni. Reponses : 200 (ApiResponse + ClientResponse), 400 SYS_005, 403 SEC_001 / GRP_002, 404 RES_001 pour id inexistant, soft-supprime OU autre tenant (aucune fuite, aucune modification)."
+          }
+        },
+        {
+          "name": "US-043 — Supprimer (archiver) un client",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients/500",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clients",
+                "500"
+              ]
+            },
+            "description": "US-043 (P0) — DELETE /api/v1/clients/{id}. Rôles : COMMERCIAL / ADMIN_FILIALE / ADMIN_GROUPE (CAISSIER refuse). Archivage logique uniquement (supprime=true, aucun DELETE SQL physique : historique commercial et FK commande_client preserves). Regle de blocage (arbitrage du 9 nov. 2026) : 409 RES_005 des qu'UNE commande client existe, QUEL QUE SOIT son etat (EN_PREPARATION, VALIDEE, LIVREE, ANNULEE) — plus strict que US-039. Reponses : 200 (ApiResponse + ClientResponse avec supprime=true), 403 SEC_001 / GRP_002, 404 RES_001 pour id inexistant, hors tenant OU deja archive (idempotence, aucune fuite), 409 RES_005."
+          }
         }
       ]
     },

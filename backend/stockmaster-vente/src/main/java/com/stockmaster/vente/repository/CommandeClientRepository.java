@@ -24,6 +24,13 @@ public interface CommandeClientRepository extends JpaRepository<CommandeClient, 
 
     boolean existsByEntrepriseIdAndCodeAndSupprimeFalse(Long entrepriseId, String code);
 
+    /**
+     * US-043 — historique de commandes d'un client, tous états confondus
+     * (y compris {@code ANNULEE}) : sert la règle d'archivage exposée par
+     * {@code CommandesClientPort}.
+     */
+    boolean existsByClientId(Long clientId);
+
     long countByEntrepriseIdAndEtatReglementAndSupprimeFalse(
             Long entrepriseId, EtatReglement etatReglement);
 }
