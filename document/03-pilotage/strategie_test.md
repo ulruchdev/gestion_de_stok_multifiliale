@@ -47,7 +47,7 @@ Ce guide est destiné à tout **QA** ou **développeur** travaillant sur StockMa
 
 La **suite unitaire** (la grande majorité des tests) est **100 % mocks** : elle passe **sans aucun service démarré**.
 
-Seuls les **futurs tests d'intégration** — et en pratique `StockMasterApplicationTest` (profil `integration`, démarrage complet de l'application) — nécessitent **PostgreSQL 16** et **Redis 7** :
+Seuls les **tests d'intégration** — `StockMasterApplicationTest` (démarrage complet) et `ClientApiIntegrationTest` (CRUD clients bout-en-bout, profil `integration`) — nécessitent **PostgreSQL 16** et **Redis 7** :
 
 ```bash
 # Lancer les services
@@ -195,10 +195,10 @@ cd backend && mvn -q test -pl stockmaster-catalogue \
 **Résultat observé en local :** `BUILD SUCCESS` —
 `CategorieServiceTest` 39 tests (2 ignorés dans `TauxTva`), `CategorieControllerTest`
 20 tests, `ArticleDefaultsTest` 2 tests — aucun échec, aucune erreur.
-**Résultat attendu :** `BUILD SUCCESS` + **771 tests, 0 failure, 0 error**
+**Résultat attendu :** `BUILD SUCCESS` + **776 tests, 0 failure, 0 error**
 
-> **Compteur réel (mesuré le 11 nov. 2026 sur `feature/GS-040-crud-clients`, soit US-036→039 + US-040→043 + port d'écriture stock + US-051/US-052 + e2e auth) :** shared 71 · auth 96 · groupe 67 · catalogue 99 (dont 2 skippés — US-027→031 + defaults) · notification 8 · utilisateur 132 · tiers **195** (dont 100 US-036→039 et 93 US-040→043 — 56 `ClientServiceTest` + 37 `ClientControllerTest`, + 2 fondamentaux) · achat **6** (3 fondamentaux + 3 `CommandesFournisseurAdapterTest`) · stock **75** (12 `EcritureStockServiceTest` + 43 US-051/052 : `StockServiceTest` 24, `StockControllerTest` 11, `StatutAlerteTest` 8) · vente **10** (8 fondamentaux + 2 `CommandesClientAdapterTest`) · reporting 5 · bootstrap 7 (dont 4 ArchUnit) = **771** — `BUILD SUCCESS`, 0 failure, 0 error, 2 skipped.
-> Les 3 tests de `bootstrap` (`StockMasterApplicationTest`) échouent **sans PostgreSQL** — c'est environnemental, pas un bug : `docker compose up -d postgres redis` les rend verts.
+> **Compteur réel (mesuré le 11 nov. 2026 sur `feature/GS-040-crud-clients`, soit US-036→039 + US-040→043 + port d'écriture stock + US-051/US-052 + e2e auth) :** shared 71 · auth 96 · groupe 67 · catalogue 99 (dont 2 skippés — US-027→031 + defaults) · notification 8 · utilisateur 132 · tiers **195** (dont 100 US-036→039 et 93 US-040→043 — 56 `ClientServiceTest` + 37 `ClientControllerTest`, + 2 fondamentaux) · achat **6** (3 fondamentaux + 3 `CommandesFournisseurAdapterTest`) · stock **75** (12 `EcritureStockServiceTest` + 43 US-051/052 : `StockServiceTest` 24, `StockControllerTest` 11, `StatutAlerteTest` 8) · vente **10** (8 fondamentaux + 2 `CommandesClientAdapterTest`) · reporting 5 · bootstrap **12** (dont 4 ArchUnit + 3 `StockMasterApplicationTest` + **5 `ClientApiIntegrationTest`**) = **776** — `BUILD SUCCESS`, 0 failure, 0 error, 2 skipped.
+> Les tests d'intégration de `bootstrap` (`StockMasterApplicationTest`, `ClientApiIntegrationTest`) échouent **sans PostgreSQL** — c'est environnemental, pas un bug : `docker compose up -d postgres redis` les rend verts. `ClientApiIntegrationTest` crée ses deux entreprises jetables (UUID) et supprime toutes ses lignes en fin de classe ; le rate limiting y est désactivé.
 >
 > ⚠️ **Le gate « Coverage ≥ 80 % » n'est PAS actif dans le build** (item **C-14** de la checklist `DEC-031` ouvert : le pom parent ne contient que `prepare-agent` + `report`, aucune exécution `jacoco:check`). Ne prétendez pas qu'il bloque la CI.
 
@@ -427,13 +427,16 @@ Pour tester les endpoints protégés (futurs modules) :
 ### 6.1 Convention de nommage
 
 ```
-{ClasseTestee}Test.java      → Tests unitaires (Mockito, isolation)
-{ClasseTestee}IT.java        → Tests d'intégration (Spring Boot complet)
+{ClasseTestee}Test.java              → Tests unitaires (Mockito, isolation)
+{ClasseTestee}IntegrationTest.java   → Tests d'intégration (Spring Boot complet)
 ```
+
+> Pas de plugin Failsafe dans le projet : les tests d'intégration vivent dans `stockmaster-bootstrap` et sont exécutés par **Surefire** via `mvn test` / `mvn verify`. Ils doivent donc finir par `Test` (le suffixe `IT` ne serait jamais exécuté).
 
 **Exemples :**
 - `GlobalExceptionHandlerTest.java` → test unitaire ✅
 - `StockMasterApplicationTest.java` → **test d'intégration** (démarrage Spring complet) ✅
+- `ClientApiIntegrationTest.java` → **test d'intégration** (CRUD clients HTTP → service → PostgreSQL réel, isolation tenant, 409 `RES_005`) ✅
 
 ### 6.2 Types de tests
 
@@ -577,6 +580,7 @@ curl http://localhost:8080/actuator/health
 | 2026-10-27 | Codebuff | Compte 502 → **545** (stock 20 → 63) | Livraison US-051/US-052 (EPIC 8) — 43 tests ajoutés (`StockServiceTest`, `StockControllerTest`, `StatutAlerteTest`). |
 | 2026-10-28 | Codebuff | Résolution du piège réseau local (5432/6379 muets) | `StockMasterApplicationTest` échouait en `EOFException` SSL quand le relais `docker-proxy` de l'hôte ne répondait plus (chaque `SYN` accepté puis `FIN+RST`, le proxy ne dial-ait jamais le conteneur) et l'ordre des règles DNAT dans la chaîne `DOCKER` pouvait pointer vers les mauvais conteneurs. **Correctifs conservés sur l'hôte** : `"userland-proxy": false` dans `/var/snap/docker/3613/config/daemon.json` (le trafic loopback passe alors par le DNAT iptables de la chaîne `DOCKER`) et reconstruction du réseau via `docker compose up -d --force-recreate` pour régénérer des règles DNAT cohérentes. ⚠️ si un `snap refresh docker` crée une nouvelle révision, son `config/daemon.json` repart des défauts — reposer `userland-proxy: false` puis `sudo snap restart docker`. `mvn test` fonctionne à nouveau **sans aucun workaround d'env** (reactor 545/545 vert, 2026-10-28). L'ancien workaround `DB_HOST=<IP conteneur>` n'est plus nécessaire |
 | 2026-10-28 | baudrel | Port d'écriture stock GS-1240 : +12 tests `EcritureStockServiceTest` (module stock 20 → 32, reactor 577/577) ; whitelist ArchUnit étendue à `stock.port..` + `stock.domain.enums..` | Ticket #1240 — contrat inter-modules pour EPIC 8 (achat/vente/transferts écrivent le stock par ce port uniquement) |
+| 2026-11-11 | Codebuff | Compte 771 → **776** (bootstrap 7 → 12) avec `ClientApiIntegrationTest` (5 tests) | Premiers tests d'intégration métier du projet : CRUD clients US-040→043 sur PostgreSQL réel (isolation tenant, soft delete, 409 `RES_005` sur commande annulée), là où les mocks ne prouvent pas le SQL ni les FK |
 ---
 
 > **Règle de gestion :** Ce document doit être mis à jour à chaque nouveau module ajouté, nouveau test écrit, ou changement dans la stack technique. Les commandes ci-dessus doivent toujours refléter l'état réel du projet.
