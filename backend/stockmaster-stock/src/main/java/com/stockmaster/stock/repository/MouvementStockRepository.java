@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 
 public interface MouvementStockRepository extends JpaRepository<MouvementStock, Long> {
@@ -104,6 +105,46 @@ public interface MouvementStockRepository extends JpaRepository<MouvementStock, 
             GROUP BY m.article_id
             """, nativeQuery = true)
     List<Object[]> calculerStockReelParArticle(@Param("entrepriseId") Long entrepriseId);
+
+    /**
+     * Stock réel et statut d'alerte de plusieurs articles d'une filiale —
+     * US-032/US-033, consommé par {@code StockDisponiblePort} pour enrichir la
+     * fiche et la liste des articles du catalogue.
+     *
+     * <p>Même définition du stock (DEC-023) et même CASE {@code statut_alerte}
+     * (REF §4.2) que {@link #listerStockParArticle} : les deux requêtes doivent
+     * rester alignées avec {@code StatutAlerte.de}.</p>
+     */
+    @Query(value = """
+            SELECT a.id                      AS article_id,
+                   COALESCE(s.stock, 0)      AS stock_actuel,
+                   CASE
+                       WHEN COALESCE(s.stock, 0) < 0 THEN 'ANOMALIE'
+                       WHEN COALESCE(s.stock, 0) <= 0 THEN 'RUPTURE'
+                       WHEN a.seuil_alerte > 0
+                            AND COALESCE(s.stock, 0) <= a.seuil_alerte THEN 'BAS'
+                       ELSE 'NORMAL' END     AS statut_alerte
+            FROM article a
+            LEFT JOIN (
+                SELECT m.article_id,
+                       SUM(CASE m.type_mouvement
+                               WHEN 'ENTREE'           THEN m.quantite
+                               WHEN 'TRANSFERT_ENTREE' THEN m.quantite
+                               WHEN 'ANNULATION_VENTE' THEN m.quantite
+                               WHEN 'REMBOURSEMENT'    THEN m.quantite
+                               WHEN 'CORRECTION_POS'   THEN m.quantite
+                               WHEN 'SORTIE'           THEN -m.quantite
+                               WHEN 'TRANSFERT_SORTIE' THEN -m.quantite
+                               WHEN 'CORRECTION_NEG'   THEN -m.quantite
+                           END) AS stock
+                FROM mouvement_stock m
+                WHERE m.entreprise_id = :entrepriseId
+                GROUP BY m.article_id
+            ) s ON s.article_id = a.id
+            WHERE a.id IN (:articleIds)
+            """, nativeQuery = true)
+    List<Object[]> stockParArticles(@Param("entrepriseId") Long entrepriseId,
+                                    @Param("articleIds") Collection<Long> articleIds);
 
     long countByTypeMouvement(TypeMouvement typeMouvement);
 
