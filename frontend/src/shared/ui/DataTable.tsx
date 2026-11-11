@@ -157,7 +157,7 @@ function DataTable<T extends Record<string, unknown>>({
               placeholder={searchPlaceholder || 'Rechercher...'}
             />
           </div>
-          <div className="text-xs text-[var(--brand-ink-muted)] whitespace-nowrap">
+          <div aria-live="polite" className="text-xs text-[var(--brand-ink-muted)] whitespace-nowrap">
             {sortedData.length} résultat{sortedData.length > 1 ? 's' : ''}
           </div>
         </div>
@@ -167,30 +167,45 @@ function DataTable<T extends Record<string, unknown>>({
       <Table variant={variant}>
         <TableHeader>
           <TableRow>
-            {columns.map((col) => (
-              <TableHead key={col.key} className={col.className}>
-                {col.sortable ? (
-                  <button
-                    type="button"
-                    onClick={() => handleSort(col.key)}
-                    className="inline-flex items-center gap-1 hover:text-[var(--brand-ink)] transition-colors"
-                  >
-                    {col.label}
-                    {sortState?.key === col.key ? (
-                      sortState.direction === 'asc' ? (
-                        <ChevronUp className="h-3.5 w-3.5" />
+            {columns.map((col) => {
+              const isSorted = sortState?.key === col.key;
+              return (
+                <TableHead
+                  key={col.key}
+                  className={col.className}
+                  aria-sort={
+                    col.sortable
+                      ? isSorted
+                        ? sortState.direction === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                      : undefined
+                  }
+                >
+                  {col.sortable ? (
+                    <button
+                      type="button"
+                      onClick={() => handleSort(col.key)}
+                      className="inline-flex items-center gap-1 hover:text-[var(--brand-ink)] transition-colors"
+                    >
+                      {col.label}
+                      {isSorted ? (
+                        sortState.direction === 'asc' ? (
+                          <ChevronUp aria-hidden="true" className="h-3.5 w-3.5" />
+                        ) : (
+                          <ChevronDown aria-hidden="true" className="h-3.5 w-3.5" />
+                        )
                       ) : (
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      )
-                    ) : (
-                      <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />
-                    )}
-                  </button>
-                ) : (
-                  col.label
-                )}
-              </TableHead>
-            ))}
+                        <ChevronsUpDown aria-hidden="true" className="h-3.5 w-3.5 opacity-40" />
+                      )}
+                    </button>
+                  ) : (
+                    col.label
+                  )}
+                </TableHead>
+              );
+            })}
           </TableRow>
         </TableHeader>
         <TableBody>

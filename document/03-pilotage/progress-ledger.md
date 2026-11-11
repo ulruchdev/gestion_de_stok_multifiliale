@@ -273,3 +273,35 @@ Terminé (branche `fix/GS-1244-parite-contrat-auth`, ticket **#1244**). Audit e2
 | Hors périmètre | Conteneur `stockmaster-api` du compose déployé avec un fat jar sans modules métier (rebuild image à part) ; `/utilisateurs/me` → 405 (aucun appel front, non bloquant) | ⚠️ |
 
 *Dernière mise à jour : 30 octobre 2026 — EPIC 1 : parité contrat auth GS-1244 (2 fixes backend, 6 corrections front, e2e live vert)*
+
+## Frontend — Audit, guards & socle de tests (11/11/2026)
+
+Suite à l'audit `document/03-pilotage/audit-frontend-2026-11.md` : deux corrections et le socle de tests frontend. Aucune page métier n'a été modifiée (elles restent des placeholders).
+
+| Élément | Contenu | Statut |
+|---------|---------|--------|
+| Dépendances vulnérables (non cassant) | `npm audit fix` : `axios` 1.18.1 → **1.21.1**, `follow-redirects` → **1.16.3** (2 CVE high corrigées). Restent `react-router` 6.30 (moderate) et `zod` 3.25 (high), dont le correctif impose des **montées majeures** (7.x / 4.x) — hors périmètre, à planifier | ✅ |
+| Menu ↔ guards alignés | Matrice de rôles centralisée dans `src/app/permissions.ts` (`ROLES_PAR_SECTION`), consommée par `DashboardLayout` **et** par les routes → plus de divergence possible. `/utilisateurs` s'ouvre désormais à `ADMIN_FILIALE` (il était réservé à `ADMIN_GROUPE` alors que le menu l'affichait pour les deux → redirection muette) | ✅ |
+| Contrôle de rôle sur toutes les routes métier | `/catalogue/*`, `/tiers/*`, `/achats/*`, `/ventes/*`, `/stock/*` passent sous `RequireAuth roles=…` (auparavant accessibles par URL à tout utilisateur authentifié, le filtrage du menu était cosmétique) | ✅ |
+| Guard durci | `RequireAuth` extrait dans `src/app/guards/RequireAuth.tsx` : session authentifiée **sans utilisateur** refusée sur une route restreinte (avant : `roles && user && …` laissait passer) | ✅ |
+| Socle de tests | `vitest` 3 + `jsdom` + Testing Library ; `npm test` (run) / `npm run test:watch` ; config dans `vite.config.ts`, setup `src/test/setup.ts` | ✅ |
+| Couverture | **17 tests, 3 fichiers** : `api-client` (en-tête auth, refresh + rejeu + rotation, file d'attente mono-refresh, purge + redirection si échec, pas de refresh sur `/auth/*`), `useAuthStore` (restauration, session corrompue, login, logout local), `RequireAuth` (login/dashboard/rôle autorisé/sans utilisateur/chargement) | ✅ |
+| CI | Étape `Tests` (`npm test`) ajoutée à `ci-frontend.yml` entre typecheck et build | ✅ |
+| Vérifications | `npx tsc --noEmit` 0 erreur · `npm run lint` 0 warning · `npm test` **17/17** · `vite build` OK (~2,3 s) | ✅ |
+| Effet bundle | Entrée `index` 291,6 → **305,1 kB** (95,2 → 99,7 kB gz) — mesuré après la montée `axios`, cause non isolée | ℹ️ |
+
+## Frontend — Accessibilité des composants partagés & montées majeures (11/11/2026)
+
+| Élément | Contenu | Statut |
+|---------|---------|--------|
+| Modale | Piège de focus (Tab/Shift+Tab bouclés), focus initial dans la boîte de dialogue, focus restitué au déclencheur à la fermeture, Échap conservé, ids de titre/description générés par `useId` (plus de collision sur `modal-title`), `type="button"` sur la croix (ne soumet plus un formulaire parent) | ✅ |
+| Champ | Bouton d'icône de fin sorti de `tabIndex={-1}` (donc atteignable au clavier) avec nom accessible configurable (`trailingIconLabel`), `aria-describedby` reliant désormais aussi `warning` et `success` | ✅ |
+| Toasts | Croix avec nom accessible (« Fermer la notification : … »), `type="button"`, barre de progression `aria-hidden` | ✅ |
+| DataTable | `aria-sort` (`none`/`ascending`/`descending`) sur les colonnes triables, icônes de tri `aria-hidden`, compteur de résultats en `aria-live="polite"` | ✅ |
+| Sidebar mobile | `inert` + `aria-hidden` quand elle est hors écran (le clavier ne rentre plus dans un menu invisible), `aria-expanded`/`aria-controls` sur le hamburger, `aria-label` sur ouverture/fermeture, `nav` nommée, Échap ferme, focus entrant/sortant géré, overlay `aria-hidden`, lien d'évitement « Aller au contenu » vers `<main id="contenu-principal">` | ✅ |
+| Montées majeures | `react-router-dom` 6.30 → **7.18.5** (plus d'avertissements de future flags), `zod` 3.25 → **4.6.7**. `@hookform/resolvers` 3.x incompatible avec zod 4 (lit `error.errors`, supprimé) : monté en **5.9.2**, sinon la validation des formulaires levait une exception | ✅ |
+| Vulnérabilités | `npm audit --omit=dev` → **0 vulnérabilité** (contre 5 au début de l'audit) | ✅ |
+| Tests | **25 tests / 7 fichiers** (dont 6 nouveaux sur l'a11y et 2 sur la validation du login) | ✅ |
+| Vérifications | `npx tsc --noEmit` 0 erreur · `npm run lint` 0 warning · `npm test` **25/25** · `npm run build` OK · `npm audit --omit=dev` 0 | ✅ |
+| Effet bundle | `index` 305,1 → **322,9 kB** (99,7 → 106,1 kB gz) et chunk partagé `style` 95,8 → **126,7 kB** (26,4 → 38,6 kB gz) — mesuré, dû aux montées react-router 7 / zod 4 / resolver 5 | ℹ️ |
+| Hors périmètre | `Tabs` reste sans navigation clavier par flèches (non demandé) ; CSP, ErrorBoundary, 404 et jeton en `localStorage` inchangés (cf. audit) | ⚠️ |
