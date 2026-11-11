@@ -262,7 +262,22 @@ Pipeline CI (automatique après push) :
 ### 4.1 Jobs du pipeline
 
 Le pipeline CI du backend (`.github/workflows/ci-backend.yml`) exécute les jobs de build + tests Maven ;
-le pipeline frontend (`.github/workflows/ci-frontend.yml`) exécute le build Vite + TypeScript typecheck.
+le pipeline frontend (`.github/workflows/ci-frontend.yml`) exécute lint, TypeScript typecheck, **tests Vitest** et build Vite.
+
+#### Tests frontend (Vitest + Testing Library)
+
+Socle posé le 11/11/2026 (`document/03-pilotage/audit-frontend-2026-11.md`) : `npm test` exécute Vitest en environnement `jsdom`
+(configuration dans `vite.config.ts`, setup `src/test/setup.ts`). Périmètre couvert aujourd'hui — 17 tests, les zones
+les plus risquées et non testables par le build :
+
+| Fichier | Ce qui est vérifié |
+|---|---|
+| `src/shared/lib/api-client.test.ts` | En-tête `Authorization`, refresh sur 401 + rejeu, rotation du refresh token, file d'attente (un seul refresh pour N 401), purge + redirection si refresh échoue, pas de refresh sur `/auth/*` |
+| `src/features/auth/useAuthStore.test.ts` | Restauration de session, session corrompue purgée, login (persistance des 3 clés), logout local même si l'appel serveur échoue |
+| `src/app/guards/RequireAuth.test.tsx` | Redirection `/login` si non authentifié, `/dashboard` si rôle hors périmètre, passage du rôle autorisé, session sans utilisateur refusée, état de chargement |
+
+Convention : fichiers `*.test.ts(x)` colocalisés avec la cible ; les nouveaux écrans métier doivent être accompagnés
+de leurs tests de comportement (règle projet : pas de page sans test de son état critique).
 
 #### Job 1 : `Build & Test`
 

@@ -273,3 +273,19 @@ Terminé (branche `fix/GS-1244-parite-contrat-auth`, ticket **#1244**). Audit e2
 | Hors périmètre | Conteneur `stockmaster-api` du compose déployé avec un fat jar sans modules métier (rebuild image à part) ; `/utilisateurs/me` → 405 (aucun appel front, non bloquant) | ⚠️ |
 
 *Dernière mise à jour : 30 octobre 2026 — EPIC 1 : parité contrat auth GS-1244 (2 fixes backend, 6 corrections front, e2e live vert)*
+
+## Frontend — Audit, guards & socle de tests (11/11/2026)
+
+Suite à l'audit `document/03-pilotage/audit-frontend-2026-11.md` : deux corrections et le socle de tests frontend. Aucune page métier n'a été modifiée (elles restent des placeholders).
+
+| Élément | Contenu | Statut |
+|---------|---------|--------|
+| Dépendances vulnérables (non cassant) | `npm audit fix` : `axios` 1.18.1 → **1.21.1**, `follow-redirects` → **1.16.3** (2 CVE high corrigées). Restent `react-router` 6.30 (moderate) et `zod` 3.25 (high), dont le correctif impose des **montées majeures** (7.x / 4.x) — hors périmètre, à planifier | ✅ |
+| Menu ↔ guards alignés | Matrice de rôles centralisée dans `src/app/permissions.ts` (`ROLES_PAR_SECTION`), consommée par `DashboardLayout` **et** par les routes → plus de divergence possible. `/utilisateurs` s'ouvre désormais à `ADMIN_FILIALE` (il était réservé à `ADMIN_GROUPE` alors que le menu l'affichait pour les deux → redirection muette) | ✅ |
+| Contrôle de rôle sur toutes les routes métier | `/catalogue/*`, `/tiers/*`, `/achats/*`, `/ventes/*`, `/stock/*` passent sous `RequireAuth roles=…` (auparavant accessibles par URL à tout utilisateur authentifié, le filtrage du menu était cosmétique) | ✅ |
+| Guard durci | `RequireAuth` extrait dans `src/app/guards/RequireAuth.tsx` : session authentifiée **sans utilisateur** refusée sur une route restreinte (avant : `roles && user && …` laissait passer) | ✅ |
+| Socle de tests | `vitest` 3 + `jsdom` + Testing Library ; `npm test` (run) / `npm run test:watch` ; config dans `vite.config.ts`, setup `src/test/setup.ts` | ✅ |
+| Couverture | **17 tests, 3 fichiers** : `api-client` (en-tête auth, refresh + rejeu + rotation, file d'attente mono-refresh, purge + redirection si échec, pas de refresh sur `/auth/*`), `useAuthStore` (restauration, session corrompue, login, logout local), `RequireAuth` (login/dashboard/rôle autorisé/sans utilisateur/chargement) | ✅ |
+| CI | Étape `Tests` (`npm test`) ajoutée à `ci-frontend.yml` entre typecheck et build | ✅ |
+| Vérifications | `npx tsc --noEmit` 0 erreur · `npm run lint` 0 warning · `npm test` **17/17** · `vite build` OK (~2,3 s) | ✅ |
+| Effet bundle | Entrée `index` 291,6 → **305,1 kB** (95,2 → 99,7 kB gz) — mesuré après la montée `axios`, cause non isolée | ℹ️ |
