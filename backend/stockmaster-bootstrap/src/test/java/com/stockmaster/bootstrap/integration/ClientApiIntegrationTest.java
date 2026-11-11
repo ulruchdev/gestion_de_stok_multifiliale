@@ -10,6 +10,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -144,6 +145,38 @@ class ClientApiIntegrationTest extends ApiIntegrationTestSupport {
         assertThat(data(rechercheA).path("totalElements").asLong()).isEqualTo(1);
     }
 
+    // ─── RBAC — CAISSIER en lecture seule ───────────────────────────────────
+
+    @Test
+    @DisplayName("RBAC — un CAISSIER lit les clients mais ne peut pas en créer (403 SEC_001)")
+    void caissierLectureSeule() throws Exception {
+        String suffixe = suffixe();
+        Tenant caissier = creerCaissier(tenantA, suffixe);
+
+        // Le CAISSIER consulte la liste et la recherche : autorisé (comptoir).
+        ResponseEntity<String> liste = echanger(HttpMethod.GET,
+                "/api/v1/clients?page=0&size=10", null, caissier);
+        assertThat(liste.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(data(liste).path("content")).isNotNull();
+
+        ResponseEntity<String> recherche = echanger(HttpMethod.GET,
+                "/api/v1/clients?search=Caissier" + suffixe, null, caissier);
+        assertThat(recherche.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // L'écriture est refusée par @PreAuthorize (rôle absent de la liste).
+        String nom = "Interdit" + suffixe;
+        ResponseEntity<String> creation = echanger(HttpMethod.POST, "/api/v1/clients",
+                Map.of("nom", nom, "telephone", "+23769600" + chiffres(4)), caissier);
+
+        assertThat(creation.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(erreurCode(creation)).isEqualTo("SEC_001");
+
+        // Le refus intervient avant toute écriture : aucun client en base.
+        Integer enBase = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM client WHERE nom = ?", Integer.class, nom);
+        assertThat(enBase).isZero();
+    }
+
     // ─── US-042 ──────────────────────────────────────────────────────────────
 
     @Test
@@ -247,5 +280,38 @@ class ClientApiIntegrationTest extends ApiIntegrationTestSupport {
                 "/api/v1/clients/" + clientId, null, tenantA);
         assertThat(secondDelete.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(erreurCode(secondDelete)).isEqualTo("RES_001");
+    }
+
+    // ─── helpers ─────────────────────────────────────────────────────────────
+
+    /** Crée un vrai compte CAISSIER (US-022) dans le tenant puis s'y connecte. */
+    private Tenant creerCaissier(Tenant admin, String suffixe) throws Exception {
+        String email = "caissier-" + suffixe + "@stockmaster.test";
+
+        Map<String, Object> employe = new HashMap<>();
+        employe.put("prenom", "Caissier");
+        employe.put("nom", "Integration");
+        employe.put("email", email);
+        employe.put("role", "CAISSIER");
+        employe.put("motDePasseProvisoire", MOT_DE_PASSE);
+
+        ResponseEntity<String> creation = echanger(HttpMethod.POST,
+                "/api/v1/utilisateurs/employes", employe, admin);
+        assertThat(creation.getStatusCode())
+                .as("Création CAISSIER : %s", creation.getBody())
+                .isEqualTo(HttpStatus.CREATED);
+
+        ResponseEntity<String> login = restTemplate.postForEntity("/api/v1/auth/login",
+                json(Map.of("email", email, "motDePasse", MOT_DE_PASSE), null), String.class);
+        assertThat(login.getStatusCode())
+                .as("Login CAISSIER : %s", login.getBody())
+                .isEqualTo(HttpStatus.OK);
+
+        JsonNode donnees = data(login);
+        assertThat(donnees.path("role").asText()).isEqualTo("CAISSIER");
+        assertThat(donnees.path("utilisateur").path("entrepriseId").asLong())
+                .isEqualTo(admin.entrepriseId());
+
+        return new Tenant(donnees.path("accessToken").asText(), admin.entrepriseId());
     }
 }
