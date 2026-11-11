@@ -1,6 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth';
-import { RoleUtilisateur } from '@/shared/types';
 import { Logo } from '@/shared/ui/Logo';
 import {
   LayoutDashboard,
@@ -18,13 +17,15 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/shared/lib/utils';
+import { ROLES_PAR_SECTION } from '../permissions';
+import type { RoleUtilisateur } from '@/shared/types';
 
 // Définition des entrées de menu par rôle (cf. GS-IA-2026-01)
 interface MenuEntry {
   label: string;
   path: string;
   icon: React.ComponentType<{ className?: string }>;
-  roles: RoleUtilisateur[];
+  roles: readonly RoleUtilisateur[];
   badge?: number;
 }
 
@@ -33,55 +34,55 @@ const menuStructure: MenuEntry[] = [
     label: 'Dashboard',
     path: '/dashboard',
     icon: LayoutDashboard,
-    roles: Object.values(RoleUtilisateur),
+    roles: ROLES_PAR_SECTION.dashboard,
   },
   {
     label: 'Groupe',
     path: '/groupe/filiales',
     icon: Building2,
-    roles: [RoleUtilisateur.ADMIN_GROUPE],
+    roles: ROLES_PAR_SECTION.groupe,
   },
   {
     label: 'Transferts',
     path: '/transferts',
     icon: ArrowLeftRight,
-    roles: [RoleUtilisateur.ADMIN_GROUPE],
+    roles: ROLES_PAR_SECTION.transferts,
   },
   {
     label: 'Catalogue',
     path: '/catalogue/articles',
     icon: Package,
-    roles: [RoleUtilisateur.ADMIN_FILIALE, RoleUtilisateur.GESTIONNAIRE_STOCK],
+    roles: ROLES_PAR_SECTION.catalogue,
   },
   {
     label: 'Tiers',
     path: '/tiers/clients',
     icon: Users,
-    roles: [RoleUtilisateur.ADMIN_FILIALE, RoleUtilisateur.COMMERCIAL, RoleUtilisateur.RESP_ACHATS],
+    roles: ROLES_PAR_SECTION.tiers,
   },
   {
     label: 'Achats',
     path: '/achats/commandes',
     icon: ShoppingCart,
-    roles: [RoleUtilisateur.ADMIN_FILIALE, RoleUtilisateur.RESP_ACHATS],
+    roles: ROLES_PAR_SECTION.achats,
   },
   {
     label: 'Ventes',
     path: '/ventes/commandes-client',
     icon: Receipt,
-    roles: [RoleUtilisateur.ADMIN_FILIALE, RoleUtilisateur.COMMERCIAL, RoleUtilisateur.CAISSIER],
+    roles: ROLES_PAR_SECTION.ventes,
   },
   {
     label: 'Stock',
     path: '/stock/mouvements',
     icon: Warehouse,
-    roles: [RoleUtilisateur.ADMIN_FILIALE, RoleUtilisateur.GESTIONNAIRE_STOCK],
+    roles: ROLES_PAR_SECTION.stock,
   },
   {
     label: 'Utilisateurs',
     path: '/utilisateurs',
     icon: Users,
-    roles: [RoleUtilisateur.ADMIN_GROUPE, RoleUtilisateur.ADMIN_FILIALE],
+    roles: ROLES_PAR_SECTION.utilisateurs,
   },
 ];
 
