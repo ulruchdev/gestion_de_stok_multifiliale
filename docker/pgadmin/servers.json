@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "StockMaster dev (postgres)",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "stockmaster_dev",
+      "Username": "stockmaster",
+      "Password": "stockmaster",
+      "SSLMode": "prefer"
+    }
+  }
+}

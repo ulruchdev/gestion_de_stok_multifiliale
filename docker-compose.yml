@@ -109,10 +109,53 @@ services:
     networks:
       - stockmaster-network
 
+  # ========== Portainer (console Docker, dev uniquement) ==========
+  # Accès : https://localhost:9443 — le socket Docker est monté :
+  # ne jamais exposer ce service hors de la machine de développement.
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: stockmaster-portainer
+    ports:
+      - "9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer-data:/data
+    restart: unless-stopped
+    networks:
+      - stockmaster-network
+
+  # ========== pgAdmin 4 (console PostgreSQL, dev uniquement) ==========
+  # Accès : http://localhost:5050 — connexion « StockMaster dev (postgres) »
+  # déjà déclarée (docker/pgadmin/servers.json).
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: stockmaster-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@stockmaster.dev}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-stockmaster}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      # Par défaut l'image écoute en IPv6 seul ([::]:80) : docker-proxy en IPv4
+      # refuse alors la connexion depuis localhost.
+      PGADMIN_CONFIG_DEFAULT_SERVER: '"0.0.0.0"'
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - stockmaster-network
+
 volumes:
   postgres-data:
   redis-data:
   minio-data:
+  portainer-data:
+  pgadmin-data:
 
 networks:
   stockmaster-network:
