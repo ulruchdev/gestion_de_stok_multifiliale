@@ -48,7 +48,7 @@ interface DataTableProps<T> {
   className?: string;
 }
 
-function DataTable<T extends Record<string, unknown>>({
+function DataTable<T>({
   columns,
   data,
   keyExtractor,
@@ -84,8 +84,8 @@ function DataTable<T extends Record<string, unknown>>({
   const sortedData = useMemo(() => {
     if (!sortState) return data;
     return [...data].sort((a, b) => {
-      const aVal = a[sortState.key];
-      const bVal = b[sortState.key];
+      const aVal = (a as Record<string, unknown>)[sortState.key];
+      const bVal = (b as Record<string, unknown>)[sortState.key];
       if (aVal == null) return 1;
       if (bVal == null) return -1;
       const comparison = String(aVal).localeCompare(String(bVal), 'fr', { numeric: true });
@@ -213,7 +213,9 @@ function DataTable<T extends Record<string, unknown>>({
             <TableRow key={keyExtractor(item)}>
               {columns.map((col) => (
                 <TableCell key={col.key} className={col.className}>
-                  {col.render ? col.render(item) : String(item[col.key] ?? '')}
+                  {col.render
+                    ? col.render(item)
+                    : String((item as Record<string, unknown>)[col.key] ?? '')}
                 </TableCell>
               ))}
             </TableRow>

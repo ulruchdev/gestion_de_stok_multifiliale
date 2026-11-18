@@ -6,3 +6,8 @@ dist/
 public/mockServiceWorker.js
 *.d.ts
 !src/vite-env.d.ts
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/

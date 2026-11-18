@@ -6,6 +6,8 @@ import com.stockmaster.catalogue.dto.request.ArticleCreateRequest;
 import com.stockmaster.catalogue.dto.request.ArticleUpdateRequest;
 import com.stockmaster.catalogue.dto.response.ArticleListResponse;
 import com.stockmaster.catalogue.dto.response.ArticleResponse;
+import com.stockmaster.catalogue.port.StockDisponiblePort;
+import com.stockmaster.catalogue.port.StockDisponiblePort.LigneStock;
 import com.stockmaster.catalogue.repository.ArticleRepository;
 import com.stockmaster.catalogue.repository.CategorieRepository;
 import com.stockmaster.shared.domain.entity.TenantGroup;
@@ -27,6 +29,9 @@ import org.springframework.data.domain.Sort.Direction;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -67,6 +72,7 @@ public class ArticleService {
     private final TauxTvaAutorises tauxTvaAutorises;
     private final PerimetreCatalogueGuard perimetreCatalogueGuard;
     private final CalculTvaService calculTvaService;
+    private final StockDisponiblePort stockDisponiblePort;
 
     private static final Set<String> ROLES_AUTORISES = Set.of(
             "GESTIONNAIRE_STOCK", "ADMIN_FILIALE", "ADMIN_GROUPE");
@@ -137,20 +143,7 @@ public class ArticleService {
         log.info("US-031 : article {} ({}) créé dans le groupe {} par l'utilisateur {}",
                 cree.getCodeArticle(), cree.getId(), groupId, principal.getUserId());
 
-        return ArticleResponse.builder()
-                .id(cree.getId())
-                .codeArticle(cree.getCodeArticle())
-                .designation(cree.getDesignation())
-                .categorieId(categorie.getId())
-                .prixAchatHt(cree.getPrixAchatHt())
-                .prixVenteHt(cree.getPrixVenteHt())
-                .tauxTva(cree.getTauxTva())
-                .prixVenteTtc(cree.getPrixVenteTtc())
-                .margeBrutePct(margeBrutePct(cree.getPrixAchatHt(), cree.getPrixVenteHt()))
-                .seuilAlerte(cree.getSeuilAlerte())
-                .actif(cree.getActif())
-                .groupId(groupId)
-                .build();
+        return toResponse(cree, stockParArticle(principal, cree.getId()));
     }
 
     // ===== US-032 — lire (paginé + search) ==================================
@@ -183,7 +176,14 @@ public class ArticleService {
             pageArticle = articleRepository.findAllByGroupeIdAndSupprimeFalse(groupId, pageable);
         }
 
-        Page<ArticleResponse> mappee = pageArticle.map(this::toResponse);
+        // US-032/US-033 : stock réel + badge d'alerte de la page courante,
+        // en une requête (port stock), jamais calculés côté catalogue.
+        List<Long> articleIds = pageArticle.getContent().stream()
+                .map(Article::getId)
+                .toList();
+        Map<Long, LigneStock> stocks = stockParArticle(principal, articleIds);
+
+        Page<ArticleResponse> mappee = pageArticle.map(a -> toResponse(a, stocks));
         return ArticleListResponse.from(mappee);
     }
 
@@ -201,7 +201,7 @@ public class ArticleService {
                 .filter(a -> a.getGroupe() != null && groupId.equals(a.getGroupe().getId()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.RES_ENTITY_NOT_FOUND));
 
-        return toResponse(article);
+        return toResponse(article, stockParArticle(principal, article.getId()));
     }
 
     // ===== US-034 — modifier ================================================
@@ -281,7 +281,7 @@ public class ArticleService {
         log.info("US-034 : article {} ({}) modifié dans le groupe {} par l'utilisateur {}",
                 modifie.getCodeArticle(), modifie.getId(), groupId, principal.getUserId());
 
-        return toResponse(modifie);
+        return toResponse(modifie, stockParArticle(principal, modifie.getId()));
     }
 
     // ===== US-035 — supprimer (archivage logique) ===========================
@@ -314,12 +314,39 @@ public class ArticleService {
         log.info("US-035 : article {} ({}) supprimé (logique) dans le groupe {} par l'utilisateur {}",
                 supprime.getCodeArticle(), supprime.getId(), groupId, principal.getUserId());
 
-        return toResponse(supprime);
+        return toResponse(supprime, stockParArticle(principal, supprime.getId()));
     }
 
     // ===== helpers partagés =================================================
 
+    /**
+     * Stock réel et statut d'alerte de la filiale du JWT pour les articles
+     * demandés. Rend une map vide si le principal n'a pas d'entreprise : aucun
+     * stock ne peut être attribué sans filiale, et le catalogue n'invente rien.
+     */
+    /** Variante mono-article — un identifiant non encore persisté n'a pas de stock. */
+    private Map<Long, LigneStock> stockParArticle(StockMasterPrincipal principal, Long articleId) {
+        return articleId == null
+                ? Map.of()
+                : stockParArticle(principal, List.of(articleId));
+    }
+
+    private Map<Long, LigneStock> stockParArticle(StockMasterPrincipal principal,
+                                                  Collection<Long> articleIds) {
+        Long entrepriseId = principal != null ? principal.getEntrepriseId() : null;
+        if (entrepriseId == null || articleIds == null || articleIds.isEmpty()) {
+            return Map.of();
+        }
+        return stockDisponiblePort.stockParArticle(entrepriseId, articleIds);
+    }
+
     private ArticleResponse toResponse(Article a) {
+        return toResponse(a, Map.of());
+    }
+
+    private ArticleResponse toResponse(Article a, Map<Long, LigneStock> stocks) {
+        // Map.of() interdit la clé null : un article non encore persisté n'a pas d'id.
+        LigneStock stock = a.getId() != null ? stocks.get(a.getId()) : null;
         return ArticleResponse.builder()
                 .id(a.getId())
                 .codeArticle(a.getCodeArticle())
@@ -333,10 +360,10 @@ public class ArticleService {
                 .seuilAlerte(a.getSeuilAlerte())
                 .actif(a.getActif())
                 .groupId(a.getGroupe() != null ? a.getGroupe().getId() : null)
-                // stockActuel / statutAlerte : null en V1 (EPIC 8 pas encore livré,
-                // voir javadoc de ArticleResponse).
-                .stockActuel(null)
-                .statutAlerte(null)
+                // Alimentés par le port stock quand la filiale du JWT est connue
+                // (US-032/US-033) ; restent null sinon, jamais calculés ici.
+                .stockActuel(stock != null ? stock.stockActuel() : null)
+                .statutAlerte(stock != null ? stock.statutAlerte() : null)
                 .build();
     }
 

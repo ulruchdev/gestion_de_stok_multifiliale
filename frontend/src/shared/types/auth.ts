@@ -83,6 +83,8 @@ export interface ProblemResponse {
   status: number;
   detail: string;
   instance: string;
+  /** Extension StockMaster (RFC 7807) : code métier, ex. GRP_002. */
+  errorCode?: string;
   timestamp: string;
   errors?: Record<string, string[]>;
 }

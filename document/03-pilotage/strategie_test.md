@@ -267,7 +267,7 @@ le pipeline frontend (`.github/workflows/ci-frontend.yml`) exécute lint, TypeSc
 #### Tests frontend (Vitest + Testing Library)
 
 Socle posé le 11/11/2026 (`document/03-pilotage/audit-frontend-2026-11.md`) : `npm test` exécute Vitest en environnement `jsdom`
-(configuration dans `vite.config.ts`, setup `src/test/setup.ts`). Périmètre couvert aujourd'hui — 25 tests, les zones
+(configuration dans `vite.config.ts`, setup `src/test/setup.ts`). Périmètre couvert aujourd'hui — 41 tests, les zones
 les plus risquées et non testables par le build :
 
 | Fichier | Ce qui est vérifié |
@@ -279,9 +279,29 @@ les plus risquées et non testables par le build :
 | `src/shared/ui/Input.test.tsx` | Bouton d'icône atteignable au clavier avec un nom accessible, liaison description/erreur via `aria-describedby` |
 | `src/shared/ui/DataTable.test.tsx` | `aria-sort` annoncé et inversé au clic sur l'en-tête triable |
 | `src/app/pages/LoginPage.test.tsx` | Validation réelle du formulaire (zod 4 + resolver 5) : champs obligatoires et email mal formé |
+| `src/features/catalogue/api.test.ts` | Paramètres envoyés à `GET /articles` (pagination, tri, recherche nettoyée) et `/categories`, déballage de l'enveloppe `ApiResponse` |
+| `src/features/catalogue/lib/format.test.ts` | XAF `fr-CM` sans décimale, pourcentages, stocks, valeurs absentes, 4 statuts d'alerte |
+| `src/features/catalogue/lib/erreurs.test.ts` | Message métier prioritaire sur le code (`GRP_002`), repli RFC 7807, détection 404 `RES_001` |
+| `src/features/catalogue/pages/ArticlesPage.test.tsx` | Rendu réel de la liste (catégorie, prix TTC, badge d'alerte), état d'URL `?q&page` → paramètres API, erreur métier + bouton Réessayer |
 
 Convention : fichiers `*.test.ts(x)` colocalisés avec la cible ; les nouveaux écrans métier doivent être accompagnés
 de leurs tests de comportement (règle projet : pas de page sans test de son état critique).
+
+#### E2E frontend (Playwright + Chromium)
+
+`npm run test:e2e` exécute `frontend/e2e/*.spec.ts` sur **backend Spring Boot réel** (`:8080`) et Vite (`:5173`).
+`playwright.config.ts` démarre Vite ; PostgreSQL/Redis et l'API doivent être lancés au préalable. Aucun MSW.
+
+| Scénario | Ce qui est vérifié |
+|---|---|
+| Liste réelle | Entreprise jetable créée par API (1 catégorie, 22 articles, 1 caissier), ligne réelle : code, catégorie, prix TTC XAF, stock `0` et badge `Rupture` fournis par le module stock |
+| Recherche | Filtre serveur `?q=` (résultat unique) puis aucun résultat (`Aucun élément ne correspond…`) |
+| Pagination | `Page 1 sur 2` → clic page 2 → URL `page=2`, `Page 2 sur 2`, article de fin de liste |
+| Chargement / erreur | Squelette `aria-busy` sur fiche retardée ; échec réseau de la liste → état d'erreur, puis `Réessayer` recharge les lignes |
+| Refus par rôle | CAISSIER sur `/catalogue/categories` → redirection `/dashboard` et section absente du menu |
+
+Les E2E ne sont pas dans `ci-frontend.yml` : ils exigent une base PostgreSQL et l'API métier, indisponibles dans ce job.
+Ils se lancent en local/CI dédiée après démarrage du backend.
 
 #### Job 1 : `Build & Test`
 
@@ -603,6 +623,7 @@ curl http://localhost:8080/actuator/health
 | 2026-10-28 | Codebuff | Résolution du piège réseau local (5432/6379 muets) | `StockMasterApplicationTest` échouait en `EOFException` SSL quand le relais `docker-proxy` de l'hôte ne répondait plus (chaque `SYN` accepté puis `FIN+RST`, le proxy ne dial-ait jamais le conteneur) et l'ordre des règles DNAT dans la chaîne `DOCKER` pouvait pointer vers les mauvais conteneurs. **Correctifs conservés sur l'hôte** : `"userland-proxy": false` dans `/var/snap/docker/3613/config/daemon.json` (le trafic loopback passe alors par le DNAT iptables de la chaîne `DOCKER`) et reconstruction du réseau via `docker compose up -d --force-recreate` pour régénérer des règles DNAT cohérentes. ⚠️ si un `snap refresh docker` crée une nouvelle révision, son `config/daemon.json` repart des défauts — reposer `userland-proxy: false` puis `sudo snap restart docker`. `mvn test` fonctionne à nouveau **sans aucun workaround d'env** (reactor 545/545 vert, 2026-10-28). L'ancien workaround `DB_HOST=<IP conteneur>` n'est plus nécessaire |
 | 2026-10-28 | baudrel | Port d'écriture stock GS-1240 : +12 tests `EcritureStockServiceTest` (module stock 20 → 32, reactor 577/577) ; whitelist ArchUnit étendue à `stock.port..` + `stock.domain.enums..` | Ticket #1240 — contrat inter-modules pour EPIC 8 (achat/vente/transferts écrivent le stock par ce port uniquement) |
 | 2026-11-11 | Codebuff | Compte 771 → **783** (bootstrap 7 → 19) avec `ClientApiIntegrationTest` (6 tests) et `FournisseurApiIntegrationTest` (6 tests) | Premiers tests d'intégration métier du projet : CRUD clients US-040→043 + RBAC CAISSIER et fournisseurs US-036→039 sur PostgreSQL réel (isolation tenant, soft delete, 409 `RES_005`), là où les mocks ne prouvent ni le SQL, ni les FK, ni la lecture des états de commande par les adaptateurs |
+| 2026-11-11 | Codebuff | Frontend **25 → 41 tests** (16 tests catalogue) + **5 E2E Playwright** ; backend : `ArticleServiceTest` enrichi (2 tests port stock) + `StockDisponibleAdapterTest` (2 tests) | US-F030/F032/F033 : première consommation réelle de l'API catalogue. Les E2E valident le contrat complet (enveloppes, recherche, pagination, stock `0`/`RUPTURE`) et le RBAC frontend sur le backend réel, là où les tests unitaires ne prouvent ni le proxy Vite, ni l'enrichissement inter-modules |
 ---
 
 > **Règle de gestion :** Ce document doit être mis à jour à chaque nouveau module ajouté, nouveau test écrit, ou changement dans la stack technique. Les commandes ci-dessus doivent toujours refléter l'état réel du projet.

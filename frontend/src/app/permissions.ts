@@ -12,7 +12,11 @@ export const ROLES_PAR_SECTION = {
   dashboard: TOUS_LES_ROLES,
   groupe: [RoleUtilisateur.ADMIN_GROUPE],
   transferts: [RoleUtilisateur.ADMIN_GROUPE],
-  catalogue: [RoleUtilisateur.ADMIN_FILIALE, RoleUtilisateur.GESTIONNAIRE_STOCK],
+  catalogue: [
+    RoleUtilisateur.ADMIN_GROUPE,
+    RoleUtilisateur.ADMIN_FILIALE,
+    RoleUtilisateur.GESTIONNAIRE_STOCK,
+  ],
   tiers: [
     RoleUtilisateur.ADMIN_FILIALE,
     RoleUtilisateur.COMMERCIAL,

@@ -39,17 +39,17 @@ public class ArticleResponse {
     private Long groupId;
 
     /**
-     * US-032/033 — stock réel calculé à la volée (DEC-023 : Σ ENTREE − Σ SORTIE
-     * depuis `mouvement_stock`). Rempli par {@code stockmaster-stock} quand
-     * {@code CalculStockService} (EPIC 8) sera livré — {@code null} en V1 : le
-     * module catalogue ne référence jamais le repository d'un autre module
-     * (communication inter-modules = Spring Events uniquement).
+     * US-032/033 — stock réel de l'article dans l'entreprise du JWT, calculé à
+     * la volée (DEC-023 : Σ ENTREE − Σ SORTIE depuis {@code mouvement_stock})
+     * et fourni par {@code StockDisponiblePort}. {@code null} si le principal
+     * n'a pas de filiale exploitable : le catalogue ne calcule jamais de stock.
      */
     private BigDecimal stockActuel;
 
     /**
-     * US-033 — statut d'alerte (REF §4.2 : NORMAL / BAS / RUPTURE / ANOMALIE).
-     * Également {@code null} en V1, faute de collection de mouvements (EPIC 8).
+     * US-033 — statut d'alerte (REF §4.2 : NORMAL / BAS / RUPTURE / ANOMALIE),
+     * dérivé par le module stock — {@code null} dans les mêmes conditions que
+     * {@link #stockActuel}.
      */
     private String statutAlerte;
 }

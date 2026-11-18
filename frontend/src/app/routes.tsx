@@ -14,6 +14,9 @@ const InscriptionEntrepriseUniquePage = lazy(() => import('./pages/InscriptionEn
 const InscriptionGroupePage = lazy(() => import('./pages/InscriptionGroupePage').then(m => ({ default: m.InscriptionGroupePage })));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
+const ArticlesPage = lazy(() => import('@/features/catalogue').then(m => ({ default: m.ArticlesPage })));
+const ArticleDetailPage = lazy(() => import('@/features/catalogue').then(m => ({ default: m.ArticleDetailPage })));
+const CategoriesPage = lazy(() => import('@/features/catalogue').then(m => ({ default: m.CategoriesPage })));
 
 // Placeholder pour les pages non encore implémentées
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -78,10 +81,10 @@ export function AppRoutes() {
 
           {/* Catalogue — GS-IA-2026-01 §2-3 */}
           <Route element={<RequireAuth roles={ROLES_PAR_SECTION.catalogue} />}>
-            <Route path="/catalogue/articles" element={<PlaceholderPage title="Articles" />} />
+            <Route path="/catalogue/articles" element={<Suspense fallback={<PageLoader />}><ArticlesPage /></Suspense>} />
             <Route path="/catalogue/articles/nouveau" element={<PlaceholderPage title="Nouvel article" />} />
-            <Route path="/catalogue/articles/:id" element={<PlaceholderPage title="Détail article" />} />
-            <Route path="/catalogue/categories" element={<PlaceholderPage title="Catégories" />} />
+            <Route path="/catalogue/articles/:id" element={<Suspense fallback={<PageLoader />}><ArticleDetailPage /></Suspense>} />
+            <Route path="/catalogue/categories" element={<Suspense fallback={<PageLoader />}><CategoriesPage /></Suspense>} />
           </Route>
 
           {/* Tiers — GS-IA-2026-01 §2, 4 */}
