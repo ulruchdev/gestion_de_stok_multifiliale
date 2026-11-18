@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   Receipt,
   Warehouse,
+  AlertTriangle,
   ArrowLeftRight,
   UserCircle,
   LogOut,
@@ -76,6 +77,12 @@ const menuStructure: MenuEntry[] = [
     label: 'Stock',
     path: '/stock/mouvements',
     icon: Warehouse,
+    roles: ROLES_PAR_SECTION.stock,
+  },
+  {
+    label: 'Alertes stock',
+    path: '/stock/alertes',
+    icon: AlertTriangle,
     roles: ROLES_PAR_SECTION.stock,
   },
   {
