@@ -83,7 +83,7 @@ const menuStructure: MenuEntry[] = [
     label: 'Alertes stock',
     path: '/stock/alertes',
     icon: AlertTriangle,
-    roles: ROLES_PAR_SECTION.stock,
+    roles: ROLES_PAR_SECTION.alertesStock,
   },
   {
     label: 'Utilisateurs',

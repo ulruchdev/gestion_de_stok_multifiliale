@@ -113,9 +113,13 @@ export function AppRoutes() {
           {/* Stock — GS-IA-2026-01 §2-3 */}
           <Route element={<RequireAuth roles={ROLES_PAR_SECTION.stock} />}>
             <Route path="/stock/mouvements" element={<PlaceholderPage title="Mouvements de stock" />} />
-            {/* US-F091 — liste dédiée des alertes (distincte du badge de fiche article) */}
-            <Route path="/stock/alertes" element={<Suspense fallback={<PageLoader />}><AlertesStockPage /></Suspense>} />
             <Route path="/stock/corrections" element={<PlaceholderPage title="Corrections manuelles" />} />
+          </Route>
+
+          {/* US-F091 — liste dédiée des alertes (distincte du badge de fiche article).
+              Tout utilisateur authentifié, comme GET /api/v1/stock (US-051). */}
+          <Route element={<RequireAuth roles={ROLES_PAR_SECTION.alertesStock} />}>
+            <Route path="/stock/alertes" element={<Suspense fallback={<PageLoader />}><AlertesStockPage /></Suspense>} />
           </Route>
 
           {/* Utilisateurs — Admin Groupe (groupe) et Admin Filiale (sa filiale) */}
