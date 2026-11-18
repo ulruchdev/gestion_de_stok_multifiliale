@@ -25,6 +25,7 @@ function renderAt(path: string, roles?: readonly RoleUtilisateur[]) {
       <Routes>
         <Route element={<RequireAuth roles={roles} />}>
           <Route path="/stock/mouvements" element={<div>Mouvements de stock</div>} />
+          <Route path="/stock/alertes" element={<div>Alertes de stock</div>} />
         </Route>
         <Route path="/dashboard" element={<div>Tableau de bord</div>} />
         <Route path="/login" element={<div>Connexion</div>} />
@@ -91,6 +92,17 @@ describe('RequireAuth', () => {
     renderAt('/stock/mouvements');
 
     expect(screen.getByText('Mouvements de stock')).toBeInTheDocument();
+  });
+
+  it('laisse un CAISSIER accéder aux alertes (contrat GET /api/v1/stock, US-051)', () => {
+    useAuthStore.setState({
+      user: makeUser(RoleUtilisateur.CAISSIER),
+      isAuthenticated: true,
+    });
+
+    renderAt('/stock/alertes', ROLES_PAR_SECTION.alertesStock);
+
+    expect(screen.getByText('Alertes de stock')).toBeInTheDocument();
   });
 
   it('affiche un chargement pendant la restauration de session', () => {

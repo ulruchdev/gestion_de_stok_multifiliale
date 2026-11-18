@@ -29,6 +29,10 @@ export const ROLES_PAR_SECTION = {
     RoleUtilisateur.CAISSIER,
   ],
   stock: [RoleUtilisateur.ADMIN_FILIALE, RoleUtilisateur.GESTIONNAIRE_STOCK],
+  // US-F091 : les alertes suivent le contrat de GET /api/v1/stock (US-051),
+  // ouvert à tout utilisateur authentifié — à la différence des écrans stock
+  // opérationnels ci-dessus, réservés à l'admin filiale et au gestionnaire.
+  alertesStock: TOUS_LES_ROLES,
   utilisateurs: [RoleUtilisateur.ADMIN_GROUPE, RoleUtilisateur.ADMIN_FILIALE],
   profil: TOUS_LES_ROLES,
 } as const satisfies Record<string, readonly RoleUtilisateur[]>;
