@@ -56,19 +56,22 @@ export function AlertesStockPage() {
   });
 
   const changerFiltre = (valeur: StatutAlerteFiltre) => {
+    if (valeur === statut) return;
     const params = new URLSearchParams(searchParams);
     if (valeur === STATUT_PAR_DEFAUT) params.delete('statut');
     else params.set('statut', valeur);
     // Un changement de filtre repart toujours de la première page.
     params.delete('page');
-    setSearchParams(params, { replace: true });
+    // Entrée d'historique : le bouton retour ramène au filtre précédent.
+    setSearchParams(params);
   };
 
   const changerPage = (pageCible: number) => {
+    if (pageCible === page) return;
     const params = new URLSearchParams(searchParams);
     if (pageCible > 1) params.set('page', String(pageCible));
     else params.delete('page');
-    setSearchParams(params, { replace: true });
+    setSearchParams(params);
   };
 
   const colonnes = useMemo<Column<StockArticle>[]>(
