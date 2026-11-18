@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import { expect, request as apiRequest, test, type Page } from '@playwright/test';
 
 /**
@@ -76,7 +77,8 @@ test.beforeAll(async () => {
     body: {
       nomEntreprise: `E2E Catalogue ${SUFFIXE}`,
       email,
-      telephone: `+2376${Math.floor(10000000 + Math.random() * 89999999)}`,
+      // CSPRNG : évite l'alerte CodeQL js/insecure-randomness sur un identifiant de tenant.
+      telephone: `+2376${randomInt(10_000_000, 90_000_000)}`,
       adminNom: 'Admin',
       adminPrenom: 'E2E',
       motDePasse: MOT_DE_PASSE,
