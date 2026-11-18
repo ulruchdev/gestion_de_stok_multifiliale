@@ -17,6 +17,7 @@ const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(m 
 const ArticlesPage = lazy(() => import('@/features/catalogue').then(m => ({ default: m.ArticlesPage })));
 const ArticleDetailPage = lazy(() => import('@/features/catalogue').then(m => ({ default: m.ArticleDetailPage })));
 const CategoriesPage = lazy(() => import('@/features/catalogue').then(m => ({ default: m.CategoriesPage })));
+const AlertesStockPage = lazy(() => import('@/features/stock').then(m => ({ default: m.AlertesStockPage })));
 
 // Placeholder pour les pages non encore implémentées
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -112,6 +113,8 @@ export function AppRoutes() {
           {/* Stock — GS-IA-2026-01 §2-3 */}
           <Route element={<RequireAuth roles={ROLES_PAR_SECTION.stock} />}>
             <Route path="/stock/mouvements" element={<PlaceholderPage title="Mouvements de stock" />} />
+            {/* US-F091 — liste dédiée des alertes (distincte du badge de fiche article) */}
+            <Route path="/stock/alertes" element={<Suspense fallback={<PageLoader />}><AlertesStockPage /></Suspense>} />
             <Route path="/stock/corrections" element={<PlaceholderPage title="Corrections manuelles" />} />
           </Route>
 
