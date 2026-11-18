@@ -27,7 +27,9 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
  *       (les FK de commande_fournisseur → article, vente → client…
  *       exigent que les documents référencent les entités du catalogue et des
  *       tiers, cf. DEC-002 ; pour stock, seul le port d'écriture
- *       {@code EcritureStockPort} est exposé — GS-1240, DEC-023).</li>
+ *       {@code EcritureStockPort} est exposé — GS-1240, DEC-023 ; pour vente,
+ *       seul le port de lecture {@code LectureVentePort} est exposé — GS-1251,
+ *       socle reporting R0).</li>
  * </ul>
  *
  * <p>Tout le reste est interdit : un module ne doit JAMAIS toucher aux
@@ -64,7 +66,12 @@ class ModuleDependencyArchTest {
             // prévu pour achat/vente/transferts (les internes du module restent
             // encapsulés — référentiel §4.2 et DEC-023).
             "com.stockmaster.stock.port..",
-            "com.stockmaster.stock.domain.enums.."
+            "com.stockmaster.stock.domain.enums..",
+            // GS-1251 : reporting lit les ventes uniquement via LectureVentePort
+            // (les repositories/services/entités de vente restent encapsulés —
+            // document/03-pilotage/PLAN-LOT-REPORTING-F090-F093.md §2).
+            "com.stockmaster.vente.port..",
+            "com.stockmaster.vente.domain.enums.."
     };
 
     /** Tous les modules fonctionnels + bootstrap (tout ce qui n'est ni self ni shared). */
@@ -112,7 +119,7 @@ class ModuleDependencyArchTest {
         if (!violations.isEmpty()) {
             throw new AssertionError(                    "Dépendances inter-modules interdites détectées "
                             + "(seuls shared et les contrats domain.entity/domain.enums/event/port "
-                            + "de catalogue, tiers, notification, stock sont autorisés) :\n"
+                            + "de catalogue, tiers, notification, stock, vente sont autorisés) :\n"
                     + String.join("\n", violations));
         }
     }
@@ -128,6 +135,24 @@ class ModuleDependencyArchTest {
                     .resideInAnyPackage(allOtherModulePackages("shared"))
                     .because("shared est la base du graphe de dépendances — "
                             + "il ne doit jamais dépendre d'un module fonctionnel ni du bootstrap");
+
+    // ================================================================
+    // Règle 2 bis — reporting ne lit vente que par son port (GS-1251).
+    //           Même garantie que la règle 1, mais ciblée : le message
+    //           d'échec nomme le port à utiliser au lieu de lister tous les
+    //           modules autorisés.
+    // ================================================================
+    @ArchTest
+    static final ArchRule reportingReadsVenteThroughPortOnly =
+            noClasses().that().resideInAPackage("com.stockmaster.reporting..")
+                    .should().dependOnClassesThat()
+                    .resideInAnyPackage(
+                            "com.stockmaster.vente.repository..",
+                            "com.stockmaster.vente.service..",
+                            "com.stockmaster.vente.domain.entity..")
+                    .because("reporting doit passer par LectureVentePort (vente.port) — "
+                            + "les repositories, services et entités de vente restent "
+                            + "encapsulés (GS-1251)");
 
     // ================================================================
     // Règle 3 — auth est une feuille du graphe : il ne consomme
