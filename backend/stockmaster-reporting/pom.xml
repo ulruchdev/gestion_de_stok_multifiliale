@@ -14,5 +14,7 @@
     <name>StockMaster CM — Reporting (statistiques &amp; export)</name>
     <dependencies>
         <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-shared</artifactId></dependency>
+        <!-- GS-1251 : lecture des ventes via le seul port exposé (règle ArchUnit n°1). -->
+        <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-vente</artifactId></dependency>
     </dependencies>
 </project>
