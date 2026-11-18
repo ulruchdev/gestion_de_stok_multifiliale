@@ -56,6 +56,8 @@ describe('AlertesStockPage', () => {
     expect(screen.getByText('RIZ50KG')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
     expect(screen.getByText('10')).toBeInTheDocument();
+    // Le périmètre filiale est annoncé explicitement (pas de vue groupe).
+    expect(screen.getByText(/votre filiale de rattachement uniquement/)).toBeInTheDocument();
     expect(listerStock).toHaveBeenCalledWith({
       statutAlerte: 'BAS',
       page: 0,

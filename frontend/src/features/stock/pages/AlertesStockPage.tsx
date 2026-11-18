@@ -128,6 +128,11 @@ export function AlertesStockPage() {
           Articles à surveiller dans votre filiale. Le seuil d’alerte est défini
           article par article.
         </p>
+        <p className="text-xs text-[var(--brand-ink-muted)]">
+          <strong className="font-medium text-[var(--brand-ink)]">Périmètre :</strong>{' '}
+          votre filiale de rattachement uniquement — pas de vue consolidée du
+          groupe.
+        </p>
       </header>
 
       <div
