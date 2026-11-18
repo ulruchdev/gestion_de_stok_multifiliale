@@ -1,10 +1,13 @@
 package com.stockmaster.reporting.service;
 
+import com.stockmaster.shared.domain.entity.Entreprise;
 import com.stockmaster.shared.domain.entity.TenantGroup;
 import com.stockmaster.shared.exception.BusinessException;
 import com.stockmaster.shared.exception.ErrorCode;
+import com.stockmaster.shared.repository.EntrepriseRepository;
 import com.stockmaster.shared.repository.TenantGroupRepository;
 import com.stockmaster.shared.security.StockMasterPrincipal;
+import com.stockmaster.reporting.dto.response.ComparaisonFilialesResponse;
 import com.stockmaster.vente.port.LectureVentePort;
 import com.stockmaster.vente.port.LectureVentePort.LigneVenteAgregat;
 import io.jsonwebtoken.Claims;
@@ -26,6 +29,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -51,6 +55,10 @@ class ReportingServiceTest {
     @Mock
     private TenantGroupRepository tenantGroupRepository;
 
+    @Mock
+    private EntrepriseRepository entrepriseRepository;
+
+    private final CalculCaService calculCaService = new CalculCaService();
     private ReportingService reportingService;
 
     private static final Long GROUP_ID = 1L;
@@ -58,16 +66,28 @@ class ReportingServiceTest {
 
     @BeforeEach
     void setUp() {
-        reportingService = new ReportingService(lectureVentePort, tenantGroupRepository);
+        reportingService = new ReportingService(
+                lectureVentePort, tenantGroupRepository, entrepriseRepository, calculCaService);
     }
 
     // ─── fixtures ───────────────────────────────────────────────────────────
 
     private StockMasterPrincipal principal(Long groupId, Long entrepriseId) {
+        return principal("GESTIONNAIRE_STOCK", groupId, entrepriseId);
+    }
+
+    private StockMasterPrincipal principal(String role, Long groupId, Long entrepriseId) {
         Claims claims = mock(Claims.class);
         lenient().when(claims.get("groupId", Long.class)).thenReturn(groupId);
         lenient().when(claims.get("entrepriseId", Long.class)).thenReturn(entrepriseId);
+        lenient().when(claims.get("role", String.class)).thenReturn(role);
         return new StockMasterPrincipal(99L, claims);
+    }
+
+    private Entreprise entreprise(long id, String nom) {
+        Entreprise entreprise = Entreprise.builder().nom(nom).build();
+        entreprise.setId(id);
+        return entreprise;
     }
 
     private TenantGroup groupe(boolean actif) {
@@ -84,8 +104,14 @@ class ReportingServiceTest {
     }
 
     private LigneVenteAgregat ligne(long articleId, String libelle, String quantite) {
-        return new LigneVenteAgregat(ENTREPRISE_ID, articleId, libelle, 7L, "Alice",
-                new BigDecimal(quantite), 12000, new BigDecimal("19.25"),
+        return ligne(500L, ENTREPRISE_ID, articleId, libelle, quantite, 12000, "19.25");
+    }
+
+    private LigneVenteAgregat ligne(long venteId, long entrepriseId, long articleId,
+                                    String libelle, String quantite,
+                                    int prixUnitaire, String tauxTva) {
+        return new LigneVenteAgregat(venteId, entrepriseId, articleId, libelle, 7L, "Alice",
+                new BigDecimal(quantite), prixUnitaire, new BigDecimal(tauxTva),
                 Instant.parse("2026-11-12T09:30:00Z"));
     }
 
@@ -241,6 +267,120 @@ class ReportingServiceTest {
 
             assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
             verify(lectureVentePort, never()).lignesVendues(any(), any(), any());
+        }
+    }
+
+    // ─── US-F092 — comparaison inter-filiales ────────────────────────────────
+
+    @Nested
+    @DisplayName("US-F092 — GET /api/v1/reporting/filiales")
+    class ComparaisonFiliales {
+
+        private final LocalDate debut = LocalDate.of(2026, 11, 1);
+        private final LocalDate fin = LocalDate.of(2026, 11, 30);
+
+        @Test
+        @DisplayName("✅ une ligne par site, tri CA décroissant, panier moyen TTC HALF_UP")
+        void shouldComparerLesFiliales() {
+            groupeActif();
+            List<Entreprise> entreprises = List.of(
+                    entreprise(10L, "Douala"), entreprise(11L, "Bafoussam"), entreprise(12L, "Yaoundé"));
+            when(entrepriseRepository.findAllByGroupeIdAndSupprimeFalseOrderByNomAsc(GROUP_ID))
+                    .thenReturn(entreprises);
+            when(lectureVentePort.lignesVenduesGroupe(anyList(), any(), any()))
+                    .thenReturn(List.of(
+                            ligne(501L, 10L, 5L, "Riz", "2.000", 1000, "19.25"),
+                            ligne(502L, 10L, 6L, "Huile", "1.000", 500, "19.25"),
+                            ligne(503L, 12L, 5L, "Riz", "3.000", 1000, "0")));
+
+            ComparaisonFilialesResponse reponse = reportingService.comparerFiliales(
+                    principal("ADMIN_GROUPE", GROUP_ID, ENTREPRISE_ID), debut, fin);
+
+            assertThat(reponse.getFiliales()).hasSize(3);
+            // Yaoundé 3000 > Douala 2500 > Bafoussam 0
+            assertThat(reponse.getFiliales()).extracting(ComparaisonFilialesResponse.LigneFiliale::getNom)
+                    .containsExactly("Yaoundé", "Douala", "Bafoussam");
+
+            ComparaisonFilialesResponse.LigneFiliale douala = reponse.getFiliales().get(1);
+            assertThat(douala.getEntrepriseId()).isEqualTo(10L);
+            assertThat(douala.getCaHt()).isEqualTo(2500L);
+            assertThat(douala.getNbVentes()).isEqualTo(2L);
+            // CA TTC = 2981, /2 ventes = 1490,5 → 1491 (HALF_UP)
+            assertThat(douala.getPanierMoyen()).isEqualTo(1491L);
+
+            ComparaisonFilialesResponse.LigneFiliale yaounde = reponse.getFiliales().get(0);
+            assertThat(yaounde.getCaHt()).isEqualTo(3000L);
+            assertThat(yaounde.getNbVentes()).isEqualTo(1L);
+            assertThat(yaounde.getPanierMoyen()).isEqualTo(3000L);
+
+            ComparaisonFilialesResponse.LigneFiliale inactive = reponse.getFiliales().get(2);
+            assertThat(inactive.getEntrepriseId()).isEqualTo(11L);
+            assertThat(inactive.getCaHt()).isZero();
+            assertThat(inactive.getNbVentes()).isZero();
+            assertThat(inactive.getPanierMoyen()).isZero();
+
+            verify(lectureVentePort).lignesVenduesGroupe(
+                    List.of(10L, 11L, 12L),
+                    Instant.parse("2026-11-01T00:00:00Z"),
+                    Instant.parse("2026-12-01T00:00:00Z"));
+        }
+
+        @Test
+        @DisplayName("✅ groupe sans entreprise : réponse vide, aucun appel au port")
+        void shouldRetournerVideSansEntreprise() {
+            groupeActif();
+            when(entrepriseRepository.findAllByGroupeIdAndSupprimeFalseOrderByNomAsc(GROUP_ID))
+                    .thenReturn(List.of());
+
+            ComparaisonFilialesResponse reponse = reportingService.comparerFiliales(
+                    principal("ADMIN_GROUPE", GROUP_ID, ENTREPRISE_ID), debut, fin);
+
+            assertThat(reponse.getFiliales()).isEmpty();
+            verify(lectureVentePort, never()).lignesVenduesGroupe(anyList(), any(), any());
+        }
+
+        @Test
+        @DisplayName("❌ 403 SEC_001 — ADMIN_FILIALE refusé avant toute I/O")
+        void shouldRefuserRoleNonGroupe() {
+            var ex = catchThrowableOfType(
+                    () -> reportingService.comparerFiliales(
+                            principal("ADMIN_FILIALE", GROUP_ID, ENTREPRISE_ID), debut, fin),
+                    BusinessException.class);
+
+            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.SEC_ACCESS_DENIED);
+            verify(tenantGroupRepository, never()).findByIdAndSupprimeFalse(any());
+            verify(entrepriseRepository, never()).findAllByGroupeIdAndSupprimeFalseOrderByNomAsc(any());
+            verify(lectureVentePort, never()).lignesVenduesGroupe(anyList(), any(), any());
+        }
+
+        @Test
+        @DisplayName("❌ 400 SYS_002 — période invalide, aucun accès aux filiales")
+        void shouldRefuserPeriodeInvalide() {
+            groupeActif();
+
+            var ex = catchThrowableOfType(
+                    () -> reportingService.comparerFiliales(
+                            principal("ADMIN_GROUPE", GROUP_ID, ENTREPRISE_ID), fin, debut),
+                    BusinessException.class);
+
+            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.SYS_BAD_REQUEST);
+            verify(entrepriseRepository, never()).findAllByGroupeIdAndSupprimeFalseOrderByNomAsc(any());
+            verify(lectureVentePort, never()).lignesVenduesGroupe(anyList(), any(), any());
+        }
+
+        @Test
+        @DisplayName("❌ 403 GRP_002 — groupe inactif")
+        void shouldRefuserGroupeInactif() {
+            when(tenantGroupRepository.findByIdAndSupprimeFalse(GROUP_ID))
+                    .thenReturn(Optional.of(groupe(false)));
+
+            var ex = catchThrowableOfType(
+                    () -> reportingService.comparerFiliales(
+                            principal("ADMIN_GROUPE", GROUP_ID, ENTREPRISE_ID), debut, fin),
+                    BusinessException.class);
+
+            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.GRP_CROSS_GROUP_FORBIDDEN);
+            verify(entrepriseRepository, never()).findAllByGroupeIdAndSupprimeFalseOrderByNomAsc(any());
         }
     }
 }

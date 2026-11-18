@@ -81,19 +81,20 @@ public class LectureVenteService implements LectureVentePort {
         }
     }
 
-    /** [entrepriseId, articleId, libelle, clientId, clientNom, quantite, prixUnitaire, tauxTva, date]. */
+    /** [venteId, entrepriseId, articleId, libelle, clientId, clientNom, quantite, PU, TVA, date]. */
     private List<LigneVenteAgregat> projeter(List<Object[]> lignes) {
         return lignes.stream()
                 .map(ligne -> new LigneVenteAgregat(
                         (Long) ligne[0],
                         (Long) ligne[1],
-                        (String) ligne[2],
-                        (Long) ligne[3],
-                        (String) ligne[4],
-                        (BigDecimal) ligne[5],
-                        ((Number) ligne[6]).intValue(),
-                        (BigDecimal) ligne[7],
-                        (Instant) ligne[8]))
+                        (Long) ligne[2],
+                        (String) ligne[3],
+                        (Long) ligne[4],
+                        (String) ligne[5],
+                        (BigDecimal) ligne[6],
+                        ((Number) ligne[7]).intValue(),
+                        (BigDecimal) ligne[8],
+                        (Instant) ligne[9]))
                 .toList();
     }
 }

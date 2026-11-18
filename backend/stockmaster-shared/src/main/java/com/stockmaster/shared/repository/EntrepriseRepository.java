@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface EntrepriseRepository extends JpaRepository<Entreprise, Long> {
@@ -34,6 +35,14 @@ public interface EntrepriseRepository extends JpaRepository<Entreprise, Long> {
      * opérationnels, non supprimés.
      */
     long countByGroupeIdAndSiteOperationnelTrueAndActifTrueAndSupprimeFalse(Long groupeId);
+
+    /**
+     * US-F092 / GS-1255 : toutes les entreprises non supprimées du groupe
+     * (maison mère incluse — chacune est un site comparable), triées par nom.
+     * Sert au périmètre de la comparaison inter-filiales, jamais à un filtre
+     * fourni par le client.
+     */
+    List<Entreprise> findAllByGroupeIdAndSupprimeFalseOrderByNomAsc(Long groupeId);
 
     /** US-016 : maison mère du groupe, pour rattacher {@code parent_id} d'une nouvelle filiale. */
     Optional<Entreprise> findFirstByGroupeIdAndTypeEntreprise(Long groupeId, TypeEntreprise typeEntreprise);

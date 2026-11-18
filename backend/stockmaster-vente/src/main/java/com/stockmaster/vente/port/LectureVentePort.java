@@ -52,6 +52,8 @@ public interface LectureVentePort {
     /**
      * Ligne de vente projetée — tout ce dont un rapport a besoin, rien de plus.
      *
+     * @param venteId         vente d'origine — indispensable aux indicateurs qui
+     *                        comptent des ventes distinctes (nbVentes, panier moyen)
      * @param entrepriseId    filiale de la vente
      * @param articleId       article vendu
      * @param articleLibelle  désignation au moment de la lecture (catalogue)
@@ -63,6 +65,7 @@ public interface LectureVentePort {
      * @param dateVente       horodatage de la vente
      */
     record LigneVenteAgregat(
+            Long venteId,
             Long entrepriseId,
             Long articleId,
             String articleLibelle,
