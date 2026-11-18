@@ -16,5 +16,11 @@
         <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-shared</artifactId></dependency>
         <!-- GS-1251 : lecture des ventes via le seul port exposé (règle ArchUnit n°1). -->
         <dependency><groupId>com.stockmaster</groupId><artifactId>stockmaster-vente</artifactId></dependency>
+        <!-- Tests MVC : authentification simulée + @PreAuthorize (pattern StockControllerTest). -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

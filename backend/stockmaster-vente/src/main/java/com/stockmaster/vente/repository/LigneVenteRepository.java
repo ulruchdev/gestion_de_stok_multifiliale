@@ -18,8 +18,8 @@ public interface LigneVenteRepository extends JpaRepository<LigneVente, Long> {
      * Lecture reporting des lignes de vente de une ou plusieurs filiales — GS-1251.
      *
      * <p>Projection brute consommée par {@code LectureVenteService} :
-     * {@code [entrepriseId, articleId, articleLibelle, clientId, clientNom,
-     * quantite, prixUnitaire, tauxTva, dateVente]}.</p>
+     * {@code [venteId, entrepriseId, articleId, articleLibelle, clientId,
+     * clientNom, quantite, prixUnitaire, tauxTva, dateVente]}.</p>
      *
      * <p>{@code left join} sur le client : les ventes au comptoir (client de
      * passage, {@code client_id} nullable — DEC-009) doivent être comptées dans
@@ -31,7 +31,7 @@ public interface LigneVenteRepository extends JpaRepository<LigneVente, Long> {
      * avec une liste d'un élément — une seule projection à maintenir.</p>
      */
     @Query("""
-            select v.entreprise.id, a.id, a.designation, c.id, c.nom,
+            select v.id, v.entreprise.id, a.id, a.designation, c.id, c.nom,
                    lv.quantite, lv.prixUnitaire, lv.tauxTvaSnapshot, v.dateVente
             from LigneVente lv
             join lv.vente v

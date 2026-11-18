@@ -49,11 +49,11 @@ class LectureVenteServiceTest {
         lectureVenteService = new LectureVenteService(ligneVenteRepository);
     }
 
-    /** Ligne brute : [entreprise, article, libellé, clientId, clientNom, qté, PU, TVA, date]. */
-    private Object[] ligne(long entrepriseId, long articleId, String libelle,
+    /** Ligne brute : [vente, entreprise, article, libellé, clientId, clientNom, qté, PU, TVA, date]. */
+    private Object[] ligne(long venteId, long entrepriseId, long articleId, String libelle,
                            Long clientId, String clientNom, String quantite,
                            int prixUnitaire, String tauxTva, Instant dateVente) {
-        return new Object[]{entrepriseId, articleId, libelle, clientId, clientNom,
+        return new Object[]{venteId, entrepriseId, articleId, libelle, clientId, clientNom,
                 new BigDecimal(quantite), prixUnitaire, new BigDecimal(tauxTva), dateVente};
     }
 
@@ -66,7 +66,7 @@ class LectureVenteServiceTest {
         void shouldProjeterLigneComplete() {
             Instant dateVente = Instant.parse("2026-11-12T09:30:00Z");
             when(ligneVenteRepository.lignesVendues(List.of(ENTREPRISE_ID), DEBUT, FIN))
-                    .thenReturn(List.<Object[]>of(ligne(ENTREPRISE_ID, 5L, "Riz sac 25 kg",
+                    .thenReturn(List.<Object[]>of(ligne(100L, ENTREPRISE_ID, 5L, "Riz sac 25 kg",
                             7L, "Alice Ngo", "2.500", 12000, "19.25", dateVente)));
 
             List<LigneVenteAgregat> lignes = lectureVenteService
@@ -74,6 +74,7 @@ class LectureVenteServiceTest {
 
             assertThat(lignes).hasSize(1);
             LigneVenteAgregat ligne = lignes.get(0);
+            assertThat(ligne.venteId()).isEqualTo(100L);
             assertThat(ligne.entrepriseId()).isEqualTo(ENTREPRISE_ID);
             assertThat(ligne.articleId()).isEqualTo(5L);
             assertThat(ligne.articleLibelle()).isEqualTo("Riz sac 25 kg");
@@ -89,7 +90,7 @@ class LectureVenteServiceTest {
         @DisplayName("✅ client de passage conservé : clientId/clientNom null (pas d'exclusion du CA)")
         void shouldConserverClientDePassage() {
             when(ligneVenteRepository.lignesVendues(List.of(ENTREPRISE_ID), DEBUT, FIN))
-                    .thenReturn(List.<Object[]>of(ligne(ENTREPRISE_ID, 6L, "Huile 1 L",
+                    .thenReturn(List.<Object[]>of(ligne(101L, ENTREPRISE_ID, 6L, "Huile 1 L",
                             null, null, "1.000", 900, "19.25", FIN.minusSeconds(3600))));
 
             List<LigneVenteAgregat> lignes = lectureVenteService
@@ -163,8 +164,8 @@ class LectureVenteServiceTest {
             List<Long> filiales = List.of(10L, 11L, 12L);
             when(ligneVenteRepository.lignesVendues(filiales, DEBUT, FIN))
                     .thenReturn(List.<Object[]>of(
-                            ligne(10L, 5L, "Riz", 7L, "Alice", "1.000", 12000, "19.25", DEBUT),
-                            ligne(12L, 5L, "Riz", 8L, "Bob", "3.000", 12000, "19.25", DEBUT)));
+                            ligne(200L, 10L, 5L, "Riz", 7L, "Alice", "1.000", 12000, "19.25", DEBUT),
+                            ligne(201L, 12L, 5L, "Riz", 8L, "Bob", "3.000", 12000, "19.25", DEBUT)));
 
             List<LigneVenteAgregat> lignes = lectureVenteService
                     .lignesVenduesGroupe(filiales, DEBUT, FIN);
