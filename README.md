@@ -97,7 +97,7 @@ StockMaster CM permet à un commerçant ou à un groupe de commerces de :
 git clone <repo-url>
 cd gestion_de_stok_multifiliale
 
-# 2. Lancer les services (PostgreSQL + Redis + MinIO + MailHog)
+# 2. Lancer les services (PostgreSQL + Redis + MinIO + MailHog + consoles)
 docker compose up -d
 
 # 3. Copier et personnaliser les variables d'environnement
@@ -122,6 +122,17 @@ curl http://localhost:8080/actuator/health
 # 7. Frontend (dans un autre terminal)
 cd ../frontend && npm install && npm run dev
 ```
+
+### Consoles d'administration (développement uniquement)
+
+| Outil | URL | Accès |
+|---|---|---|
+| Portainer (conteneurs Docker) | <https://localhost:9443> | `admin` / défini à la première ouverture (certificat auto-signé) |
+| pgAdmin 4 (PostgreSQL) | <http://localhost:5050> | serveur « StockMaster dev (postgres) » déjà déclaré |
+
+Portainer monte le socket Docker : ne jamais l'exposer hors de la machine de
+développement. Les identifiants par défaut de pgAdmin sont surchargeables via
+`PGADMIN_DEFAULT_EMAIL` et `PGADMIN_DEFAULT_PASSWORD`.
 
 ### Tests
 
